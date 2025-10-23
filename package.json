@@ -15,7 +15,11 @@
     "lint": "eslint . --fix --cache"
   },
   "dependencies": {
+    "@primeuix/themes": "^1.2.5",
     "appwrite": "^21.2.1",
+    "primeflex": "^4.0.0",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.4.1",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3"
   },

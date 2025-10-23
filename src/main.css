@@ -1,0 +1,29 @@
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: var(--font-family);
+  color: var(--text-color);
+  background: var(--surface-ground);
+}
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Menos margen en los mensajes */
+.p-message {
+  margin: 0.5rem 0;
+}
+/* Todas las etiquetas en negrita*/
+label {
+  font-weight: 600;
+}
