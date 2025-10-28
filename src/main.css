@@ -43,11 +43,11 @@ body {
   font-weight: normal;
 }
 
-/* Menos margen en los mensajes */
-.p-message {
-  margin: 0.5rem 0;
-}
 /* Todas las etiquetas en negrita*/
 label {
-  font-weight: 600;
+  font-weight: bold;
+}
+
+.p-panel-title {
+  font-size: large;
 }

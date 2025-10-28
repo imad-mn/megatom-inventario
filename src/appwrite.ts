@@ -1,16 +1,12 @@
-import { Client, Account, Databases } from 'appwrite';
+import { Client, Account, Databases, TablesDB } from 'appwrite';
 
-const getEndpoint = () => {
-  return import.meta.env.VITE_APPWRITE_ENDPOINT
-}
+const client = new Client()
+  .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
+  .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID);
 
-const getProjectId = () => {
-  return import.meta.env.VITE_APPWRITE_PROJECT_ID
-}
-
-const client = new Client().setEndpoint(getEndpoint()).setProject(getProjectId())
-const account = new Account(client)
-const databases = new Databases(client)
+const account = new Account(client);
+const databases = new Databases(client);
+const tables = new TablesDB(client);
 
 export { ID } from 'appwrite';
-export { client, account, databases }
+export { client, account, databases, tables }

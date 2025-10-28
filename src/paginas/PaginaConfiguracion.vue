@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import ListaEditable from '@/componentes/ListaEditable.vue';
 </script>
 
 <template>
-  <h1>Configuración</h1>
+  <ListaEditable nombreTabla="Ejemplo" />
 </template>

@@ -27,6 +27,6 @@ const menuItems = ref<MenuItem[]>([
 </script>
 
 <template>
-  <Menubar :model="menuItems" class="mb-2" />
+  <Menubar :model="menuItems" class="mb-2!" />
   <RouterView />
 </template>
