@@ -39,7 +39,7 @@ body {
 #app {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 1rem 1rem 1rem;
   font-weight: normal;
 }
 
@@ -50,4 +50,7 @@ label {
 
 .p-panel-title {
   font-size: large;
+}
+.p-menubar-end {
+  margin-right: auto;
 }

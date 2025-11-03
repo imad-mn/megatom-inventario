@@ -8,7 +8,7 @@ defineProps<EditarGuardarProps>();
 
 <template>
   <div class="flex gap-1">
-    <Button icon="pi pi-pen-to-square" severity="success" variant="outlined" size="small" @click="onEditarClick" />
-    <Button icon="pi pi-trash" severity="danger" variant="outlined" size="small" @click="onQuitarClick" />
+    <Button icon="pi pi-pen-to-square" severity="success" variant="text" size="small" @click="onEditarClick" />
+    <Button icon="pi pi-trash" severity="danger" variant="text" size="small" @click="onQuitarClick" />
   </div>
 </template>

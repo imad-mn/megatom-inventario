@@ -38,9 +38,12 @@ const MyPreset = definePreset(Aura, {
     components: {
       panel: {
         header: {
-          padding: '0.5rem 1.125rem',
+          padding: '0.5rem 1rem',
           background: '{primary.100}',
         },
+        content: {
+          padding: '0.5rem',
+        }
       }
     }
 });

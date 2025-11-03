@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
 
 const router = useRouter();
+const route = useRoute();
 
 const menuItems = ref<MenuItem[]>([
   {
@@ -18,15 +19,24 @@ const menuItems = ref<MenuItem[]>([
     command: () => router.push('/productos')
   },
   {
-    label: 'Configuración',
-    icon: PrimeIcons.COG,
-    command: () => router.push('/configuracion')
+    label: 'Listas',
+    icon: PrimeIcons.LIST,
+    command: () => router.push('/listas')
+  },
+  {
+    label: 'Usuarios',
+    icon: PrimeIcons.USERS,
+    command: () => router.push('/usuarios')
   },
 ]);
 
 </script>
 
 <template>
-  <Menubar :model="menuItems" class="mb-2!" />
+  <Menubar :model="menuItems" class="mb-3!">
+    <template #end>
+      <div class="md:hidden text-lg">{{ route.name }}</div>
+    </template>
+  </Menubar>
   <RouterView />
 </template>

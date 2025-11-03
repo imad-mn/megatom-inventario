@@ -1,27 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
-import type { IdNombre } from '@/modelos';
+import type { IdNombre } from '@/servicios/modelos.ts';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
-import { ID } from '../appwrite.ts';
+import * as ServicioBase from '@/servicios/ServicioBase.ts';
+import DialogoEdicion from './DialogoEdicion.vue';
 
 interface ListaEditableProps {
-  nombreTabla: string,
+  nombreTabla: string;
 }
 const props = defineProps<ListaEditableProps>();
 const confirm = useConfirm();
 
 const lista = ref<IdNombre[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<IdNombre>({ id: '', nombre: '' });
+const itemEdicion = ref<IdNombre>({ $id: '', nombre: '' });
 const esNuevo = ref(false);
 
-import myDataRaw from './MOCK_DATA.json';
-lista.value = myDataRaw as IdNombre[];
+onMounted(async () => {
+  lista.value = await ServicioBase.ObtenerTodos<IdNombre>(props.nombreTabla.toLowerCase());
+});
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { id: ID.unique(), nombre: '' };
+  itemEdicion.value = { $id: '', nombre: '' };
   dialogVisible.value = true;
 }
 
@@ -31,29 +33,32 @@ function Editar(item: IdNombre) {
   dialogVisible.value = true;
 }
 
-function Guardar() {
+async function Guardar() {
   if (esNuevo.value) {
+    await ServicioBase.Crear(props.nombreTabla.toLowerCase(), itemEdicion.value);
     lista.value.push({ ...itemEdicion.value });
   } else {
-    const indice = lista.value.findIndex(x => x.id === itemEdicion.value.id);
+    const indice = lista.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
+      await ServicioBase.Actualizar(props.nombreTabla.toLowerCase(), itemEdicion.value);
       lista.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
-function Quitar(item: IdNombre) {
+function Quitar(item: IdNombre): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar: "${item.nombre}"?`,
     acceptClass: 'p-button-danger',
     acceptIcon: 'pi pi-trash',
-    rejectClass: 'p-button-text',
     accept: () => {
-      const indice = lista.value.findIndex(x => x.id === item.id);
+      const indice = lista.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        lista.value.splice(indice, 1);
+        ServicioBase.Eliminar(props.nombreTabla.toLowerCase(), item.$id).then(() => {
+          lista.value.splice(indice, 1);
+        });
       }
     }
   });
@@ -61,30 +66,25 @@ function Quitar(item: IdNombre) {
 </script>
 
 <template>
-  <Panel :header="props.nombreTabla" class="w-sm">
+  <Panel :header="props.nombreTabla" class="w-full md:w-sm">
     <template #icons>
-      <Button label="Agregar" icon="pi pi-plus" severity="info" variant="outlined" size="small" @click="Agregar" />
+      <Button label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>
     <DataView :value="lista" dataKey="id">
       <template #list="slotProps">
         <div v-for="item in slotProps.items" :key="item.id" class="flex items-center justify-between p-1 border-b-1 border-surface">
           <div>{{ item.nombre }}</div>
-          <EditarQuitar @editar-click="() => Editar(item)" @quitar-click="() => Quitar(item)" />
+          <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
         </div>
       </template>
     </DataView>
   </Panel>
 
-  <Dialog v-model:visible="dialogVisible" :modal="true" :header="esNuevo ? 'Agregar' : 'Editar'">
-    <div class="flex items-center gap-2">
+  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
+    :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
+    <div class="flex flex-col">
       <label for="nombre">Nombre</label>
       <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="flex-auto" />
     </div>
-    <template #footer>
-      <Button label="Cancelar" icon="pi pi-times" @click="dialogVisible = false" severity="secondary" />
-      <Button label="Guardar" icon="pi pi-check" @click="Guardar" :disabled="!itemEdicion.nombre" />
-    </template>
-  </Dialog>
-
-  <ConfirmDialog />
+  </DialogoEdicion>
 </template>
