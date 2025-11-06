@@ -18,6 +18,12 @@ import Panel from 'primevue/panel';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import Select from 'primevue/select';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import InputNumber from 'primevue/inputnumber';
+import Textarea from 'primevue/textarea';
+import FileUpload from 'primevue/fileupload';
 
 const MyPreset = definePreset(Aura, {
     semantic: {
@@ -64,5 +70,11 @@ app.component('Panel', Panel);
 app.component('ConfirmDialog', ConfirmDialog);
 app.component('Dialog', Dialog);
 app.component('InputText', InputText);
+app.component('Select', Select);
+app.component('IconField', IconField);
+app.component('InputIcon', InputIcon);
+app.component('InputNumber', InputNumber);
+app.component('Textarea', Textarea);
+app.component('FileUpload', FileUpload);
 
 app.mount('#app')

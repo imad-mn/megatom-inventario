@@ -8,5 +8,4 @@ import ListaEditable from '@/componentes/ListaEditable.vue';
     <ListaEditable nombreTabla="Fabricantes" />
     <ListaEditable nombreTabla="Almacenistas" />
   </div>
-  <ConfirmDialog />
 </template>

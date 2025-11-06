@@ -22,38 +22,33 @@ export type Cajones = Models.Row & {
   nombre: string;
 }
 
-export type Productos = Models.Row & {
+export type Producto = {
+  $id: string;
   nombre: string;
-  codigo_serial: string;
-  detalles: string | null;
+  codigo: string;
+  descripcion: string | null;
   pesoUnitario: number | null;
-  grupo: Grupos;
-  fabricante: Fabricantes;
+  grupo: string;
+  fabricante: string;
 }
 
-export type Grupos = Models.Row & {
-  nombre: string;
-}
+export type Grupo = IdNombre & { }
 
-export type Fabricantes = Models.Row & {
-  nombre: string;
-}
+export type Fabricante = IdNombre & { }
 
 export type Inventario = Models.Row & {
   cajon: Cajones;
-  producto: Productos;
+  producto: Producto;
   cantidad: number;
 }
 
 export type Movimientos = Models.Row & {
-  producto: Productos;
+  producto: Producto;
   cantidad: number;
-  almacenista: Almacenistas;
+  almacenista: Almacenista;
 }
 
-export type Almacenistas = Models.Row & {
-  nombre: string;
-}
+export type Almacenista = IdNombre & { }
 
 export type IdNombre = {
   $id: string;
