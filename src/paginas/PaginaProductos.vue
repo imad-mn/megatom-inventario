@@ -4,7 +4,7 @@ import type { Fabricante, Grupo, Producto } from '@/servicios/modelos.ts';
 import { onMounted, ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
-import type { FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
+import type { FileUploadSelectEvent } from 'primevue';
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
 
@@ -27,6 +27,7 @@ const grupoDict = ref<Record<string, string>>({});
 const fabricanteDict = ref<Record<string, string>>({});
 
 const fileUploadRef = ref<InstanceType<typeof FileUpload> | null>(null);
+let archivo: File | undefined;
 const imagenEdicion = ref<string>();
 
 onMounted(async () => {
@@ -55,6 +56,14 @@ function Agregar() {
 
 async function Guardar() {
   try {
+    if (itemEdicion.value == null)
+      return;
+
+    if (archivo) {
+      itemEdicion.value!.imagenId = await StorageService.Subir(archivo);
+      archivo = undefined;
+    }
+
     if (esNuevo.value) {
       await ServicioBase.Crear('productos', itemEdicion.value!);
       productos.value.push({ ...itemEdicion.value! });
@@ -99,23 +108,9 @@ function Quitar(item: Producto): void {
   });
 }
 
-async function SubirImagen(e: FileUploadUploaderEvent) {
-  const archivo = (<File[]>e.files)[0];
-  if (archivo == null || itemEdicion.value == null)
-    return;
-
-  try {
-    itemEdicion.value.imagenId = await StorageService.Subir(archivo);
-  } catch (error) {
-    console.error('Error al subir la imagen:', error);
-  }
-  e.files = [];
-  Guardar();
-}
-
 // Al seleccionar la foto, la muestra en el diálogo de edición
 function SeleccionarFoto(e: FileUploadSelectEvent) {
-  const archivo = (<File[]>e.files)[0];
+  archivo = (<File[]>e.files)[0];
   if (archivo == null)
       return;
   const reader = new FileReader();
@@ -165,7 +160,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
     </template>
   </DataView>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="() => fileUploadRef!.upload()"
+  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
     :desabilitarAceptar="itemEdicion?.nombre?.trim() === '' || itemEdicion?.codigo?.trim() === '' || itemEdicion?.grupo == undefined || itemEdicion?.fabricante === undefined">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on">
@@ -201,7 +196,6 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
         choose-label="Escoger Foto"
         :custom-upload="true"
         class="p-button-outlined"
-        @uploader="SubirImagen"
         @select="SeleccionarFoto" />
       <img v-if="imagenEdicion" :src="imagenEdicion" alt="Foto" class="rounded-xl w-full" />
     </div>
