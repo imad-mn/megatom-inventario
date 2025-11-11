@@ -1,5 +1,7 @@
 import type { Models } from 'appwrite';
-import { tablesDB, databaseId, ID } from './appwrite.ts';
+import { tablesDB, ID } from './appwrite.ts';
+
+const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 
 export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
   try {

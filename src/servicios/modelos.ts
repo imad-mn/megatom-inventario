@@ -30,6 +30,7 @@ export type Producto = {
   pesoUnitario: number | null;
   grupo: string;
   fabricante: string;
+  imagenId: string | null;
 }
 
 export type Grupo = IdNombre & { }

@@ -5,6 +5,9 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 1rem 1rem 1rem;
+
+  --p-card-title-font-size: 1rem;
+  --p-card-body-padding: 1rem;
 }
 
 /* Todas las etiquetas en negrita*/

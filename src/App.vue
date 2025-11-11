@@ -33,7 +33,7 @@ const menuItems = ref<MenuItem[]>([
 </script>
 
 <template>
-  <Menubar :model="menuItems" class="mb-3!">
+  <Menubar :model="menuItems" class="mb-3!" breakpoint="768px">
     <template #end>
       <div class="md:hidden text-lg">{{ route.name }}</div>
     </template>

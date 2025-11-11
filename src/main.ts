@@ -24,6 +24,8 @@ import InputIcon from 'primevue/inputicon';
 import InputNumber from 'primevue/inputnumber';
 import Textarea from 'primevue/textarea';
 import FileUpload from 'primevue/fileupload';
+import FloatLabel from 'primevue/floatlabel';
+import Card from 'primevue/card';
 
 const MyPreset = definePreset(Aura, {
     semantic: {
@@ -43,12 +45,19 @@ const MyPreset = definePreset(Aura, {
     },
     components: {
       panel: {
+        colorScheme: {
+          light: {
+            header: { background: '{primary.100}' },
+          },
+          dark: {
+            header: { background: '{primary.900}' },
+          }
+        },
         header: {
           padding: '0.5rem 1rem',
-          background: '{primary.100}',
         },
         content: {
-          padding: '0.5rem',
+          padding: '0 0.5rem',
         }
       }
     }
@@ -76,5 +85,7 @@ app.component('InputIcon', InputIcon);
 app.component('InputNumber', InputNumber);
 app.component('Textarea', Textarea);
 app.component('FileUpload', FileUpload);
+app.component('FloatLabel', FloatLabel);
+app.component('Card', Card);
 
 app.mount('#app')
