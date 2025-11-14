@@ -25,7 +25,7 @@ export type Cajones = Models.Row & {
 export type Producto = {
   $id: string;
   nombre: string;
-  codigo: string;
+  codigo: string | null;
   descripcion: string | null;
   pesoUnitario: number | null;
   grupo: string;

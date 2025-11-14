@@ -29,6 +29,7 @@ const fabricanteDict = ref<Record<string, string>>({});
 const fileUploadRef = ref<InstanceType<typeof FileUpload> | null>(null);
 let archivo: File | undefined;
 const imagenEdicion = ref<string>();
+const mostrarAdvertencia = ref(false);
 
 onMounted(async () => {
   grupos.value = await ServicioBase.ObtenerTodos<Grupo>('grupos');
@@ -50,13 +51,15 @@ watchEffect(() => {
 
 function Agregar() {
   esNuevo.value = true;
+  imagenEdicion.value = undefined;
   itemEdicion.value = { $id: '', nombre: '', grupo: '', fabricante: '', codigo: '', descripcion: null, pesoUnitario: null, imagenId: null };
   dialogVisible.value = true;
+  mostrarAdvertencia.value = false;
 }
 
 async function Guardar() {
   try {
-    if (itemEdicion.value == null)
+    if (itemEdicion.value == undefined)
       return;
 
     if (archivo) {
@@ -86,6 +89,7 @@ function Editar(item: Producto) {
   itemEdicion.value = { ...item };
   imagenEdicion.value = item.imagenId ? StorageService.Url(item.imagenId) : undefined;
   dialogVisible.value = true;
+  mostrarAdvertencia.value = false;
 }
 
 function Quitar(item: Producto): void {
@@ -120,6 +124,13 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
   };
   reader.readAsDataURL(archivo);
 }
+
+function RevisarNombreUnico() {
+  if (productos.value.findIndex(x => x.nombre == itemEdicion.value?.nombre) >= 0)
+    mostrarAdvertencia.value = true;
+  else
+    mostrarAdvertencia.value = false;
+}
 </script>
 
 <template>
@@ -136,7 +147,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
 
   <DataView :value="productosFiltrados">
     <template #list="slotProps">
-      <div class="grid grid-col-1 md:grid-cols-4 gap-2">
+      <div class="grid grid-col-1 md:grid-cols-4 gap-3">
         <Card v-for="item in slotProps.items" :key="item.$id" style="overflow: hidden">
           <template #header>
             <img v-if="item.imagenId" :src="StorageService.Url(item.imagenId)" alt="Foto" />
@@ -147,7 +158,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
             <div><b>Código:&nbsp;</b>{{ item.codigo }}</div>
             <div><b>Grupo:&nbsp;</b>{{ grupoDict[item.grupo] }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
-            <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario.toFixed(2) }} Kg</div>
+            <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
           </template>
           <template #footer>
             <div class="flex gap-5">
@@ -161,18 +172,18 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
   </DataView>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
-    :desabilitarAceptar="itemEdicion?.nombre?.trim() === '' || itemEdicion?.codigo?.trim() === '' || itemEdicion?.grupo == undefined || itemEdicion?.fabricante === undefined">
+    :desabilitarAceptar="itemEdicion?.nombre?.trim() === '' || itemEdicion?.grupo == undefined || itemEdicion?.fabricante === undefined || mostrarAdvertencia">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on">
-        <InputText id="nombre" v-model="itemEdicion!.nombre" autofocus class="w-full" />
+        <InputText id="nombre" v-model="itemEdicion!.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" @change="RevisarNombreUnico" />
         <label for="nombre">Nombre</label>
       </FloatLabel>
       <FloatLabel variant="on">
-        <Select id="grupo" v-model="itemEdicion!.grupo" :options="grupos" optionValue="$id" optionLabel="nombre" class="w-full" />
+        <Select id="grupo" v-model="itemEdicion!.grupo" :options="grupos" optionValue="$id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.grupo" />
         <label for="grupo">Grupo</label>
       </FloatLabel>
       <FloatLabel variant="on">
-        <Select id="fabricante" v-model="itemEdicion!.fabricante" :options="fabricantes" optionValue="$id" optionLabel="nombre" class="w-full" />
+        <Select id="fabricante" v-model="itemEdicion!.fabricante" :options="fabricantes" optionValue="$id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.fabricante" />
         <label for="fabricante">Fabricante</label>
       </FloatLabel>
       <FloatLabel variant="on">
@@ -198,6 +209,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
         class="p-button-outlined"
         @select="SeleccionarFoto" />
       <img v-if="imagenEdicion" :src="imagenEdicion" alt="Foto" class="rounded-xl w-full" />
+      <Message severity="warn" v-if="mostrarAdvertencia">Ya existe un producto con ese nombre</Message>
     </div>
   </DialogoEdicion>
 </template>

@@ -13,7 +13,7 @@ const mostrar = defineModel<boolean>('mostrar')
     <slot></slot>
     <template #footer>
       <Button label="Cancelar" icon="pi pi-times" @click="mostrar = false" severity="secondary" />
-      <Button label="Guardar" icon="pi pi-check" @click="$props.clickAceptar" :disabled="$props.desabilitarAceptar" />
+      <Button label="Guardar" icon="pi pi-save" @click="$props.clickAceptar" :disabled="$props.desabilitarAceptar" />
     </template>
   </Dialog>
 </template>

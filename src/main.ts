@@ -26,6 +26,7 @@ import Textarea from 'primevue/textarea';
 import FileUpload from 'primevue/fileupload';
 import FloatLabel from 'primevue/floatlabel';
 import Card from 'primevue/card';
+import Message from 'primevue/message';
 
 const MyPreset = definePreset(Aura, {
     semantic: {
@@ -87,5 +88,6 @@ app.component('Textarea', Textarea);
 app.component('FileUpload', FileUpload);
 app.component('FloatLabel', FloatLabel);
 app.component('Card', Card);
+app.component('Message', Message);
 
 app.mount('#app')

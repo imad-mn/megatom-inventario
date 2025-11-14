@@ -82,9 +82,9 @@ function Quitar(item: IdNombre): void {
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
-    <div class="flex flex-col">
+    <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Nombre</label>
-      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="flex-auto" />
-    </div>
+      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre"/>
+    </FloatLabel>
   </DialogoEdicion>
 </template>
