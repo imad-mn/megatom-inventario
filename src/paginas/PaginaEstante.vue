@@ -2,5 +2,5 @@
 </script>
 
 <template>
-  <h1>Inventario</h1>
+  <h1>Estante</h1>
 </template>

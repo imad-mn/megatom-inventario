@@ -9,9 +9,9 @@ const route = useRoute();
 
 const menuItems = ref<MenuItem[]>([
   {
-    label: 'Inventario',
+    label: 'Bodega',
     icon: PrimeIcons.WAREHOUSE,
-    command: () => router.push('/inventario')
+    command: () => router.push('/bodega')
   },
   {
     label: 'Productos',

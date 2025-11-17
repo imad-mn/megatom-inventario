@@ -147,7 +147,7 @@ function RevisarNombreUnico() {
 
   <DataView :value="productosFiltrados">
     <template #list="slotProps">
-      <div class="grid grid-col-1 md:grid-cols-4 gap-3">
+      <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <Card v-for="item in slotProps.items" :key="item.$id" style="overflow: hidden">
           <template #header>
             <img v-if="item.imagenId" :src="StorageService.Url(item.imagenId)" alt="Foto" />

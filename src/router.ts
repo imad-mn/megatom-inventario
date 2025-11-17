@@ -1,18 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import PaginaListas from './paginas/PaginaListas.vue'
-import PaginaInventario from './paginas/PaginaInventario.vue'
+import PaginaInventario from './paginas/PaginaBodega.vue'
 import PaginaProductos from './paginas/PaginaProductos.vue'
 import PaginaUsuarios from './paginas/PaginaUsuarios.vue'
+import PaginaGalpon from './paginas/PaginaGalpon.vue'
+import PaginaEstante from './paginas/PaginaEstante.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/listas', component: PaginaListas, name: 'Listas' },
-    { path: '/inventario', component: PaginaInventario, name: 'Inventario' },
+    { path: '/bodega', component: PaginaInventario, name: 'Bodega' },
     { path: '/productos', component: PaginaProductos, name: 'Productos' },
     { path: '/usuarios', component: PaginaUsuarios, name: 'Usuarios' },
+    { path: '/galpon/:id', component: PaginaGalpon, name: 'Galpón', sensitive: true },
+    { path: '/estante/:id', component: PaginaEstante, name: 'Estante', sensitive: true },
   ],
+  strict: true,
 })
 
 export default router
