@@ -15,7 +15,7 @@ const router = createRouter({
     { path: '/productos', component: PaginaProductos, name: 'Productos' },
     { path: '/usuarios', component: PaginaUsuarios, name: 'Usuarios' },
     { path: '/galpon/:id', component: PaginaGalpon, name: 'Galpón', sensitive: true },
-    { path: '/estante/:id', component: PaginaEstante, name: 'Estante', sensitive: true },
+    { path: '/estante/:galpon/:estante', component: PaginaEstante, name: 'Estante', sensitive: true },
   ],
   strict: true,
 })

@@ -1,71 +1,65 @@
 <script setup lang="ts">
 import * as ServicioBase from '@/servicios/ServicioBase.ts';
-import type { Galpon, Estante } from '@/servicios/modelos.ts';
+import type { Inventario } from '@/servicios/modelos.ts';
 import { onMounted, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
-import { Button } from 'primevue';
 
 const confirm = useConfirm();
 const router = useRouter();
 
-const galpon = ref<Galpon | null>(null);
+const estantes = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Estante>({ $id: '', nombre: '', secciones: [] });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: router.currentRoute.value.params.id as string, producto: null, cantidad: null });
 const esNuevo = ref(false);
 
 onMounted(async () => {
-  galpon.value = await ServicioBase.ObtenerUno<Galpon>('galpones', router.currentRoute.value.params.id as string, 'estantes');
+  estantes.value = await ServicioBase.ObtenerConFiltro<Inventario>('inventario', 'padre', router.currentRoute.value.params.id as string);
 })
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', secciones: [] };
+  itemEdicion.value = { $id: '', actual: '', padre: router.currentRoute.value.params.id as string, producto: null, cantidad: null };
   dialogVisible.value = true;
 }
 
 async function Guardar() {
-  if (!galpon.value) return;
-
   if (esNuevo.value) {
-    await ServicioBase.Crear('estantes', itemEdicion.value);
-    galpon.value.estantes.push({ ...itemEdicion.value });
+    await ServicioBase.Crear('inventario', itemEdicion.value);
+    estantes.value.push({ ...itemEdicion.value });
   } else {
-    const indice = galpon.value.estantes.findIndex(x => x.$id === itemEdicion.value.$id);
+    const indice = estantes.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
-      await ServicioBase.Actualizar('estantes', itemEdicion.value);
-      galpon.value.estantes[indice] = { ...itemEdicion.value };
+      await ServicioBase.Actualizar('inventario', itemEdicion.value);
+      estantes.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
-function Ver(item: Estante) {
-  router.push({ name: 'Estante', params: { id: item.$id } });
+function Ver(item: Inventario) {
+  router.push({ name: 'Estante', params: { galpon: router.currentRoute.value.params.id, estante: item.actual } });
 }
 
-function Editar(item: Estante) {
+function Editar(item: Inventario) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
   dialogVisible.value = true;
 }
 
-function Quitar(item: Estante): void {
-
-
+function Quitar(item: Inventario): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar el Estante: ${item.nombre} ?`,
+    message: `¿Estás seguro de eliminar el Estante: ${item.actual} ?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      if (!galpon.value) return;
-      const indice = galpon.value.estantes.findIndex(x => x.$id === item.$id);
+      const indice = estantes.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        await ServicioBase.Eliminar('estantes', item.$id);
-        galpon.value.estantes.splice(indice, 1);
+        await ServicioBase.Eliminar('inventario', item.$id);
+        estantes.value.splice(indice, 1);
       }
     }
   });
@@ -74,18 +68,18 @@ function Quitar(item: Estante): void {
 
 <template>
   <div class="flex  justify-between items-center mb-3">
-    <div></div>
-    <div class="text-2xl">GALPÓN {{galpon?.nombre}}</div>
+    <Button label="Ir a Bodega" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push('/bodega')" />
+    <div class="text-2xl">GALPÓN {{$route.params.id}}</div>
     <Button label="Agregar Estante" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
   </div>
 
-  <DataView :value="galpon?.estantes">
+  <DataView :value="estantes">
     <template #list="slotProps">
       <div class="flex flex-wrap gap-3">
         <Card v-for="item in slotProps.items" :key="item.$id" class="w-2xs">
           <template #content>
             <div class="flex justify-between">
-              <Button class="text-lg" icon="pi pi-server" variant="text" :label="'Estante ' + item.nombre" @click="Ver(item)" />
+              <Button class="text-lg" icon="pi pi-server" variant="text" :label="'Estante ' + item.actual" @click="Ver(item)" />
               <div>
                 <Button icon="pi pi-pen-to-square" severity="success" class="mr-1" variant="text" @click="Editar(item)" />
                 <Button icon="pi pi-trash" severity="danger" variant="text" @click="Quitar(item)" />
@@ -98,10 +92,10 @@ function Quitar(item: Estante): void {
   </DataView>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
-    :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
+    :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Nombre</label>
-      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" />
+      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" />
     </FloatLabel>
   </DialogoEdicion>
 </template>

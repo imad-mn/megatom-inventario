@@ -1,22 +1,3 @@
-import type { Models } from 'appwrite';
-
-export type Estante = IdNombre & {
-  secciones: Secciones[];
-}
-
-export type Galpon = IdNombre & {
-  estantes: Estante[];
-}
-
-export type Secciones = Models.Row & {
-  Nombre: string;
-  cajones: Cajones[];
-}
-
-export type Cajones = Models.Row & {
-  nombre: string;
-}
-
 export type Producto = {
   $id: string;
   nombre: string;
@@ -32,13 +13,15 @@ export type Grupo = IdNombre & { }
 
 export type Fabricante = IdNombre & { }
 
-export type Inventario = Models.Row & {
-  cajon: Cajones;
-  producto: Producto;
-  cantidad: number;
+export type Inventario = {
+  $id: string;
+  producto: Producto | null;
+  cantidad: number | null;
+  actual: string;
+  padre: string | null;
 }
 
-export type Movimientos = Models.Row & {
+export type Movimientos = {
   producto: Producto;
   cantidad: number;
   almacenista: Almacenista;

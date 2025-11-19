@@ -16,18 +16,17 @@ export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
   }
 }
 
-export async function ObtenerUno<T>(tableId: string, id: string, hijos: string): Promise<T | null> {
+export async function ObtenerConFiltro<T>(tableId: string, columna: string, valor: string | null): Promise<T[]> {
   try {
-    const respuesta = await tablesDB.getRow({
+    const respuesta = await tablesDB.listRows({
       databaseId,
       tableId,
-      rowId: id,
-      queries: [Query.select(['*', `${hijos}.*`])]
+      queries: [valor == null ? Query.isNull(columna) : Query.equal(columna, valor)]
     });
-    return respuesta as T;
+    return respuesta.rows as T[];
   } catch (error) {
-    console.error(`Error obteniendo todos el registro:${id} de la tabla "${tableId}":`, error);
-    return null;
+    console.error(`Error obteniendo datos de la tabla ${tableId} con filtro ${columna}=${valor}:`, error);
+    return [];
   }
 }
 

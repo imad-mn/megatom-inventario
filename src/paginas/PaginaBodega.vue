@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as ServicioBase from '@/servicios/ServicioBase.ts';
-import type { Galpon } from '@/servicios/modelos.ts';
+import type { Inventario } from '@/servicios/modelos.ts';
 import { onMounted, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
@@ -10,56 +10,56 @@ import { Button } from 'primevue';
 const confirm = useConfirm();
 const router = useRouter();
 
-const galpones = ref<Galpon[]>([]);
+const galpones = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Galpon>({ $id: '', nombre: '', estantes: [] });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null, producto: null, cantidad: null });
 const esNuevo = ref(false);
 
 onMounted(async () => {
-  galpones.value = await ServicioBase.ObtenerTodos<Galpon>('galpones');
+  galpones.value = await ServicioBase.ObtenerConFiltro<Inventario>('inventario', 'padre', null);
 })
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', estantes: [] };
+  itemEdicion.value = { $id: '', actual: '', padre: null, producto: null, cantidad: null };
   dialogVisible.value = true;
 }
 
 async function Guardar() {
   if (esNuevo.value) {
-    await ServicioBase.Crear('galpones', itemEdicion.value);
+    await ServicioBase.Crear('inventario', itemEdicion.value);
     galpones.value.push({ ...itemEdicion.value });
   } else {
     const indice = galpones.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
-      await ServicioBase.Actualizar('galpones', itemEdicion.value);
+      await ServicioBase.Actualizar('inventario', itemEdicion.value);
       galpones.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
-function Ver(item: Galpon) {
-  router.push({ name: 'Galpón', params: { id: item.$id } });
+function Ver(item: Inventario) {
+  router.push({ name: 'Galpón', params: { id: item.actual } });
 }
 
-function Editar(item: Galpon) {
+function Editar(item: Inventario) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
   dialogVisible.value = true;
 }
 
-function Quitar(item: Galpon): void {
+function Quitar(item: Inventario): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar el Galpón: ${item.nombre} ?`,
+    message: `¿Estás seguro de eliminar el Galpón: ${item.actual} ?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: () => {
       const indice = galpones.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        ServicioBase.Eliminar('galpones', item.$id).then(() => {
+        ServicioBase.Eliminar('inventario', item.$id).then(() => {
           galpones.value.splice(indice, 1);
         });
       }
@@ -81,7 +81,7 @@ function Quitar(item: Galpon): void {
         <Card v-for="item in slotProps.items" :key="item.$id" class="w-2xs">
           <template #content>
             <div class="flex justify-between">
-              <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.nombre" @click="Ver(item)" />
+              <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
               <div>
                 <Button icon="pi pi-pen-to-square" severity="success" class="mr-1" variant="text" @click="Editar(item)" />
                 <Button icon="pi pi-trash" severity="danger" variant="text" @click="Quitar(item)" />
@@ -94,10 +94,10 @@ function Quitar(item: Galpon): void {
   </DataView>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
-    :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
+    :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Nombre</label>
-      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" />
+      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" />
     </FloatLabel>
   </DialogoEdicion>
 </template>

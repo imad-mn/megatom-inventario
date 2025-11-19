@@ -96,8 +96,9 @@ function Quitar(item: Producto): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar: "${item.nombre}"?`,
-    acceptClass: 'p-button-danger',
+    acceptClass: 'p-button-danger p-button-outlined',
     acceptIcon: 'pi pi-trash',
+    rejectClass: 'p-button-secondary p-button-outlined',
     accept: () => {
       const indice = productos.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
