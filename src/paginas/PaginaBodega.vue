@@ -72,13 +72,13 @@ function Quitar(item: Inventario): void {
   <div class="flex  justify-between items-center mb-3">
     <div></div>
     <div class="text-2xl">BODEGA</div>
-    <Button label="Agregar Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
+    <Button label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
   </div>
 
   <DataView :value="galpones">
     <template #list="slotProps">
       <div class="flex flex-wrap gap-3">
-        <Card v-for="item in slotProps.items" :key="item.$id" class="w-2xs">
+        <Card v-for="item in slotProps.items" :key="item.$id" class="w-full md:w-2xs">
           <template #content>
             <div class="flex justify-between">
               <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
@@ -97,7 +97,7 @@ function Quitar(item: Inventario): void {
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Nombre</label>
-      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" />
+      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" />
     </FloatLabel>
   </DialogoEdicion>
 </template>

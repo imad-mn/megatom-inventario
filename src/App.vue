@@ -19,6 +19,11 @@ const menuItems = ref<MenuItem[]>([
     command: () => router.push('/productos')
   },
   {
+    label: 'Movimientos',
+    icon: PrimeIcons.ARROW_RIGHT_ARROW_LEFT,
+    command: () => router.push('/movimientos')
+  },
+  {
     label: 'Listas',
     icon: PrimeIcons.LIST,
     command: () => router.push('/listas')

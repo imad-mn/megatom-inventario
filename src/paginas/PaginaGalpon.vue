@@ -67,16 +67,16 @@ function Quitar(item: Inventario): void {
 </script>
 
 <template>
-  <div class="flex  justify-between items-center mb-3">
-    <Button label="Ir a Bodega" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push('/bodega')" />
-    <div class="text-2xl">GALPÓN {{$route.params.id}}</div>
-    <Button label="Agregar Estante" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
+  <div class="flex justify-between items-center mb-3">
+    <Button label="Bodega" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push('/bodega')" />
+    <div class="text-xl">GALPÓN {{$route.params.id}}</div>
+    <Button label="Estante" icon="pi pi-plus" class="w-auto" severity="info" variant="outlined" @click="Agregar" />
   </div>
 
   <DataView :value="estantes">
     <template #list="slotProps">
       <div class="flex flex-wrap gap-3">
-        <Card v-for="item in slotProps.items" :key="item.$id" class="w-2xs">
+        <Card v-for="item in slotProps.items" :key="item.$id" class="w-full md:w-2xs">
           <template #content>
             <div class="flex justify-between">
               <Button class="text-lg" icon="pi pi-server" variant="text" :label="'Estante ' + item.actual" @click="Ver(item)" />
