@@ -1,33 +1,33 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
-import type { IdNombre } from '@/servicios/modelos.ts';
+import type { Lista, TipoLista } from '@/servicios/modelos.ts';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
-import * as ServicioBase from '@/servicios/ServicioBase.ts';
+import * as TablesDbService from '@/servicios/TablesDbService';
 import DialogoEdicion from './DialogoEdicion.vue';
 
 interface ListaEditableProps {
-  nombreTabla: string;
+  tipo: TipoLista;
 }
 const props = defineProps<ListaEditableProps>();
 const confirm = useConfirm();
 
-const lista = ref<IdNombre[]>([]);
+const lista = ref<Lista[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<IdNombre>({ $id: '', nombre: '' });
+const itemEdicion = ref<Lista>({ $id: '', tipo: props.tipo, nombre: '' });
 const esNuevo = ref(false);
 
 onMounted(async () => {
-  lista.value = await ServicioBase.ObtenerTodos<IdNombre>(props.nombreTabla.toLowerCase());
+  lista.value = await TablesDbService.ObtenerConFiltro<Lista>('listas', 'tipo', props.tipo);
 });
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '' };
+  itemEdicion.value = { $id: '', nombre: '', tipo: props.tipo };
   dialogVisible.value = true;
 }
 
-function Editar(item: IdNombre) {
+function Editar(item: Lista) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
   dialogVisible.value = true;
@@ -35,19 +35,19 @@ function Editar(item: IdNombre) {
 
 async function Guardar() {
   if (esNuevo.value) {
-    await ServicioBase.Crear(props.nombreTabla.toLowerCase(), itemEdicion.value);
+    await TablesDbService.Crear('listas', itemEdicion.value);
     lista.value.push({ ...itemEdicion.value });
   } else {
     const indice = lista.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
-      await ServicioBase.Actualizar(props.nombreTabla.toLowerCase(), itemEdicion.value);
+      await TablesDbService.Actualizar('listas', itemEdicion.value);
       lista.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
-function Quitar(item: IdNombre): void {
+function Quitar(item: Lista): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar: "${item.nombre}"?`,
@@ -57,7 +57,7 @@ function Quitar(item: IdNombre): void {
     accept: () => {
       const indice = lista.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        ServicioBase.Eliminar(props.nombreTabla.toLowerCase(), item.$id).then(() => {
+        TablesDbService.Eliminar('listas', item.$id).then(() => {
           lista.value.splice(indice, 1);
         });
       }
@@ -67,7 +67,7 @@ function Quitar(item: IdNombre): void {
 </script>
 
 <template>
-  <Panel :header="props.nombreTabla" class="w-full md:w-sm">
+  <Panel :header="props.tipo" class="w-full md:w-sm">
     <template #icons>
       <Button label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>

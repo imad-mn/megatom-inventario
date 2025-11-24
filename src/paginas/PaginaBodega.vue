@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import * as ServicioBase from '@/servicios/ServicioBase.ts';
+import * as ServicioBase from '@/servicios/TablesDbService';
 import type { Inventario } from '@/servicios/modelos.ts';
 import { onMounted, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';

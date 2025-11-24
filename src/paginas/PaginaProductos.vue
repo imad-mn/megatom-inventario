@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import * as ServicioBase from '@/servicios/ServicioBase.ts';
+import * as ServicioBase from '@/servicios/TablesDbService';
 import type { Fabricante, Grupo, Producto } from '@/servicios/modelos.ts';
 import { onMounted, ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
@@ -32,8 +32,8 @@ const imagenEdicion = ref<string>();
 const mostrarAdvertencia = ref(false);
 
 onMounted(async () => {
-  grupos.value = await ServicioBase.ObtenerTodos<Grupo>('grupos');
-  fabricantes.value = await ServicioBase.ObtenerTodos<Fabricante>('fabricantes');
+  grupos.value = await ServicioBase.ObtenerConFiltro<Grupo>('listas', 'tipo', 'grupos');
+  fabricantes.value = await ServicioBase.ObtenerConFiltro<Fabricante>('listas', 'tipo', 'fabricantes');
   productos.value = await ServicioBase.ObtenerTodos<Producto>('productos');
 
   grupoDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));;

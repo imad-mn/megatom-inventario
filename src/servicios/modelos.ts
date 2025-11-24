@@ -9,10 +9,6 @@ export type Producto = {
   imagenId: string | null;
 }
 
-export type Grupo = IdNombre & { }
-
-export type Fabricante = IdNombre & { }
-
 export type Inventario = {
   $id: string;
   producto: Producto | null;
@@ -24,12 +20,16 @@ export type Inventario = {
 export type Movimientos = {
   producto: Producto;
   cantidad: number;
-  almacenista: Almacenista;
+  almacenista: Lista;
 }
 
-export type Almacenista = IdNombre & { }
-
-export type IdNombre = {
+export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas';
+export type Lista = {
   $id: string;
+  tipo: TipoLista;
   nombre: string;
 }
+
+export type Grupo = Lista & { tipo: 'grupos' };
+export type Fabricante = Lista & { tipo: 'fabricantes' };
+export type Almacenista = Lista & { tipo: 'almacenistas' };
