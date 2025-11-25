@@ -77,7 +77,7 @@ export async function ObtenerContenidoEstante(estanteId: string): Promise<Invent
   try {
     const respuesta = await tablesDB.listRows<Inventario>({
       databaseId,
-      tableId: 'Inventario',
+      tableId: 'inventario',
       queries: [Query.startsWith('padre', estanteId)]
     });
     return respuesta.rows;

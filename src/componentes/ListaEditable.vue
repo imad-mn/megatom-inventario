@@ -67,18 +67,14 @@ function Quitar(item: Lista): void {
 </script>
 
 <template>
-  <Panel :header="props.tipo" class="w-full md:w-sm">
+  <Panel :header="props.tipo.charAt(0).toUpperCase() + props.tipo.substring(1)" class="w-full md:w-sm">
     <template #icons>
       <Button label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>
-    <DataView :value="lista" dataKey="id">
-      <template #list="slotProps">
-        <div v-for="item in slotProps.items" :key="item.id" class="flex items-center justify-between p-1 border-b-1 border-surface">
-          <div>{{ item.nombre }}</div>
-          <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
-        </div>
-      </template>
-    </DataView>
+    <div v-for="item in lista" :key="item.$id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
+      <div>{{ item.nombre }}</div>
+      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
+    </div>
   </Panel>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"

@@ -6,6 +6,7 @@ import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
 import { Button } from 'primevue';
+import EditarQuitar from '../componentes/EditarQuitar.vue';
 
 const confirm = useConfirm();
 const router = useRouter();
@@ -80,10 +81,7 @@ function Quitar(item: Inventario): void {
       <template #content>
         <div class="flex justify-between">
           <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
-          <div>
-            <Button icon="pi pi-pen-to-square" severity="success" class="mr-1" variant="text" @click="Editar(item)" />
-            <Button icon="pi pi-trash" severity="danger" variant="text" @click="Quitar(item)" />
-          </div>
+          <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
         </div>
       </template>
     </Card>
@@ -92,7 +90,7 @@ function Quitar(item: Inventario): void {
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
-      <label for="nombre">Nombre</label>
+      <label for="nombre">Galpón</label>
       <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" />
     </FloatLabel>
   </DialogoEdicion>
