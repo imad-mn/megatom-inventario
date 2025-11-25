@@ -1,5 +1,6 @@
 import { Query, type Models } from 'appwrite';
 import { tablesDB, ID } from './appwrite.ts';
+import type { Inventario, Lista } from './modelos.ts';
 
 const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 
@@ -55,4 +56,33 @@ export async function Eliminar(tableId: string, id: string): Promise<void> {
     tableId,
     rowId: id,
   });
+}
+
+
+export async function ObtenerLista(tipo: string): Promise<Lista[]> {
+  try {
+    const respuesta = await tablesDB.listRows({
+      databaseId,
+      tableId: 'listas',
+      queries: [Query.equal('tipo', tipo)]
+    });
+    return respuesta.rows as Lista[];
+  } catch (error) {
+    console.error(`Error obteniendo la lista de ${tipo}:`, error);
+    return [];
+  }
+}
+
+export async function ObtenerContenidoEstante(estanteId: string): Promise<Inventario[]> {
+  try {
+    const respuesta = await tablesDB.listRows<Inventario>({
+      databaseId,
+      tableId: 'Inventario',
+      queries: [Query.startsWith('padre', estanteId)]
+    });
+    return respuesta.rows;
+  } catch (error) {
+    console.error(`Error en ObtenerContenidoEstante() ${estanteId}:`, error);
+    return [];
+  }
 }

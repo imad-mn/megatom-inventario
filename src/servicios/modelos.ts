@@ -29,7 +29,3 @@ export type Lista = {
   tipo: TipoLista;
   nombre: string;
 }
-
-export type Grupo = Lista & { tipo: 'grupos' };
-export type Fabricante = Lista & { tipo: 'fabricantes' };
-export type Almacenista = Lista & { tipo: 'almacenistas' };

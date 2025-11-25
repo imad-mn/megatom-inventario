@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as ServicioBase from '@/servicios/TablesDbService';
-import type { Fabricante, Grupo, Producto } from '@/servicios/modelos.ts';
+import type { Lista, Producto } from '@/servicios/modelos.ts';
 import { onMounted, ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
@@ -10,13 +10,13 @@ import * as StorageService from '@/servicios/StorageService.ts';
 
 const confirm = useConfirm();
 
-const grupos = ref<Grupo[]>([]);
-const fabricantes = ref<Fabricante[]>([]);
+const grupos = ref<Lista[]>([]);
+const fabricantes = ref<Lista[]>([]);
 const productos = ref<Producto[]>([]);
 const productosFiltrados = ref<Producto[]>([]);
 
-const filtroGrupo = ref<Grupo | null>(null);
-const filtroFabricante = ref<Fabricante | null>(null);
+const filtroGrupo = ref<Lista | null>(null);
+const filtroFabricante = ref<Lista | null>(null);
 const filtroNombre = ref<string>('');
 
 const dialogVisible = ref(false);
@@ -32,8 +32,8 @@ const imagenEdicion = ref<string>();
 const mostrarAdvertencia = ref(false);
 
 onMounted(async () => {
-  grupos.value = await ServicioBase.ObtenerConFiltro<Grupo>('listas', 'tipo', 'grupos');
-  fabricantes.value = await ServicioBase.ObtenerConFiltro<Fabricante>('listas', 'tipo', 'fabricantes');
+  grupos.value = await ServicioBase.ObtenerLista('grupos');
+  fabricantes.value = await ServicioBase.ObtenerLista('fabricantes');
   productos.value = await ServicioBase.ObtenerTodos<Producto>('productos');
 
   grupoDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));;

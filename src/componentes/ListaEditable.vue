@@ -18,7 +18,7 @@ const itemEdicion = ref<Lista>({ $id: '', tipo: props.tipo, nombre: '' });
 const esNuevo = ref(false);
 
 onMounted(async () => {
-  lista.value = await TablesDbService.ObtenerConFiltro<Lista>('listas', 'tipo', props.tipo);
+  lista.value = await TablesDbService.ObtenerLista(props.tipo);
 });
 
 function Agregar() {

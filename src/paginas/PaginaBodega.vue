@@ -75,23 +75,19 @@ function Quitar(item: Inventario): void {
     <Button label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
   </div>
 
-  <DataView :value="galpones">
-    <template #list="slotProps">
-      <div class="flex flex-wrap gap-3">
-        <Card v-for="item in slotProps.items" :key="item.$id" class="w-full md:w-2xs">
-          <template #content>
-            <div class="flex justify-between">
-              <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
-              <div>
-                <Button icon="pi pi-pen-to-square" severity="success" class="mr-1" variant="text" @click="Editar(item)" />
-                <Button icon="pi pi-trash" severity="danger" variant="text" @click="Quitar(item)" />
-              </div>
-            </div>
-          </template>
-        </Card>
-      </div>
-    </template>
-  </DataView>
+  <div class="flex flex-wrap gap-3">
+    <Card v-for="item in galpones" :key="item.$id" class="w-full md:w-2xs">
+      <template #content>
+        <div class="flex justify-between">
+          <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
+          <div>
+            <Button icon="pi pi-pen-to-square" severity="success" class="mr-1" variant="text" @click="Editar(item)" />
+            <Button icon="pi pi-trash" severity="danger" variant="text" @click="Quitar(item)" />
+          </div>
+        </div>
+      </template>
+    </Card>
+  </div>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
