@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import * as ServicioBase from '@/servicios/TablesDbService';
+import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Inventario } from '@/servicios/modelos.ts';
 import { onMounted, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
@@ -17,7 +17,7 @@ const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null, producto
 const esNuevo = ref(false);
 
 onMounted(async () => {
-  galpones.value = await ServicioBase.ObtenerConFiltro<Inventario>('inventario', 'padre', null);
+  galpones.value = await TablesDbService.ObtenerBodega(null);
 })
 
 function Agregar() {
@@ -28,12 +28,12 @@ function Agregar() {
 
 async function Guardar() {
   if (esNuevo.value) {
-    await ServicioBase.Crear('inventario', itemEdicion.value);
+    await TablesDbService.Crear('inventario', itemEdicion.value);
     galpones.value.push({ ...itemEdicion.value });
   } else {
     const indice = galpones.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
-      await ServicioBase.Actualizar('inventario', itemEdicion.value);
+      await TablesDbService.Actualizar('inventario', itemEdicion.value);
       galpones.value[indice] = { ...itemEdicion.value };
     }
   }
@@ -60,7 +60,7 @@ function Quitar(item: Inventario): void {
     accept: () => {
       const indice = galpones.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        ServicioBase.Eliminar('inventario', item.$id).then(() => {
+        TablesDbService.Eliminar('inventario', item.$id).then(() => {
           galpones.value.splice(indice, 1);
         });
       }

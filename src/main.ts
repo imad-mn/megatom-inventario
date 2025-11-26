@@ -27,6 +27,7 @@ import FileUpload from 'primevue/fileupload';
 import FloatLabel from 'primevue/floatlabel';
 import Card from 'primevue/card';
 import Message from 'primevue/message';
+import Fieldset from 'primevue/fieldset';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -71,5 +72,6 @@ app.component('FileUpload', FileUpload);
 app.component('FloatLabel', FloatLabel);
 app.component('Card', Card);
 app.component('Message', Message);
+app.component('Fieldset', Fieldset);
 
 app.mount('#app')

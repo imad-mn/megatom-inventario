@@ -17,7 +17,7 @@ export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
   }
 }
 
-export async function ObtenerConFiltro<T>(tableId: string, columna: string, valor: string | null): Promise<T[]> {
+async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: string | null): Promise<T[]> {
   try {
     const respuesta = await tablesDB.listRows({
       databaseId,
@@ -29,6 +29,15 @@ export async function ObtenerConFiltro<T>(tableId: string, columna: string, valo
     console.error(`Error obteniendo datos de la tabla ${tableId} con filtro ${columna}=${valor}:`, error);
     return [];
   }
+}
+
+async function ObtenerFiltroStartWith<T>(tableId: string, columna: string, valor: string): Promise<T[]> {
+  const respuesta = await tablesDB.listRows({
+    databaseId,
+    tableId,
+    queries: [Query.startsWith(columna, valor)]
+  });
+  return respuesta.rows as T[];
 }
 
 export async function Crear(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
@@ -58,31 +67,14 @@ export async function Eliminar(tableId: string, id: string): Promise<void> {
   });
 }
 
-
 export async function ObtenerLista(tipo: string): Promise<Lista[]> {
-  try {
-    const respuesta = await tablesDB.listRows({
-      databaseId,
-      tableId: 'listas',
-      queries: [Query.equal('tipo', tipo)]
-    });
-    return respuesta.rows as Lista[];
-  } catch (error) {
-    console.error(`Error obteniendo la lista de ${tipo}:`, error);
-    return [];
-  }
+  return ObtenerFiltroEqual<Lista>('listas', 'tipo', tipo);
 }
 
-export async function ObtenerContenidoEstante(estanteId: string): Promise<Inventario[]> {
-  try {
-    const respuesta = await tablesDB.listRows<Inventario>({
-      databaseId,
-      tableId: 'inventario',
-      queries: [Query.startsWith('padre', estanteId)]
-    });
-    return respuesta.rows;
-  } catch (error) {
-    console.error(`Error en ObtenerContenidoEstante() ${estanteId}:`, error);
-    return [];
-  }
+export async function ObtenerBodega(padre: string | null): Promise<Inventario[]> {
+  return ObtenerFiltroEqual<Inventario>('inventario', 'padre', padre);
+}
+
+export function ObtenerContenidoEstante(estanteId: string): Promise<Inventario[]> {
+  return ObtenerFiltroStartWith<Inventario>('inventario', 'padre', estanteId);
 }
