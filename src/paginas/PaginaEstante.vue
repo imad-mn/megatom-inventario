@@ -49,10 +49,10 @@ async function Guardar() {
   dialogVisible.value = false;
 }
 
-function Quitar(item: Inventario): void {
+function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar la Sección: ${item.actual} ?`,
+    message: `¿Estás seguro de eliminar ${tipoEdicionParam}: ${item.actual} ?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
@@ -80,10 +80,16 @@ function Quitar(item: Inventario): void {
         <template #icons>
           <div class="flex gap-1">
             <Button label="Cajón" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${estanteNombre}-${seccion.actual}`, 'Cajón')" />
-            <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion)" />
+            <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
           </div>
         </template>
-        <Fieldset v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id" :legend="'Cajón ' + cajon.actual">
+        <Fieldset v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id">
+           <template #legend>
+            <div class="flex gap-1 items-center">
+              <span>Cajón {{ cajon.actual }}</span>
+              <EditarQuitar @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+            </div>
+           </template>
         </Fieldset>
       </Panel>
     </div>
