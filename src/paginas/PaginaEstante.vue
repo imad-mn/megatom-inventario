@@ -78,16 +78,16 @@ function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void
     <div v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre)" :key="seccion.$id">
       <Panel :header="'Sección ' + seccion.actual" class="w-full md:w-xs">
         <template #icons>
-          <div class="flex gap-1">
+          <div class="flex">
             <Button label="Cajón" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${estanteNombre}-${seccion.actual}`, 'Cajón')" />
             <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
           </div>
         </template>
         <Fieldset v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id">
            <template #legend>
-            <div class="flex gap-1 items-center">
+            <div class="flex gap-2 items-center">
               <span>Cajón {{ cajon.actual }}</span>
-              <EditarQuitar @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+              <EditarQuitar tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
             </div>
            </template>
         </Fieldset>
@@ -99,7 +99,7 @@ function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">{{ tipoEdicion }}</label>
-      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" />
+      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
     </FloatLabel>
   </DialogoEdicion>
 </template>

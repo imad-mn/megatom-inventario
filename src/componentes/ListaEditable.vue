@@ -81,7 +81,7 @@ function Quitar(item: Lista): void {
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Nombre</label>
-      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre"/>
+      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre"  @keyup.enter="Guardar" />
     </FloatLabel>
   </DialogoEdicion>
 </template>
