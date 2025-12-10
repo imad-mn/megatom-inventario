@@ -77,7 +77,7 @@ function Quitar(item: Lista): void {
     </div>
   </Panel>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
+  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="props.tipo"
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Nombre</label>

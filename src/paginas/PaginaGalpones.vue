@@ -13,7 +13,7 @@ const router = useRouter();
 
 const galpones = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null, producto: null, cantidad: null });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null });
 const esNuevo = ref(false);
 
 onMounted(async () => {
@@ -22,7 +22,7 @@ onMounted(async () => {
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: null, producto: null, cantidad: null };
+  itemEdicion.value = { $id: '', actual: '', padre: null };
   dialogVisible.value = true;
 }
 
@@ -72,7 +72,7 @@ function Quitar(item: Inventario): void {
 <template>
   <div class="flex  justify-between items-center mb-3">
     <div></div>
-    <div class="text-2xl">BODEGA</div>
+    <div class="text-xl">GALPONES</div>
     <Button label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
   </div>
 
@@ -87,7 +87,7 @@ function Quitar(item: Inventario): void {
     </Card>
   </div>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
+  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Galpón"
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Galpón</label>

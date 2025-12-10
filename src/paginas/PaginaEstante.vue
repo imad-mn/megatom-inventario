@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Inventario } from '@/servicios/modelos.ts';
-import { onMounted, ref } from 'vue';
+import type { Cantidades, Inventario, Lista, Producto } from '@/servicios/modelos.ts';
+import { onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
@@ -13,17 +13,34 @@ const confirm = useConfirm();
 const estanteNombre = router.currentRoute.value.params.estante as string;
 const contenidoEstante = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estanteNombre, producto: null, cantidad: null });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estanteNombre });
 const esNuevo = ref(false);
 const tipoEdicion = ref<'Sección' | 'Cajón' | ''>('');
 
+const mostrarDialogoProducto = ref(false);
+const grupos = ref<Lista[]>([]);
+const grupoSeleccionado = ref<string>('');
+const productosDelGrupo = ref<Producto[]>([]);
+const productoSeleccionado = ref<Producto | null>(null);
+const cantidad = ref<number>(1);
+const cajonSeleccionado = ref<Inventario | null>(null);
+const productosEnCajones = ref<Cantidades[]>([]);
+
 onMounted(async () => {
   contenidoEstante.value = await TablesDbService.ObtenerContenidoEstante(estanteNombre);
+  grupos.value = await TablesDbService.ObtenerLista('grupos');
+  productosEnCajones.value = await TablesDbService.ObtenerCantidadesPorCajones(contenidoEstante.value.map(x => x.$id));
 })
+
+watchEffect(async () => {
+  if (grupoSeleccionado.value) {
+    productosDelGrupo.value = await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value);
+  }
+});
 
 function Agregar(padre: string, tipoEdicionParam: 'Sección' | 'Cajón') {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: padre, producto: null, cantidad: null };
+  itemEdicion.value = { $id: '', actual: '', padre: padre };
   dialogVisible.value = true;
   tipoEdicion.value = tipoEdicionParam;
 }
@@ -65,6 +82,28 @@ function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void
     }
   });
 }
+
+function AgregarProductoACajon(cajon: Inventario) {
+  mostrarDialogoProducto.value = true;
+  grupoSeleccionado.value = '';
+  productoSeleccionado.value = null;
+  cantidad.value = 1;
+  cajonSeleccionado.value = cajon;
+}
+
+async function GuardarProducto() {
+  if (productoSeleccionado.value == null || cajonSeleccionado.value == null || cantidad.value <= 0)
+    return;
+  const item: Cantidades = {
+    $id: '',
+    producto: productoSeleccionado.value.$id,
+    cantidad: cantidad.value,
+    cajon: cajonSeleccionado.value.$id
+  };
+  await TablesDbService.Crear('cantidades', item);
+  productosEnCajones.value.push({ ...item, producto: productoSeleccionado.value });
+  mostrarDialogoProducto.value = false;
+}
 </script>
 
 <template>
@@ -85,21 +124,37 @@ function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void
         </template>
         <Fieldset v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id">
            <template #legend>
-            <div class="flex gap-2 items-center">
-              <span>Cajón {{ cajon.actual }}</span>
+            <div class="flex items-center">
+              <span class="mr-2">Cajón {{ cajon.actual }}</span>
               <EditarQuitar tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+              <Button icon="pi pi-plus-circle" severity="info" variant="text" size="small" @click="AgregarProductoACajon(cajon)" />
             </div>
            </template>
+            <div v-for="item in productosEnCajones.filter(x => x.cajon == cajon.$id)" :key="item.$id">
+              <span>{{ item.cantidad }} x {{ (item.producto as Producto).nombre }}</span>
+            </div>
         </Fieldset>
       </Panel>
     </div>
   </div>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
+  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="tipoEdicion"
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">{{ tipoEdicion }}</label>
       <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
     </FloatLabel>
+  </DialogoEdicion>
+
+  <DialogoEdicion v-model:mostrar="mostrarDialogoProducto" :esAgregar="true" :clickAceptar="GuardarProducto" nombre-objeto="Producto"
+    :desabilitarAceptar="productoSeleccionado == null || cantidad <= 0">
+    <label for="grupo">Grupo</label>
+    <Select id="grupo" v-model="grupoSeleccionado" :options="grupos" optionValue="$id" optionLabel="nombre" class="w-full mb-3" />
+    <label for="productos">Productos</label>
+    <Listbox id="productos" v-model="productoSeleccionado" :options="productosDelGrupo" :optionLabel="(data: Producto) => (data.codigo ?? '') + ' - ' + data.nombre" class="w-full" />
+    <div class="mt-3 flex gap-3 items-center">
+      <label for="cantidad">Cantidad</label>
+      <InputNumber id="cantidad" v-model="cantidad" :min="1" class="w-full" />
+    </div>
   </DialogoEdicion>
 </template>

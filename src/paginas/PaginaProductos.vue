@@ -172,7 +172,7 @@ function RevisarNombreUnico() {
     </template>
   </DataView>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar"
+  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Producto"
     :desabilitarAceptar="itemEdicion?.nombre?.trim() === '' || itemEdicion?.grupo == undefined || itemEdicion?.fabricante === undefined || mostrarAdvertencia">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on">

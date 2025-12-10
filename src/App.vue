@@ -9,27 +9,27 @@ const route = useRoute();
 
 const menuItems = ref<MenuItem[]>([
   {
-    label: 'Bodega',
+    label: 'GALPONES',
     icon: PrimeIcons.WAREHOUSE,
-    command: () => router.push('/bodega')
+    command: () => router.push('/galpones')
   },
   {
-    label: 'Productos',
+    label: 'PRODUCTOS',
     icon: PrimeIcons.HAMMER,
     command: () => router.push('/productos')
   },
   {
-    label: 'Movimientos',
+    label: 'MOVIMIENTOS',
     icon: PrimeIcons.ARROW_RIGHT_ARROW_LEFT,
     command: () => router.push('/movimientos')
   },
   {
-    label: 'Listas',
+    label: 'DATA',
     icon: PrimeIcons.LIST,
     command: () => router.push('/listas')
   },
   {
-    label: 'Usuarios',
+    label: 'USUARIOS',
     icon: PrimeIcons.USERS,
     command: () => router.push('/usuarios')
   },

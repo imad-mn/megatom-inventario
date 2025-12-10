@@ -1,6 +1,6 @@
 import { Query, type Models } from 'appwrite';
 import { tablesDB, ID } from './appwrite.ts';
-import type { Inventario, Lista } from './modelos.ts';
+import type { Cantidades, Inventario, Lista, Producto } from './modelos.ts';
 
 const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 
@@ -17,27 +17,17 @@ export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
   }
 }
 
-async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: string | null): Promise<T[]> {
-  try {
-    const respuesta = await tablesDB.listRows({
-      databaseId,
-      tableId,
-      queries: [valor == null ? Query.isNull(columna) : Query.equal(columna, valor)]
-    });
-    return respuesta.rows as T[];
-  } catch (error) {
-    console.error(`Error obteniendo datos de la tabla ${tableId} con filtro ${columna}=${valor}:`, error);
-    return [];
-  }
-}
-
-async function ObtenerFiltroStartWith<T>(tableId: string, columna: string, valor: string): Promise<T[]> {
+async function ObtenerConQuery<T>(tableId: string, queries: string[]): Promise<T[]> {
   const respuesta = await tablesDB.listRows({
     databaseId,
     tableId,
-    queries: [Query.startsWith(columna, valor)]
+    queries: queries
   });
   return respuesta.rows as T[];
+}
+
+async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: string | string[] | null): Promise<T[]> {
+  return ObtenerConQuery<T>(tableId, [valor == null ? Query.isNull(columna) : Query.equal(columna, valor)]);
 }
 
 export async function Crear(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
@@ -76,5 +66,13 @@ export async function ObtenerBodega(padre: string | null): Promise<Inventario[]>
 }
 
 export function ObtenerContenidoEstante(estanteId: string): Promise<Inventario[]> {
-  return ObtenerFiltroStartWith<Inventario>('inventario', 'padre', estanteId);
+  return ObtenerConQuery<Inventario>('inventario', [Query.startsWith('padre', estanteId)]);
+}
+
+export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
+  return ObtenerFiltroEqual<Producto>('productos', 'grupo', grupoId);
+}
+
+export function ObtenerCantidadesPorCajones(cajonIds: string[]): Promise<Cantidades[]> {
+  return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonIds), Query.select(['*', 'producto.*'])]);
 }

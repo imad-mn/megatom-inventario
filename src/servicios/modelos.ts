@@ -11,16 +11,25 @@ export type Producto = {
 
 export type Inventario = {
   $id: string;
-  producto: Producto | null;
-  cantidad: number | null;
   actual: string;
   padre: string | null;
 }
 
+export type Cantidades = {
+  $id: string;
+  producto: string | Producto;
+  cantidad: number;
+  cajon: string;
+}
+
 export type Movimientos = {
+  $id: string;
   producto: Producto;
   cantidad: number;
   almacenista: Lista;
+  justificacion: string | null;
+  creadoPor: string;
+  $createdAt: Date;
 }
 
 export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas';

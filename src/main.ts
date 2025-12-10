@@ -28,6 +28,7 @@ import FloatLabel from 'primevue/floatlabel';
 import Card from 'primevue/card';
 import Message from 'primevue/message';
 import Fieldset from 'primevue/fieldset';
+import Listbox from 'primevue/listbox';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -73,5 +74,6 @@ app.component('FloatLabel', FloatLabel);
 app.component('Card', Card);
 app.component('Message', Message);
 app.component('Fieldset', Fieldset);
+app.component('Listbox', Listbox);
 
 app.mount('#app')
