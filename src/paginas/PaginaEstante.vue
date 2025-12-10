@@ -34,7 +34,7 @@ onMounted(async () => {
 
 watchEffect(async () => {
   if (grupoSeleccionado.value) {
-    productosDelGrupo.value = await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value);
+    productosDelGrupo.value = (await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value)).sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
 });
 
@@ -85,7 +85,6 @@ function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void
 
 function AgregarProductoACajon(cajon: Inventario) {
   mostrarDialogoProducto.value = true;
-  grupoSeleccionado.value = '';
   productoSeleccionado.value = null;
   cantidad.value = 1;
   cajonSeleccionado.value = cajon;
@@ -123,16 +122,18 @@ async function GuardarProducto() {
           </div>
         </template>
         <Fieldset v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id">
-           <template #legend>
-            <div class="flex items-center">
-              <span class="mr-2">Cajón {{ cajon.actual }}</span>
-              <EditarQuitar tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
-              <Button icon="pi pi-plus-circle" severity="info" variant="text" size="small" @click="AgregarProductoACajon(cajon)" />
-            </div>
-           </template>
-            <div v-for="item in productosEnCajones.filter(x => x.cajon == cajon.$id)" :key="item.$id">
-              <span>{{ item.cantidad }} x {{ (item.producto as Producto).nombre }}</span>
-            </div>
+          <template #legend>
+          <div class="flex items-center">
+            <span class="mr-2">Cajón {{ cajon.actual }}</span>
+            <EditarQuitar tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+            <Button icon="pi pi-plus-circle" severity="info" variant="text" size="small" @click="AgregarProductoACajon(cajon)" />
+          </div>
+          </template>
+          <ul style="list-style-type: square;" class="ml-4">
+            <li v-for="item in productosEnCajones.filter(x => x.cajon == cajon.$id)" :key="item.$id">
+              {{ item.cantidad }} x {{ (item.producto as Producto).nombre }}
+            </li>
+          </ul>
         </Fieldset>
       </Panel>
     </div>
@@ -147,11 +148,11 @@ async function GuardarProducto() {
   </DialogoEdicion>
 
   <DialogoEdicion v-model:mostrar="mostrarDialogoProducto" :esAgregar="true" :clickAceptar="GuardarProducto" nombre-objeto="Producto"
-    :desabilitarAceptar="productoSeleccionado == null || cantidad <= 0">
+    :desabilitarAceptar="productoSeleccionado == null || cantidad <= 0" class="w-sm md:w-md">
     <label for="grupo">Grupo</label>
     <Select id="grupo" v-model="grupoSeleccionado" :options="grupos" optionValue="$id" optionLabel="nombre" class="w-full mb-3" />
     <label for="productos">Productos</label>
-    <Listbox id="productos" v-model="productoSeleccionado" :options="productosDelGrupo" :optionLabel="(data: Producto) => (data.codigo ?? '') + ' - ' + data.nombre" class="w-full" />
+    <Listbox id="productos" v-model="productoSeleccionado" :options="productosDelGrupo" :optionLabel="(data: Producto) => data.nombre + ' - ' + (data.codigo ?? '')" class="w-full" />
     <div class="mt-3 flex gap-3 items-center">
       <label for="cantidad">Cantidad</label>
       <InputNumber id="cantidad" v-model="cantidad" :min="1" class="w-full" />

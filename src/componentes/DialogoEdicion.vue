@@ -4,13 +4,14 @@ interface DialogoEdicionProps {
   clickAceptar(): void
   desabilitarAceptar: boolean,
   nombreObjeto: string,
+  class?: string,
 }
-defineProps<DialogoEdicionProps>();
+const props = defineProps<DialogoEdicionProps>();
 const mostrar = defineModel<boolean>('mostrar')
 </script>
 
 <template>
-  <Dialog v-model:visible="mostrar" :header="($props.esAgregar ? 'Agregar ' : 'Editar ') + $props.nombreObjeto" :modal="true" class="w-xs md:w-sm">
+  <Dialog v-model:visible="mostrar" :header="($props.esAgregar ? 'Agregar ' : 'Editar ') + $props.nombreObjeto" :modal="true" :class="props.class ?? 'w-xs md:w-sm'">
     <slot></slot>
     <template #footer>
       <Button label="Cancelar" icon="pi pi-times" @click="mostrar = false" severity="secondary" variant="outlined" />

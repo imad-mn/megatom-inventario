@@ -15,7 +15,7 @@
 
 /* Todas las etiquetas en negrita*/
 label {
-  font-weight: bold;
+  font-weight:600;
 }
 
 .p-menubar-end {
