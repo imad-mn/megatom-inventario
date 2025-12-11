@@ -8,9 +8,14 @@
 
   --p-card-title-font-size: 1rem;
   --p-card-body-padding: 1rem;
+
   --p-panel-header-padding: 0.5rem 1rem;
   --p-panel-content-padding: 0 0.5rem 0.5rem 0.5rem;
   --p-panel-header-border-width: 0 0 1px 0;
+  --p-panel-header-background: var(--p-surface-200);
+
+  --p-fieldset-background: var(--p-amber-50);
+  --p-fieldset-legend-background: var(--p-amber-50);
 }
 
 /* Todas las etiquetas en negrita*/

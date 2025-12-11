@@ -39,6 +39,10 @@ const menuItems = ref<MenuItem[]>([
 
 <template>
   <Menubar :model="menuItems" class="mb-3!" breakpoint="768px">
+    <template #start>
+      <img src="/public/48.png" alt="Megatom Logo" class="h-8 mr-2" />
+      <div class="text-lg">Megatom Inventario</div>
+    </template>
     <template #end>
       <div class="md:hidden text-lg">{{ route.name }}</div>
     </template>

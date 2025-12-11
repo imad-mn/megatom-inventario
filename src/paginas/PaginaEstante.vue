@@ -114,7 +114,7 @@ async function GuardarProducto() {
 
   <div class="flex flex-wrap gap-3">
     <div v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre)" :key="seccion.$id">
-      <Panel :header="'Sección ' + seccion.actual" class="w-full md:w-xs">
+      <Panel :header="'Sección ' + seccion.actual" class="w-full md:w-sm">
         <template #icons>
           <div class="flex">
             <Button label="Cajón" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${estanteNombre}-${seccion.actual}`, 'Cajón')" />
@@ -134,6 +134,12 @@ async function GuardarProducto() {
               {{ item.cantidad }} x {{ (item.producto as Producto).nombre }}
             </li>
           </ul>
+          <div v-if="productosEnCajones.filter(x => x.cajon == cajon.$id).length === 0" class="italic text-gray-500">
+            No hay productos en este cajón.
+          </div>
+          <div v-else class="font-bold mt-2">
+            Peso total: {{ productosEnCajones.filter(x => x.cajon == cajon.$id).reduce((sum, item) => sum + item.cantidad * ((item.producto as Producto).pesoUnitario ?? 0), 0) }} Kg.
+          </div>
         </Fieldset>
       </Panel>
     </div>
