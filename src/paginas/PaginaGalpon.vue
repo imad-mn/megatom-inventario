@@ -82,7 +82,7 @@ function Quitar(item: Inventario): void {
     <div class="text-xl">GALPÓN {{$route.params.id}}</div>
     <Button label="Estante" icon="pi pi-plus" class="w-auto" severity="info" variant="outlined" @click="Agregar" />
   </div>
-
+  <div v-if="estantes.length === 0" class="italic text-muted-color">No hay estantes en este Galpón</div>
   <div class="flex flex-wrap gap-3">
     <Card v-for="item in estantes" :key="item.$id" class="w-full md:w-2xs">
       <template #content>

@@ -112,6 +112,8 @@ async function GuardarProducto() {
     <Button label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estanteNombre, 'Sección')" />
   </div>
 
+  <div v-if="contenidoEstante.length === 0" class="italic text-muted-color">No hay secciones en este Estante</div>
+
   <div id="secciones" class="grid grid-cols-3 gap-3">
     <div v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre)" :key="seccion.$id">
       <Panel :header="'Sección ' + seccion.actual">
@@ -121,6 +123,11 @@ async function GuardarProducto() {
             <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
           </div>
         </template>
+
+        <div v-if="contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`).length === 0" class="italic text-muted-color m-2">
+          No hay cajones en esta sección.
+        </div>
+
         <Fieldset v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id">
           <template #legend>
             <div class="flex items-center">
@@ -134,14 +141,18 @@ async function GuardarProducto() {
           </div>
           <div v-else>
             <table class="w-full">
-              <tr>
-                <th>Cant.</th>
-                <th>Producto</th>
-              </tr>
-              <tr v-for="item in productosEnCajones.filter(x => x.cajon == cajon.$id).sort((a,b) => (a.producto as Producto).nombre.localeCompare((b.producto as Producto).nombre))" :key="item.$id">
-                <td class="text-center">{{ item.cantidad }}</td>
-                <td>{{ (item.producto as Producto).nombre }}</td>
-              </tr>
+              <thead>
+                <tr>
+                  <th>Cant.</th>
+                  <th>Producto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in productosEnCajones.filter(x => x.cajon == cajon.$id).sort((a,b) => (a.producto as Producto).nombre.localeCompare((b.producto as Producto).nombre))" :key="item.$id">
+                  <td class="text-center">{{ item.cantidad }}</td>
+                  <td>{{ (item.producto as Producto).nombre }}</td>
+                </tr>
+              </tbody>
             </table>
             <div class="mt-2">
               Peso total: {{ productosEnCajones.filter(x => x.cajon == cajon.$id).reduce((sum, item) => sum + item.cantidad * ((item.producto as Producto).pesoUnitario ?? 0), 0).toFixed(2) }} Kg.

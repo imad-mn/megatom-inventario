@@ -45,8 +45,12 @@ onMounted(async () => {
 <template>
   <Menubar :model="menuItems" class="mb-3!" breakpoint="768px">
     <template #start>
-      <img src="/public/48.png" alt="Megatom Logo" class="h-8 mr-2" />
-      <div class="text-lg">Megatom Inventario</div>
+      <RouterLink to="/">
+        <div class="flex items-center">
+          <img src="/48.png" alt="Megatom Logo" class="h-8 mr-2" />
+          <div class="text-lg">Megatom Inventario</div>
+        </div>
+      </RouterLink>
     </template>
     <template #end>
       <div class="md:hidden text-lg">{{ route.name }}</div>
