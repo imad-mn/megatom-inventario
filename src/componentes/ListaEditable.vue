@@ -18,7 +18,7 @@ const itemEdicion = ref<Lista>({ $id: '', tipo: props.tipo, nombre: '' });
 const esNuevo = ref(false);
 
 onMounted(async () => {
-  lista.value = await TablesDbService.ObtenerLista(props.tipo);
+  lista.value = TablesDbService.ObtenerLista(props.tipo);
 });
 
 function Agregar() {
@@ -37,11 +37,16 @@ async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('listas', itemEdicion.value);
     lista.value.push({ ...itemEdicion.value });
+    TablesDbService.GlobalStorage.Listas.push({ ...itemEdicion.value });
   } else {
     const indice = lista.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('listas', itemEdicion.value);
       lista.value[indice] = { ...itemEdicion.value };
+      const globalIndice = TablesDbService.GlobalStorage.Listas.findIndex(x => x.$id === itemEdicion.value.$id);
+      if (globalIndice >= 0) {
+        TablesDbService.GlobalStorage.Listas[globalIndice] = { ...itemEdicion.value };
+      }
     }
   }
   dialogVisible.value = false;
@@ -59,6 +64,8 @@ function Quitar(item: Lista): void {
       if (indice >= 0) {
         TablesDbService.Eliminar('listas', item.$id).then(() => {
           lista.value.splice(indice, 1);
+          const globalIndice = TablesDbService.GlobalStorage.Listas.findIndex(x => x.$id === item.$id);
+          TablesDbService.GlobalStorage.Listas.splice(globalIndice, 1);
         });
       }
     }

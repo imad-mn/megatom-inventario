@@ -11,11 +11,12 @@
 
   --p-panel-header-padding: 0.5rem 1rem;
   --p-panel-content-padding: 0 0.5rem 0.5rem 0.5rem;
+  /* --p-panel-background: var(--p-amber-50); */
   --p-panel-header-border-width: 0 0 1px 0;
   --p-panel-header-background: var(--p-surface-200);
 
-  --p-fieldset-background: var(--p-amber-50);
-  --p-fieldset-legend-background: var(--p-amber-50);
+  /* --p-fieldset-background: var(--p-amber-50);
+  --p-fieldset-legend-background: var(--p-amber-50); */
 }
 
 /* Todas las etiquetas en negrita*/
@@ -25,4 +26,14 @@ label {
 
 .p-menubar-end {
   margin-right: auto;
+}
+
+table, th, td {
+  border: 1px solid var(--p-surface-300);
+}
+table {
+  border-collapse: collapse; /* Merges borders into a single line */
+}
+th, td {
+  padding: 5px; /* Adds some spacing so text isn't against the border */
 }

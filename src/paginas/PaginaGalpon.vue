@@ -15,8 +15,8 @@ const dialogVisible = ref(false);
 const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: router.currentRoute.value.params.id as string });
 const esNuevo = ref(false);
 
-onMounted(async () => {
-  estantes.value = await TablesDbService.ObtenerBodega(router.currentRoute.value.params.id as string);
+onMounted(() => {
+  estantes.value = TablesDbService.ObtenerBodega(router.currentRoute.value.params.id as string);
 })
 
 function Agregar() {
@@ -29,11 +29,16 @@ async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
     estantes.value.push({ ...itemEdicion.value });
+    TablesDbService.GlobalStorage.Inventarios.push({ ...itemEdicion.value });
   } else {
     const indice = estantes.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
       estantes.value[indice] = { ...itemEdicion.value };
+      const globalIndice = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === itemEdicion.value.$id);
+      if (globalIndice >= 0) {
+        TablesDbService.GlobalStorage.Inventarios[globalIndice] = { ...itemEdicion.value };
+      }
     }
   }
   dialogVisible.value = false;
@@ -61,6 +66,10 @@ function Quitar(item: Inventario): void {
       if (indice >= 0) {
         await TablesDbService.Eliminar('inventario', item.$id);
         estantes.value.splice(indice, 1);
+        const globalIndice = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === item.$id);
+        if (globalIndice >= 0) {
+          TablesDbService.GlobalStorage.Inventarios.splice(globalIndice, 1);
+        }
       }
     }
   });

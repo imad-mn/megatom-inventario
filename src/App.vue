@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
+import { GlobalStorage, ObtenerTodos } from './servicios/TablesDbService';
 
 const router = useRouter();
 const route = useRoute();
@@ -35,6 +36,10 @@ const menuItems = ref<MenuItem[]>([
   },
 ]);
 
+onMounted(async () => {
+  GlobalStorage.Inventarios = await ObtenerTodos('inventario');
+  GlobalStorage.Listas = await ObtenerTodos('listas');
+})
 </script>
 
 <template>

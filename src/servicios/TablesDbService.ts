@@ -4,17 +4,21 @@ import type { Cantidades, Inventario, Lista, Producto } from './modelos.ts';
 
 const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 
+type GlobalStorageType = {
+  Inventarios: Inventario[],
+  Listas: Lista[],
+};
+export const GlobalStorage : GlobalStorageType = {
+  Inventarios: [],
+  Listas: [],
+};
+
 export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
-  try {
-    const respuesta = await tablesDB.listRows({
-      databaseId,
-      tableId
-    });
-    return respuesta.rows as T[];
-  } catch (error) {
-    console.error(`Error obteniendo todos los registros de la tabla ${tableId}:`, error);
-    return [];
-  }
+  const respuesta = await tablesDB.listRows({
+    databaseId,
+    tableId
+  });
+  return respuesta.rows as T[];
 }
 
 async function ObtenerConQuery<T>(tableId: string, queries: string[]): Promise<T[]> {
@@ -24,10 +28,6 @@ async function ObtenerConQuery<T>(tableId: string, queries: string[]): Promise<T
     queries: queries
   });
   return respuesta.rows as T[];
-}
-
-async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: string | string[] | null): Promise<T[]> {
-  return ObtenerConQuery<T>(tableId, [valor == null ? Query.isNull(columna) : Query.equal(columna, valor)]);
 }
 
 export async function Crear(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
@@ -57,16 +57,20 @@ export async function Eliminar(tableId: string, id: string): Promise<void> {
   });
 }
 
-export async function ObtenerLista(tipo: string): Promise<Lista[]> {
-  return ObtenerFiltroEqual<Lista>('listas', 'tipo', tipo);
+async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: string | string[] | null): Promise<T[]> {
+  return ObtenerConQuery<T>(tableId, [valor == null ? Query.isNull(columna) : Query.equal(columna, valor)]);
 }
 
-export async function ObtenerBodega(padre: string | null): Promise<Inventario[]> {
-  return ObtenerFiltroEqual<Inventario>('inventario', 'padre', padre);
+export function ObtenerLista(tipo: string): Lista[] {
+  return GlobalStorage.Listas.filter(x => x.tipo == tipo);
 }
 
-export function ObtenerContenidoEstante(estanteId: string): Promise<Inventario[]> {
-  return ObtenerConQuery<Inventario>('inventario', [Query.startsWith('padre', estanteId)]);
+export function ObtenerBodega(padre: string | null): Inventario[] {
+  return GlobalStorage.Inventarios.filter(x => x.padre == padre);
+}
+
+export function ObtenerContenidoEstante(estanteId: string): Inventario[] {
+  return GlobalStorage.Inventarios.filter(x => x.padre != null && x.padre.startsWith(estanteId));
 }
 
 export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {

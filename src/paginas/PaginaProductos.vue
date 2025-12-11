@@ -32,8 +32,8 @@ const imagenEdicion = ref<string>();
 const mostrarAdvertencia = ref(false);
 
 onMounted(async () => {
-  grupos.value = await ServicioBase.ObtenerLista('grupos');
-  fabricantes.value = await ServicioBase.ObtenerLista('fabricantes');
+  grupos.value = ServicioBase.ObtenerLista('grupos');
+  fabricantes.value = ServicioBase.ObtenerLista('fabricantes');
   productos.value = await ServicioBase.ObtenerTodos<Producto>('productos');
 
   grupoDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));;
