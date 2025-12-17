@@ -152,7 +152,7 @@ async function VerCajon(cajon: Inventario) {
           <div v-if="contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`).length === 0" class="italic text-muted-color m-1">
             No hay cajones en esta sección.
           </div>
-          <div v-else v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50">
+          <div v-else v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
                 <Button variant="text" severity="warn" size="small" :label="'Cajón ' + cajon.actual" @click="VerCajon(cajon)" />
                 <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACajon(cajon)" />
@@ -192,7 +192,7 @@ async function VerCajon(cajon: Inventario) {
 
   <Dialog v-model:visible="mostrarDialogoCajon" :header="`Cajón ${cajonSeleccionado?.actual}`" :modal="true" class="md:w-2xl">
     <div v-if="productosEnCajon.length === 0" class="italic text-muted-color">No hay productos en este cajón</div>
-    <div v-else v-for="item in productosEnCajon" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 mb-2">
+    <div v-else v-for="item in productosEnCajon" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex justify-between">
         <div>
           <div><b>Nombre: </b>{{ (item.producto as Producto).nombre }}</div>

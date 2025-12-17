@@ -12,9 +12,15 @@
   --p-panel-header-padding: 0.5rem 1rem;
   --p-panel-content-padding: 0 0.5rem 0.5rem 0.5rem;
   --p-panel-header-border-width: 0 0 1px 0;
-  --p-panel-header-background: var(--p-surface-200);
+  --p-panel-header-background: var(--p-gray-100);
 
   --p-dialog-header-padding: 0.5rem 1.25rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  #app {
+    --p-panel-header-background: var(--p-gray-800);
+  }
 }
 
 /* Todas las etiquetas en negrita*/

@@ -86,14 +86,10 @@ function Quitar(item: Inventario): void {
   </div>
 
   <div class="flex flex-wrap gap-3">
-    <Card v-for="item in galpones" :key="item.$id" class="w-full md:w-2xs">
-      <template #content>
-        <div class="flex justify-between">
-          <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
-          <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
-        </div>
-      </template>
-    </Card>
+    <div v-for="item in galpones" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
+      <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
+      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
+    </div>
   </div>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Galpón"
