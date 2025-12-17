@@ -6,14 +6,18 @@ import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
+import * as StorageService from '@/servicios/StorageService.ts';
 
 const router = useRouter();
 const confirm = useConfirm();
 
-const estanteNombre = router.currentRoute.value.params.estante as string;
+const estante = (router.currentRoute.value.params.estante as string).split('-');
+const estanteNombre = estante[0] ?? '';
+const estanteNivel = parseInt(estante[1] ?? '0');
+
 const contenidoEstante = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estanteNombre });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estanteNombre, nivel: null });
 const esNuevo = ref(false);
 const tipoEdicion = ref<'Sección' | 'Cajón' | ''>('');
 
@@ -24,12 +28,17 @@ const productosDelGrupo = ref<Producto[]>([]);
 const productoSeleccionado = ref<Producto | null>(null);
 const cantidad = ref<number>(1);
 const cajonSeleccionado = ref<Inventario | null>(null);
-const productosEnCajones = ref<Cantidades[]>([]);
+const productosEnCajon = ref<Cantidades[]>([]);
+const mostrarDialogoCajon = ref(false);
+const gruposDict = ref<Record<string, string>>({});
+const fabricantesDict = ref<Record<string, string>>({});
 
 onMounted(async () => {
   contenidoEstante.value = TablesDbService.ObtenerContenidoEstante(estanteNombre);
   grupos.value = TablesDbService.ObtenerLista('grupos');
-  productosEnCajones.value = await TablesDbService.ObtenerCantidadesPorCajones(contenidoEstante.value.map(x => x.$id));
+  gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));
+  const fabricantes = TablesDbService.ObtenerLista('fabricantes');
+  fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
 })
 
 watchEffect(async () => {
@@ -40,7 +49,7 @@ watchEffect(async () => {
 
 function Agregar(padre: string, tipoEdicionParam: 'Sección' | 'Cajón') {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: padre };
+  itemEdicion.value = { $id: '', actual: '', padre: padre, nivel: tipoEdicionParam === 'Sección' ? 1 : null };
   dialogVisible.value = true;
   tipoEdicion.value = tipoEdicionParam;
 }
@@ -56,11 +65,16 @@ async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
     contenidoEstante.value.push({ ...itemEdicion.value });
+    TablesDbService.GlobalStorage.Inventarios.push({ ...itemEdicion.value });
   } else {
     const indice = contenidoEstante.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
       contenidoEstante.value[indice] = { ...itemEdicion.value };
+    }
+    const indiceGlobal = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === itemEdicion.value.$id);
+    if (indiceGlobal >= 0) {
+      TablesDbService.GlobalStorage.Inventarios[indiceGlobal] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
@@ -78,6 +92,10 @@ function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void
       if (indice >= 0) {
         await TablesDbService.Eliminar('inventario', item.$id);
         contenidoEstante.value.splice(indice, 1);
+      }
+      const indiceGlobal = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === itemEdicion.value.$id);
+      if (indiceGlobal >= 0) {
+        TablesDbService.GlobalStorage.Inventarios.splice(indiceGlobal, 1);
       }
     }
   });
@@ -100,75 +118,64 @@ async function GuardarProducto() {
     cajon: cajonSeleccionado.value.$id
   };
   await TablesDbService.Crear('cantidades', item);
-  productosEnCajones.value.push({ ...item, producto: productoSeleccionado.value });
+  productosEnCajon.value.push({ ...item, producto: productoSeleccionado.value });
   mostrarDialogoProducto.value = false;
+}
+
+async function VerCajon(cajon: Inventario) {
+  productosEnCajon.value = await TablesDbService.ObtenerCantidadesEnCajon(cajon.$id);
+  cajonSeleccionado.value = cajon;
+  mostrarDialogoCajon.value = true;
 }
 </script>
 
 <template>
-  <div id="encabezado" class="flex justify-between items-center mb-3">
+  <div id="encabezado" class="flex justify-between items-center">
     <Button :label="`Galpón ${$route.params.galpon}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${$route.params.galpon}`)" />
     <div class="text-xl">ESTANTE {{estanteNombre}}</div>
     <Button label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estanteNombre, 'Sección')" />
   </div>
 
-  <div v-if="contenidoEstante.length === 0" class="italic text-muted-color">No hay secciones en este Estante</div>
-
-  <div id="secciones" class="grid grid-cols-3 gap-3">
-    <div v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre)" :key="seccion.$id">
-      <Panel :header="'Sección ' + seccion.actual">
-        <template #icons>
-          <div class="flex">
-            <Button label="Cajón" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${estanteNombre}-${seccion.actual}`, 'Cajón')" />
-            <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
-          </div>
-        </template>
-
-        <div v-if="contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`).length === 0" class="italic text-muted-color m-2">
-          No hay cajones en esta sección.
+  <div v-for="nivel in estanteNivel" :key="nivel">
+     <Fieldset :legend="`Nivel ${nivel}`">
+      <div class="flex flex-row gap-2">
+        <div v-if="contenidoEstante.filter(x => x.padre == estanteNombre && x.nivel == nivel).length === 0" class="italic text-muted-color">
+          No hay secciones en este nivel.
         </div>
-
-        <Fieldset v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id">
-          <template #legend>
-            <div class="flex items-center">
-              <span class="font-bold mr-2">Cajón {{ cajon.actual }}</span>
-              <EditarQuitar tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
-              <Button icon="pi pi-plus-circle" severity="info" variant="text" size="small" @click="AgregarProductoACajon(cajon)" />
+        <Panel v-else v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre && x.nivel == nivel)" :key="seccion.$id" :header="seccion.actual">
+          <template #icons>
+            <div class="flex">
+              <Button label="Cajón" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${estanteNombre}-${seccion.actual}`, 'Cajón')" />
+              <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
             </div>
           </template>
-          <div v-if="productosEnCajones.filter(x => x.cajon == cajon.$id).length === 0" class="italic text-muted-color">
-            No hay productos en este cajón.
+          <div v-if="contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`).length === 0" class="italic text-muted-color m-1">
+            No hay cajones en esta sección.
           </div>
-          <div v-else>
-            <table class="w-full">
-              <thead>
-                <tr>
-                  <th>Cant.</th>
-                  <th>Producto</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in productosEnCajones.filter(x => x.cajon == cajon.$id).sort((a,b) => (a.producto as Producto).nombre.localeCompare((b.producto as Producto).nombre))" :key="item.$id">
-                  <td class="text-center">{{ item.cantidad }}</td>
-                  <td>{{ (item.producto as Producto).nombre }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="mt-2">
-              Peso total: {{ productosEnCajones.filter(x => x.cajon == cajon.$id).reduce((sum, item) => sum + item.cantidad * ((item.producto as Producto).pesoUnitario ?? 0), 0).toFixed(2) }} Kg.
-            </div>
+          <div v-else v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50">
+              <div class="flex">
+                <Button variant="text" severity="warn" size="small" :label="'Cajón ' + cajon.actual" @click="VerCajon(cajon)" />
+                <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACajon(cajon)" />
+                <EditarQuitar tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+              </div>
           </div>
-        </Fieldset>
-      </Panel>
-    </div>
+        </Panel>
+      </div>
+    </Fieldset>
   </div>
 
   <DialogoEdicion id="editarSeccionCajon" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="tipoEdicion"
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
-    <FloatLabel variant="on" class="w-full mt-1">
-      <label for="nombre">{{ tipoEdicion }}</label>
-      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
-    </FloatLabel>
+    <div class="flex flex-col gap-3 pt-1">
+      <FloatLabel variant="on" class="w-full mt-1">
+        <label for="nombre">{{ tipoEdicion }}</label>
+        <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
+      </FloatLabel>
+      <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Sección'">
+        <InputNumber id="nivel" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" />
+        <label for="nivel">Nivel</label>
+      </FloatLabel>
+    </div>
   </DialogoEdicion>
 
   <DialogoEdicion id="agregarProducto" v-model:mostrar="mostrarDialogoProducto" :esAgregar="true" :clickAceptar="GuardarProducto" nombre-objeto="Producto"
@@ -182,4 +189,24 @@ async function GuardarProducto() {
       <InputNumber id="cantidad" v-model="cantidad" :min="1" class="w-full" />
     </div>
   </DialogoEdicion>
+
+  <Dialog v-model:visible="mostrarDialogoCajon" :header="`Cajón ${cajonSeleccionado?.actual}`" :modal="true" class="md:w-2xl">
+    <div v-if="productosEnCajon.length === 0" class="italic text-muted-color">No hay productos en este cajón</div>
+    <div v-else v-for="item in productosEnCajon" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 mb-2">
+      <div class="flex justify-between">
+        <div>
+          <div><b>Nombre: </b>{{ (item.producto as Producto).nombre }}</div>
+          <div><b>Grupo: </b>{{ gruposDict[(item.producto as Producto).grupo] }}</div>
+          <div><b>Fabricante: </b>{{ fabricantesDict[(item.producto as Producto).fabricante] }}</div>
+          <div><b>Código: </b>{{ (item.producto as Producto).codigo }}</div>
+          <br />
+          <div><b>Cantidad: </b>{{ item.cantidad }}</div>
+          <div><b>Peso Unitario: </b>{{ (item.producto as Producto).pesoUnitario }} Kg.</div>
+          <div><b>Peso Total: </b>{{ ((item.producto as Producto).pesoUnitario * item.cantidad).toFixed(2) }} Kg.</div>
+        </div>
+        <img :src="(item.producto as Producto).imagenId ? StorageService.Url((item.producto as Producto).imagenId ?? '') : undefined" alt="Foto" class="rounded-xl w-49 h-49" />
+      </div>
+      <div><b>Descripción: </b>{{ (item.producto as Producto).descripcion }}</div>
+    </div>
+  </Dialog>
 </template>

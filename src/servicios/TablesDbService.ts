@@ -77,6 +77,6 @@ export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
   return ObtenerFiltroEqual<Producto>('productos', 'grupo', grupoId);
 }
 
-export function ObtenerCantidadesPorCajones(cajonIds: string[]): Promise<Cantidades[]> {
-  return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonIds), Query.select(['*', 'producto.*'])]);
+export function ObtenerCantidadesEnCajon(cajonId: string): Promise<Cantidades[]> {
+  return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonId), Query.select(['*', 'producto.*'])]);
 }

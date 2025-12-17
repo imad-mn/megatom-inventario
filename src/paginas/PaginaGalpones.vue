@@ -13,7 +13,7 @@ const router = useRouter();
 
 const galpones = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null, nivel: null });
 const esNuevo = ref(false);
 
 onMounted(() => {
@@ -22,7 +22,7 @@ onMounted(() => {
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: null };
+  itemEdicion.value = { $id: '', actual: '', padre: null, nivel: null };
   dialogVisible.value = true;
 }
 

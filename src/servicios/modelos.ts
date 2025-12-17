@@ -3,7 +3,7 @@ export type Producto = {
   nombre: string;
   codigo: string | null;
   descripcion: string | null;
-  pesoUnitario: number | null;
+  pesoUnitario: number;
   grupo: string;
   fabricante: string;
   imagenId: string | null;
@@ -13,6 +13,7 @@ export type Inventario = {
   $id: string;
   actual: string;
   padre: string | null;
+  nivel: number | null;
 }
 
 export type Cantidades = {

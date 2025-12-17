@@ -12,7 +12,7 @@ const router = useRouter();
 
 const estantes = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: router.currentRoute.value.params.id as string });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: router.currentRoute.value.params.id as string, nivel: null });
 const esNuevo = ref(false);
 
 onMounted(() => {
@@ -21,7 +21,7 @@ onMounted(() => {
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: router.currentRoute.value.params.id as string };
+  itemEdicion.value = { $id: '', actual: '', padre: router.currentRoute.value.params.id as string, nivel: 3 };
   dialogVisible.value = true;
 }
 
@@ -45,7 +45,7 @@ async function Guardar() {
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Estante', params: { galpon: router.currentRoute.value.params.id, estante: item.actual } });
+  router.push({ name: 'Estante', params: { galpon: router.currentRoute.value.params.id, estante: `${item.actual}-${item.nivel}` } });
 }
 
 function Editar(item: Inventario) {
@@ -96,9 +96,15 @@ function Quitar(item: Inventario): void {
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Estante"
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
-    <FloatLabel variant="on" class="w-full mt-1">
-      <label for="nombre">Estante</label>
-      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none"  @keyup.enter="Guardar" />
-    </FloatLabel>
+    <div class="flex flex-col gap-3 pt-1">
+      <FloatLabel variant="on" class="w-full">
+        <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none"  @keyup.enter="Guardar" />
+        <label for="nombre">Estante</label>
+      </FloatLabel>
+      <FloatLabel variant="on" class="w-full">
+        <InputNumber id="niveles" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" />
+        <label for="niveles">Niveles</label>
+      </FloatLabel>
+    </div>
   </DialogoEdicion>
 </template>
