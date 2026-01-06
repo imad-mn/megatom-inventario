@@ -28,10 +28,6 @@ label {
   font-weight:600;
 }
 
-.p-menubar-end {
-  margin-right: auto;
-}
-
 table, th, td {
   border: 1px solid var(--p-surface-300);
 }

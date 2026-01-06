@@ -7,6 +7,8 @@ import PaginaUsuarios from './paginas/PaginaUsuarios.vue'
 import PaginaGalpon from './paginas/PaginaGalpon.vue'
 import PaginaEstante from './paginas/PaginaEstante.vue'
 import PaginaMovimientos from './paginas/PaginaMovimientos.vue'
+import PaginaLogin from './paginas/PaginaLogin.vue'
+import PaginaHome from './paginas/PaginaHome.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,6 +20,8 @@ const router = createRouter({
     { path: '/galpon/:id', component: PaginaGalpon, name: 'Galpón', sensitive: true },
     { path: '/estante/:galpon/:estante', component: PaginaEstante, name: 'Estante', sensitive: true },
     { path: '/movimientos', component: PaginaMovimientos, name: 'Movimientos' },
+    { path: '/login', component: PaginaLogin, name: 'Login' },
+    { path: '/', component: PaginaHome, name: 'Home' }
   ],
   strict: true,
 })

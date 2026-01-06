@@ -7,6 +7,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
 import { Button } from 'primevue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
+import { Usuario } from '@/servicios/appwrite';
 
 const confirm = useConfirm();
 const router = useRouter();
@@ -81,14 +82,16 @@ function Quitar(item: Inventario): void {
 <template>
   <div class="flex  justify-between items-center mb-3">
     <div></div>
-    <div class="text-xl">GALPONES</div>
-    <Button label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
+    <div class="text-xl justify-self-center">GALPONES</div>
+    <div>
+      <Button v-if="Usuario" label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
+    </div>
   </div>
 
   <div class="flex flex-wrap gap-3">
     <div v-for="item in galpones" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
       <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
-      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
+      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
     </div>
   </div>
 

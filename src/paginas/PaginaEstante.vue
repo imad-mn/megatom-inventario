@@ -7,6 +7,7 @@ import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
 import * as StorageService from '@/servicios/StorageService.ts';
+import { Usuario } from '@/servicios/appwrite';
 
 const router = useRouter();
 const confirm = useConfirm();
@@ -133,7 +134,7 @@ async function VerCajon(cajon: Inventario) {
   <div id="encabezado" class="flex justify-between items-center">
     <Button :label="`Galpón ${$route.params.galpon}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${$route.params.galpon}`)" />
     <div class="text-xl">ESTANTE {{estanteNombre}}</div>
-    <Button label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estanteNombre, 'Sección')" />
+    <div><Button v-if="Usuario" label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estanteNombre, 'Sección')" /></div>
   </div>
 
   <div v-for="nivel in estanteNivel" :key="nivel">
@@ -143,7 +144,7 @@ async function VerCajon(cajon: Inventario) {
           No hay secciones en este nivel.
         </div>
         <Panel v-else v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre && x.nivel == nivel)" :key="seccion.$id" :header="seccion.actual">
-          <template #icons>
+          <template #icons v-if="Usuario">
             <div class="flex">
               <Button label="Cajón" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${estanteNombre}-${seccion.actual}`, 'Cajón')" />
               <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
@@ -155,8 +156,8 @@ async function VerCajon(cajon: Inventario) {
           <div v-else v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
                 <Button variant="text" severity="warn" size="small" :label="'Cajón ' + cajon.actual" @click="VerCajon(cajon)" />
-                <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACajon(cajon)" />
-                <EditarQuitar tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+                <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACajon(cajon)" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
               </div>
           </div>
         </Panel>

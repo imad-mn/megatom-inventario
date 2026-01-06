@@ -7,6 +7,7 @@ import { useConfirm } from "primevue/useconfirm";
 import type { FileUploadSelectEvent } from 'primevue';
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
+import { Usuario } from '@/servicios/appwrite';
 
 const confirm = useConfirm();
 
@@ -137,7 +138,7 @@ function RevisarNombreUnico() {
 <template>
   <div class="flex flex-wrap gap-2 items-center mb-3">
     <div class="text-xl mr-3">Productos</div>
-    <Button label="Agregar" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
+    <Button v-if="Usuario" label="Agregar" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
     <IconField class="w-full md:w-auto">
       <InputIcon class="pi pi-search" />
       <InputText v-model="filtroNombre" placeholder="Buscar por nombre" class="w-full md:w-auto" />
@@ -162,7 +163,7 @@ function RevisarNombreUnico() {
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
           </template>
-          <template #footer>
+          <template #footer v-if="Usuario">
             <div class="flex gap-5">
               <Button icon="pi pi-pen-to-square" label="Editar" severity="success" size="small" variant="outlined" class="w-full" @click="Editar(item)" />
               <Button icon="pi pi-trash" label="Eliminar" severity="danger" size="small" variant="outlined" class="w-full" @click="Quitar(item)" />
