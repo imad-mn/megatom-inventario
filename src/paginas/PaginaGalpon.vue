@@ -46,7 +46,7 @@ async function Guardar() {
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Estante', params: { galpon: router.currentRoute.value.params.id, estante: `${item.actual}-${item.nivel}` } });
+  router.push({ name: 'Estante', params: { estante: `${item.$id}-${item.padre}-${item.actual}-${item.nivel}` } });
 }
 
 function Editar(item: Inventario) {
@@ -99,7 +99,7 @@ function Quitar(item: Inventario): void {
         <label for="nombre">Estante</label>
       </FloatLabel>
       <FloatLabel variant="on" class="w-full">
-        <InputNumber id="niveles" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" />
+        <InputNumber id="niveles" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none" @keyup.enter="Guardar" showButtons :min="1" />
         <label for="niveles">Niveles</label>
       </FloatLabel>
     </div>
