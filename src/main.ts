@@ -52,7 +52,15 @@ const app = createApp(App)
 app.use(router)
 app.use(PrimeVue, {
   locale: es,
-  theme: { preset: MyPreset },
+  theme: {
+    preset: MyPreset,
+    options: {
+      cssLayer: {
+        name: 'primevue',
+        order: 'theme, base, primevue, utilities'
+      }
+    }
+},
 })
 app.use(ConfirmationService)
 

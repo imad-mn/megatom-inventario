@@ -20,7 +20,7 @@ const contenidoEstante = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
 const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estanteNombre, nivel: null });
 const esNuevo = ref(false);
-const tipoEdicion = ref<'Sección' | 'Cajón' | ''>('');
+const tipoEdicion = ref<'Cajón' | 'Caja' | ''>('');
 
 const mostrarDialogoProducto = ref(false);
 const grupos = ref<Lista[]>([]);
@@ -34,7 +34,7 @@ const mostrarDialogoCajon = ref(false);
 const gruposDict = ref<Record<string, string>>({});
 const fabricantesDict = ref<Record<string, string>>({});
 
-onMounted(async () => {
+onMounted(() => {
   contenidoEstante.value = TablesDbService.ObtenerContenidoEstante(estanteNombre);
   grupos.value = TablesDbService.ObtenerLista('grupos');
   gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));
@@ -48,14 +48,14 @@ watchEffect(async () => {
   }
 });
 
-function Agregar(padre: string, tipoEdicionParam: 'Sección' | 'Cajón') {
+function Agregar(padre: string, tipoEdicionParam: 'Cajón' | 'Caja') {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: padre, nivel: tipoEdicionParam === 'Sección' ? 1 : null };
+  itemEdicion.value = { $id: '', actual: '', padre: padre, nivel: tipoEdicionParam === 'Cajón' ? 1 : null };
   dialogVisible.value = true;
   tipoEdicion.value = tipoEdicionParam;
 }
 
-function Editar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón') {
+function Editar(item: Inventario, tipoEdicionParam: 'Cajón' | 'Caja') {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
   dialogVisible.value = true;
@@ -81,7 +81,7 @@ async function Guardar() {
   dialogVisible.value = false;
 }
 
-function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Cajón'): void {
+function Quitar(item: Inventario, tipoEdicionParam: 'Cajón' | 'Caja'): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar ${tipoEdicionParam}: ${item.actual} ?`,
@@ -134,20 +134,23 @@ async function VerCajon(cajon: Inventario) {
   <div id="encabezado" class="flex justify-between items-center">
     <Button :label="`Galpón ${$route.params.galpon}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${$route.params.galpon}`)" />
     <div class="text-xl">ESTANTE {{estanteNombre}}</div>
-    <div><Button v-if="Usuario" label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estanteNombre, 'Sección')" /></div>
+    <div>
+      <Button v-if="Usuario" label="Estante" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" />
+      <Button v-if="Usuario" label="Cajón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estanteNombre, 'Cajón')" />
+    </div>
   </div>
 
   <div v-for="nivel in estanteNivel" :key="nivel">
      <Fieldset :legend="`Nivel ${nivel}`">
       <div class="flex flex-row gap-2">
         <div v-if="contenidoEstante.filter(x => x.padre == estanteNombre && x.nivel == nivel).length === 0" class="italic text-muted-color">
-          No hay secciones en este nivel.
+          No hay cajones en este nivel.
         </div>
-        <Panel v-else v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre && x.nivel == nivel)" :key="seccion.$id" :header="seccion.actual">
+        <Panel v-else v-for="seccion in contenidoEstante.filter(x => x.padre == estanteNombre && x.nivel == nivel)" :key="seccion.$id" :header="seccion.actual" :pt:header:class="Usuario ? '' : 'justify-center'">
           <template #icons v-if="Usuario">
             <div class="flex">
               <Button label="Cajón" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${estanteNombre}-${seccion.actual}`, 'Cajón')" />
-              <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
+              <EditarQuitar @editar-click="Editar(seccion, 'Cajón')" @quitar-click="Quitar(seccion, 'Cajón')" />
             </div>
           </template>
           <div v-if="contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`).length === 0" class="italic text-muted-color m-1">
@@ -155,9 +158,9 @@ async function VerCajon(cajon: Inventario) {
           </div>
           <div v-else v-for="cajon in contenidoEstante.filter(x => x.padre == `${estanteNombre}-${seccion.actual}`)" :key="cajon.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Cajón ' + cajon.actual" @click="VerCajon(cajon)" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + cajon.actual" @click="VerCajon(cajon)" />
                 <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACajon(cajon)" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(cajon, 'Caja')" @quitar-click="Quitar(cajon, 'Caja')" />
               </div>
           </div>
         </Panel>
@@ -172,7 +175,7 @@ async function VerCajon(cajon: Inventario) {
         <label for="nombre">{{ tipoEdicion }}</label>
         <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
       </FloatLabel>
-      <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Sección'">
+      <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Cajón'">
         <InputNumber id="nivel" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" />
         <label for="nivel">Nivel</label>
       </FloatLabel>
@@ -191,7 +194,7 @@ async function VerCajon(cajon: Inventario) {
     </div>
   </DialogoEdicion>
 
-  <Dialog v-model:visible="mostrarDialogoCajon" :header="`Cajón ${cajonSeleccionado?.actual}`" :modal="true" class="md:w-2xl">
+  <Dialog v-model:visible="mostrarDialogoCajon" :header="`Caja ${cajonSeleccionado?.actual}`" :modal="true" class="md:w-2xl">
     <div v-if="productosEnCajon.length === 0" class="italic text-muted-color">No hay productos en este cajón</div>
     <div v-else v-for="item in productosEnCajon" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex justify-between">

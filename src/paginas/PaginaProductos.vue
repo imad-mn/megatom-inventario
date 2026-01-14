@@ -43,7 +43,10 @@ onMounted(async () => {
 
 watchEffect(() => {
   productosFiltrados.value = productos.value.filter(p => {
-    return (filtroNombre.value.trim() === '' || p.nombre.toLowerCase().includes(filtroNombre.value.toLowerCase()))
+    return (filtroNombre.value.trim() === ''
+        || p.nombre.toLowerCase().includes(filtroNombre.value.toLowerCase())
+        || p.descripcion?.toLowerCase().includes(filtroNombre.value.toLowerCase())
+        || (p.codigo !== null && p.codigo.toLowerCase().includes(filtroNombre.value.toLowerCase())))
       && (filtroGrupo.value === null || p.grupo === filtroGrupo.value.$id)
       && (filtroFabricante.value === null || p.fabricante === filtroFabricante.value.$id);
   });
