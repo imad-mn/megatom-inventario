@@ -19,7 +19,7 @@ const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', padre: estan
 const dialogVisible = ref(false);
 const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estante.value.actual, nivel: null });
 const esNuevo = ref(false);
-const tipoEdicion = ref<'Cajón' | 'Caja' | ''>('');
+const tipoEdicion = ref<'Sección' | 'Caja' | ''>('');
 
 const mostrarDialogoProducto = ref(false);
 const grupos = ref<Lista[]>([]);
@@ -46,14 +46,14 @@ watchEffect(async () => {
   }
 });
 
-function Agregar(padre: string, tipoEdicionParam: 'Cajón' | 'Caja') {
+function Agregar(padre: string, tipoEdicionParam: 'Sección' | 'Caja') {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: padre, nivel: tipoEdicionParam === 'Cajón' ? 1 : null };
+  itemEdicion.value = { $id: '', actual: '', padre: padre, nivel: tipoEdicionParam === 'Sección' ? 1 : null };
   dialogVisible.value = true;
   tipoEdicion.value = tipoEdicionParam;
 }
 
-function Editar(item: Inventario, tipoEdicionParam: 'Cajón' | 'Caja') {
+function Editar(item: Inventario, tipoEdicionParam: 'Sección' | 'Caja') {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
   dialogVisible.value = true;
@@ -74,7 +74,7 @@ async function Guardar() {
   dialogVisible.value = false;
 }
 
-function Quitar(item: Inventario, tipoEdicionParam: 'Cajón' | 'Caja'): void {
+function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Caja'): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar ${tipoEdicionParam}: ${item.actual} ?`,
@@ -130,11 +130,11 @@ async function GuardarEstante() {
 
 <template>
   <div id="encabezado" class="flex justify-between items-center">
-    <Button :label="`Galpón ${estanteQueryString[4]}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}`)" />
+    <Button :label="`Galpón ${estanteQueryString[4]}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${estanteQueryString[4]}`)" />
     <div class="text-xl">ESTANTE {{estante.actual}}</div>
     <div>
       <Button v-if="Usuario" label="Estante" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="() => dialogoEstante = true" />
-      <Button v-if="Usuario" label="Cajón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Cajón')" />
+      <Button v-if="Usuario" label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Sección')" />
     </div>
   </div>
 
@@ -144,17 +144,17 @@ async function GuardarEstante() {
         <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == nivel).length === 0" class="italic text-muted-color">
           No hay cajones en este nivel.
         </div>
-        <Panel v-else v-for="cajon in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == nivel)" :key="cajon.$id" :header="cajon.actual" :pt:header:class="Usuario ? '' : 'justify-center'">
+        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == nivel)" :key="seccion.$id" :header="seccion.actual" :pt:header:class="Usuario ? '' : 'justify-center'">
           <template #icons v-if="Usuario">
             <div class="flex">
-              <Button label="Caja" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(cajon.$id, 'Caja')" />
-              <EditarQuitar @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
+              <Button label="Caja" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')" />
+              <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
             </div>
           </template>
-          <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == cajon.$id).length === 0" class="italic text-muted-color m-1">
-            No hay cajas en esta cajón.
+          <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id).length === 0" class="italic text-muted-color m-1">
+            No hay cajas en esta Sección.
           </div>
-          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == cajon.$id)" :key="caja.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
                 <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.actual" @click="VerCaja(caja)" />
                 <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" />
@@ -173,7 +173,7 @@ async function GuardarEstante() {
         <label for="nombre">{{ tipoEdicion }}</label>
         <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
       </FloatLabel>
-      <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Cajón'">
+      <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Sección'">
         <InputNumber id="nivel" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" showButtons :max="estante.nivel ?? 1" :min="1" />
         <label for="nivel">Nivel</label>
       </FloatLabel>
