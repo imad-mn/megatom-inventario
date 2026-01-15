@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Inventario } from '@/servicios/modelos.ts';
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
@@ -12,14 +12,9 @@ import { Usuario } from '@/servicios/appwrite';
 const confirm = useConfirm();
 const router = useRouter();
 
-const galpones = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
 const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null, nivel: null });
 const esNuevo = ref(false);
-
-onMounted(() => {
-  galpones.value = TablesDbService.ObtenerBodega(null);
-})
 
 function Agregar() {
   esNuevo.value = true;
@@ -30,24 +25,19 @@ function Agregar() {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
-    galpones.value.push({ ...itemEdicion.value });
-    TablesDbService.GlobalStorage.Inventarios.push({ ...itemEdicion.value });
+    TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
   } else {
-    const indice = galpones.value.findIndex(x => x.$id === itemEdicion.value.$id);
+    const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      galpones.value[indice] = { ...itemEdicion.value };
-      const globalIndice = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === itemEdicion.value.$id);
-      if (globalIndice >= 0) {
-        TablesDbService.GlobalStorage.Inventarios[globalIndice] = { ...itemEdicion.value };
-      }
+      TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Galpón', params: { id: item.actual } });
+  router.push({ name: 'Galpón', params: { id: `${item.$id}-${item.actual}` } });
 }
 
 function Editar(item: Inventario) {
@@ -63,16 +53,11 @@ function Quitar(item: Inventario): void {
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
-    accept: () => {
-      const indice = galpones.value.findIndex(x => x.$id === item.$id);
+    accept: async () => {
+      const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
       if (indice >= 0) {
-        TablesDbService.Eliminar('inventario', item.$id).then(() => {
-          galpones.value.splice(indice, 1);
-          const globalIndice = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === item.$id);
-          if (globalIndice >= 0) {
-            TablesDbService.GlobalStorage.Inventarios.splice(globalIndice, 1);
-          }
-        });
+        await TablesDbService.Eliminar('inventario', item.$id);
+        TablesDbService.Inventarios.value.splice(indice, 1);
       }
     }
   });
@@ -89,7 +74,7 @@ function Quitar(item: Inventario): void {
   </div>
 
   <div class="flex flex-wrap gap-3">
-    <div v-for="item in galpones" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
+    <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
       <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
       <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
     </div>

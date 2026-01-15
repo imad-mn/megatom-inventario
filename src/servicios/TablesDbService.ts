@@ -1,17 +1,12 @@
 import { Query, type Models } from 'appwrite';
 import { tablesDB, ID } from './appwrite.ts';
 import type { Cantidades, Inventario, Lista, Producto } from './modelos.ts';
+import { ref } from 'vue';
 
 const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 
-type GlobalStorageType = {
-  Inventarios: Inventario[],
-  Listas: Lista[],
-};
-export const GlobalStorage : GlobalStorageType = {
-  Inventarios: [],
-  Listas: [],
-};
+export const Inventarios = ref<Inventario[]>([]);
+export const Listas = ref<Lista[]>([]);
 
 export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
   const respuesta = await tablesDB.listRows({
@@ -62,21 +57,13 @@ async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: st
 }
 
 export function ObtenerLista(tipo: string): Lista[] {
-  return GlobalStorage.Listas.filter(x => x.tipo == tipo);
-}
-
-export function ObtenerBodega(padre: string | null): Inventario[] {
-  return GlobalStorage.Inventarios.filter(x => x.padre == padre);
-}
-
-export function ObtenerContenidoEstante(estanteId: string): Inventario[] {
-  return GlobalStorage.Inventarios.filter(x => x.padre != null && x.padre.startsWith(estanteId));
+  return Listas.value.filter(x => x.tipo == tipo);
 }
 
 export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
   return ObtenerFiltroEqual<Producto>('productos', 'grupo', grupoId);
 }
 
-export function ObtenerCantidadesEnCajon(cajonId: string): Promise<Cantidades[]> {
+export function ObtenerCantidadesEnCaja(cajonId: string): Promise<Cantidades[]> {
   return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonId), Query.select(['*', 'producto.*'])]);
 }

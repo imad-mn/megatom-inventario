@@ -12,13 +12,12 @@ import { Usuario } from '@/servicios/appwrite';
 const router = useRouter();
 const confirm = useConfirm();
 
-const estante = (router.currentRoute.value.params.estante as string).split('-');
+const estanteQueryString = (router.currentRoute.value.params.estante as string).split('-');
 const dialogoEstante = ref(false);
-const itemEstante = ref<Inventario>({ $id: estante[0] ?? '', padre: estante[1] ?? '', actual: estante[2] ?? '', nivel: parseInt(estante[3] ?? '0') });
+const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', padre: estanteQueryString[1] ?? '', actual: estanteQueryString[2] ?? '', nivel: parseInt(estanteQueryString[3] ?? '0') });
 
-const contenidoEstante = ref<Inventario[]>([]);
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: itemEstante.value.actual, nivel: null });
+const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estante.value.actual, nivel: null });
 const esNuevo = ref(false);
 const tipoEdicion = ref<'Cajón' | 'Caja' | ''>('');
 
@@ -28,14 +27,13 @@ const grupoSeleccionado = ref<string>('');
 const productosDelGrupo = ref<Producto[]>([]);
 const productoSeleccionado = ref<Producto | null>(null);
 const cantidad = ref<number>(1);
-const cajonSeleccionado = ref<Inventario | null>(null);
-const productosEnCajon = ref<Cantidades[]>([]);
-const mostrarDialogoCajon = ref(false);
+const cajaSeleccionada = ref<Inventario | null>(null);
+const productosEnCaja = ref<Cantidades[]>([]);
+const mostrarDialogoCaja = ref(false);
 const gruposDict = ref<Record<string, string>>({});
 const fabricantesDict = ref<Record<string, string>>({});
 
 onMounted(() => {
-  contenidoEstante.value = TablesDbService.ObtenerContenidoEstante(itemEstante.value.actual);
   grupos.value = TablesDbService.ObtenerLista('grupos');
   gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
@@ -65,17 +63,12 @@ function Editar(item: Inventario, tipoEdicionParam: 'Cajón' | 'Caja') {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
-    contenidoEstante.value.push({ ...itemEdicion.value });
-    TablesDbService.GlobalStorage.Inventarios.push({ ...itemEdicion.value });
+    TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
   } else {
-    const indice = contenidoEstante.value.findIndex(x => x.$id === itemEdicion.value.$id);
+    const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      contenidoEstante.value[indice] = { ...itemEdicion.value };
-    }
-    const indiceGlobal = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === itemEdicion.value.$id);
-    if (indiceGlobal >= 0) {
-      TablesDbService.GlobalStorage.Inventarios[indiceGlobal] = { ...itemEdicion.value };
+      TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
@@ -89,51 +82,47 @@ function Quitar(item: Inventario, tipoEdicionParam: 'Cajón' | 'Caja'): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      const indice = contenidoEstante.value.findIndex(x => x.$id === item.$id);
+      const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
         await TablesDbService.Eliminar('inventario', item.$id);
-        contenidoEstante.value.splice(indice, 1);
-      }
-      const indiceGlobal = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === itemEdicion.value.$id);
-      if (indiceGlobal >= 0) {
-        TablesDbService.GlobalStorage.Inventarios.splice(indiceGlobal, 1);
+        TablesDbService.Inventarios.value.splice(indice, 1);
       }
     }
   });
 }
 
-function AgregarProductoACajon(cajon: Inventario) {
+function AgregarProductoACaja(caja: Inventario) {
   mostrarDialogoProducto.value = true;
   productoSeleccionado.value = null;
   cantidad.value = 1;
-  cajonSeleccionado.value = cajon;
+  cajaSeleccionada.value = caja;
 }
 
 async function GuardarProducto() {
-  if (productoSeleccionado.value == null || cajonSeleccionado.value == null || cantidad.value <= 0)
+  if (productoSeleccionado.value == null || cajaSeleccionada.value == null || cantidad.value <= 0)
     return;
   const item: Cantidades = {
     $id: '',
     producto: productoSeleccionado.value.$id,
     cantidad: cantidad.value,
-    cajon: cajonSeleccionado.value.$id
+    cajon: cajaSeleccionada.value.$id
   };
   await TablesDbService.Crear('cantidades', item);
-  productosEnCajon.value.push({ ...item, producto: productoSeleccionado.value });
+  productosEnCaja.value.push({ ...item, producto: productoSeleccionado.value });
   mostrarDialogoProducto.value = false;
 }
 
-async function VerCajon(cajon: Inventario) {
-  productosEnCajon.value = await TablesDbService.ObtenerCantidadesEnCajon(cajon.$id);
-  cajonSeleccionado.value = cajon;
-  mostrarDialogoCajon.value = true;
+async function VerCaja(caja: Inventario) {
+  productosEnCaja.value = await TablesDbService.ObtenerCantidadesEnCaja(caja.$id);
+  cajaSeleccionada.value = caja;
+  mostrarDialogoCaja.value = true;
 }
 
 async function GuardarEstante() {
-  await TablesDbService.Actualizar('inventario', itemEstante.value);
-  const globalIndice = TablesDbService.GlobalStorage.Inventarios.findIndex(x => x.$id === itemEstante.value.$id);
+  await TablesDbService.Actualizar('inventario', estante.value);
+  const globalIndice = TablesDbService.Inventarios.value.findIndex(x => x.$id === estante.value.$id);
   if (globalIndice >= 0) {
-    TablesDbService.GlobalStorage.Inventarios[globalIndice] = { ...itemEstante.value };
+    TablesDbService.Inventarios.value[globalIndice] = { ...estante.value };
   }
   dialogoEstante.value = false;
 }
@@ -141,35 +130,35 @@ async function GuardarEstante() {
 
 <template>
   <div id="encabezado" class="flex justify-between items-center">
-    <Button :label="`Galpón ${itemEstante.padre}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${itemEstante.padre}`)" />
-    <div class="text-xl">ESTANTE {{itemEstante.actual}}</div>
+    <Button :label="`Galpón ${estanteQueryString[4]}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}`)" />
+    <div class="text-xl">ESTANTE {{estante.actual}}</div>
     <div>
       <Button v-if="Usuario" label="Estante" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="() => dialogoEstante = true" />
-      <Button v-if="Usuario" label="Cajón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(itemEstante.actual, 'Cajón')" />
+      <Button v-if="Usuario" label="Cajón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Cajón')" />
     </div>
   </div>
 
-  <div v-for="nivel in itemEstante.nivel" :key="nivel">
+  <div v-for="nivel in estante.nivel" :key="nivel">
      <Fieldset :legend="`Nivel ${nivel}`">
       <div class="flex flex-row gap-2">
-        <div v-if="contenidoEstante.filter(x => x.padre == itemEstante.actual && x.nivel == nivel).length === 0" class="italic text-muted-color">
+        <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == nivel).length === 0" class="italic text-muted-color">
           No hay cajones en este nivel.
         </div>
-        <Panel v-else v-for="seccion in contenidoEstante.filter(x => x.padre == itemEstante.actual && x.nivel == nivel)" :key="seccion.$id" :header="seccion.actual" :pt:header:class="Usuario ? '' : 'justify-center'">
+        <Panel v-else v-for="cajon in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == nivel)" :key="cajon.$id" :header="cajon.actual" :pt:header:class="Usuario ? '' : 'justify-center'">
           <template #icons v-if="Usuario">
             <div class="flex">
-              <Button label="Caja" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(`${itemEstante.actual}-${seccion.actual}`, 'Caja')" />
-              <EditarQuitar @editar-click="Editar(seccion, 'Cajón')" @quitar-click="Quitar(seccion, 'Cajón')" />
+              <Button label="Caja" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(cajon.$id, 'Caja')" />
+              <EditarQuitar @editar-click="Editar(cajon, 'Cajón')" @quitar-click="Quitar(cajon, 'Cajón')" />
             </div>
           </template>
-          <div v-if="contenidoEstante.filter(x => x.padre == `${itemEstante.actual}-${seccion.actual}`).length === 0" class="italic text-muted-color m-1">
-            No hay cajones en esta sección.
+          <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == cajon.$id).length === 0" class="italic text-muted-color m-1">
+            No hay cajas en esta cajón.
           </div>
-          <div v-else v-for="cajon in contenidoEstante.filter(x => x.padre == `${itemEstante.actual}-${seccion.actual}`)" :key="cajon.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == cajon.$id)" :key="caja.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + cajon.actual" @click="VerCajon(cajon)" />
-                <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACajon(cajon)" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(cajon, 'Caja')" @quitar-click="Quitar(cajon, 'Caja')" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.actual" @click="VerCaja(caja)" />
+                <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja, 'Caja')" @quitar-click="Quitar(caja, 'Caja')" />
               </div>
           </div>
         </Panel>
@@ -177,7 +166,7 @@ async function GuardarEstante() {
     </Fieldset>
   </div>
 
-  <DialogoEdicion id="editarSeccionCajon" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="tipoEdicion"
+  <DialogoEdicion id="editarCajonCaja" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="tipoEdicion"
     :desabilitarAceptar="itemEdicion.actual.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full mt-1">
@@ -185,7 +174,7 @@ async function GuardarEstante() {
         <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
       </FloatLabel>
       <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Cajón'">
-        <InputNumber id="nivel" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" showButtons :max="itemEstante.nivel ?? 1" :min="1" />
+        <InputNumber id="nivel" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" showButtons :max="estante.nivel ?? 1" :min="1" />
         <label for="nivel">Nivel</label>
       </FloatLabel>
     </div>
@@ -203,9 +192,9 @@ async function GuardarEstante() {
     </div>
   </DialogoEdicion>
 
-  <Dialog v-model:visible="mostrarDialogoCajon" :header="`Caja ${cajonSeleccionado?.actual}`" :modal="true" class="md:w-2xl">
-    <div v-if="productosEnCajon.length === 0" class="italic text-muted-color">No hay productos en este cajón</div>
-    <div v-else v-for="item in productosEnCajon" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
+  <Dialog v-model:visible="mostrarDialogoCaja" :header="`Caja ${cajaSeleccionada?.actual}`" :modal="true" class="md:w-2xl">
+    <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
+    <div v-else v-for="item in productosEnCaja" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex justify-between">
         <div>
           <div><b>Nombre: </b>{{ (item.producto as Producto).nombre }}</div>
@@ -224,14 +213,14 @@ async function GuardarEstante() {
   </Dialog>
 
   <DialogoEdicion id="editarEstante" v-model:mostrar="dialogoEstante" :esAgregar="false" :clickAceptar="GuardarEstante" nombre-objeto="Estante"
-    :desabilitarAceptar="itemEstante.actual.trim() === ''">
+    :desabilitarAceptar="estante.actual.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full">
-        <InputText id="nombre" v-model="itemEstante.actual" autofocus class="w-full" :invalid="!itemEstante?.actual" aria-autocomplete="none"  @keyup.enter="GuardarEstante" />
+        <InputText id="nombre" v-model="estante.actual" autofocus class="w-full" :invalid="!estante?.actual" aria-autocomplete="none"  @keyup.enter="GuardarEstante" />
         <label for="nombre">Estante</label>
       </FloatLabel>
       <FloatLabel variant="on" class="w-full">
-        <InputNumber id="niveles" v-model="itemEstante.nivel" class="w-full" :invalid="!itemEstante?.nivel" aria-autocomplete="none"  @keyup.enter="GuardarEstante" showButtons :min="1" />
+        <InputNumber id="niveles" v-model="estante.nivel" class="w-full" :invalid="!estante?.nivel" aria-autocomplete="none"  @keyup.enter="GuardarEstante" showButtons :min="1" />
         <label for="niveles">Niveles</label>
       </FloatLabel>
     </div>

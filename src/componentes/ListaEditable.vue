@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { Lista, TipoLista } from '@/servicios/modelos.ts';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
@@ -12,14 +12,9 @@ interface ListaEditableProps {
 const props = defineProps<ListaEditableProps>();
 const confirm = useConfirm();
 
-const lista = ref<Lista[]>([]);
 const dialogVisible = ref(false);
 const itemEdicion = ref<Lista>({ $id: '', tipo: props.tipo, nombre: '' });
 const esNuevo = ref(false);
-
-onMounted(async () => {
-  lista.value = TablesDbService.ObtenerLista(props.tipo);
-});
 
 function Agregar() {
   esNuevo.value = true;
@@ -36,17 +31,12 @@ function Editar(item: Lista) {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('listas', itemEdicion.value);
-    lista.value.push({ ...itemEdicion.value });
-    TablesDbService.GlobalStorage.Listas.push({ ...itemEdicion.value });
+    TablesDbService.Listas.value.push({ ...itemEdicion.value });
   } else {
-    const indice = lista.value.findIndex(x => x.$id === itemEdicion.value.$id);
+    const indice = TablesDbService.Listas.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('listas', itemEdicion.value);
-      lista.value[indice] = { ...itemEdicion.value };
-      const globalIndice = TablesDbService.GlobalStorage.Listas.findIndex(x => x.$id === itemEdicion.value.$id);
-      if (globalIndice >= 0) {
-        TablesDbService.GlobalStorage.Listas[globalIndice] = { ...itemEdicion.value };
-      }
+      TablesDbService.Listas.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
@@ -59,14 +49,11 @@ function Quitar(item: Lista): void {
     acceptClass: 'p-button-danger p-button-outlined',
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
-    accept: () => {
-      const indice = lista.value.findIndex(x => x.$id === item.$id);
+    accept: async () => {
+      const indice = TablesDbService.Listas.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        TablesDbService.Eliminar('listas', item.$id).then(() => {
-          lista.value.splice(indice, 1);
-          const globalIndice = TablesDbService.GlobalStorage.Listas.findIndex(x => x.$id === item.$id);
-          TablesDbService.GlobalStorage.Listas.splice(globalIndice, 1);
-        });
+        await TablesDbService.Eliminar('listas', item.$id);
+        TablesDbService.Listas.value.splice(indice, 1);
       }
     }
   });
@@ -78,7 +65,7 @@ function Quitar(item: Lista): void {
     <template #icons>
       <Button label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>
-    <div v-for="item in lista" :key="item.$id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
+    <div v-for="item in TablesDbService.Listas.value.filter(x => x.tipo == tipo)" :key="item.$id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
       <div>{{ item.nombre }}</div>
       <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
     </div>

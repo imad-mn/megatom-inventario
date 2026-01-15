@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
-import { GlobalStorage, ObtenerTodos } from './servicios/TablesDbService';
+import { Inventarios, Listas, ObtenerTodos } from './servicios/TablesDbService';
 import { account, Usuario } from './servicios/appwrite';
 
 const router = useRouter();
@@ -30,17 +30,11 @@ const menuItems = ref<MenuItem[]>([
     isAdmin: true,
     command: () => router.push('/listas')
   },
-  {
-    label: 'USUARIOS',
-    icon: PrimeIcons.USERS,
-    isAdmin: true,
-    command: () => router.push('/usuarios')
-  },
 ]);
 
 onMounted(async () => {
-  GlobalStorage.Inventarios = await ObtenerTodos('inventario');
-  GlobalStorage.Listas = await ObtenerTodos('listas');
+  Inventarios.value = await ObtenerTodos('inventario');
+  Listas.value = await ObtenerTodos('listas');
 })
 
 async function cerrarSesion() {
