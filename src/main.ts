@@ -29,6 +29,7 @@ import Card from 'primevue/card';
 import Message from 'primevue/message';
 import Fieldset from 'primevue/fieldset';
 import Listbox from 'primevue/listbox';
+import ToggleSwitch from 'primevue/toggleswitch';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -83,5 +84,6 @@ app.component('Card', Card);
 app.component('Message', Message);
 app.component('Fieldset', Fieldset);
 app.component('Listbox', Listbox);
+app.component('ToggleSwitch', ToggleSwitch);
 
 app.mount('#app')

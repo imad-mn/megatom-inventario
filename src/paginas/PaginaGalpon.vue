@@ -13,12 +13,12 @@ const router = useRouter();
 const galpon = (router.currentRoute.value.params.id as string).split('-');
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: galpon[0] ?? '', nivel: null });
+const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: galpon[0] ?? '', nivel: null, ordenDescendente: false });
 const esNuevo = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: galpon[0] ?? '', nivel: 3 };
+  itemEdicion.value = { $id: '', nombre: '', padre: galpon[0] ?? '', nivel: 3, ordenDescendente: false };
   dialogVisible.value = true;
 }
 
@@ -37,7 +37,7 @@ async function Guardar() {
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Estante', params: { estante: `${item.$id}-${item.padre}-${item.actual}-${item.nivel}-${galpon[1]}` } });
+  router.push({ name: 'Estante', params: { estante: `${item.$id}-${item.padre}-${item.nombre}-${item.nivel}-${item.ordenDescendente}-${galpon[1]}` } });
 }
 
 function Editar(item: Inventario) {
@@ -49,7 +49,7 @@ function Editar(item: Inventario) {
 function Quitar(item: Inventario): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar el Estante: ${item.actual} ?`,
+    message: `¿Estás seguro de eliminar el Estante: ${item.nombre} ?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
@@ -73,22 +73,26 @@ function Quitar(item: Inventario): void {
   <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == galpon[0]).length === 0" class="italic text-muted-color">No hay estantes en este Galpón</div>
   <div class="flex flex-wrap gap-3">
     <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == galpon[0])" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
-      <Button class="text-lg" icon="pi pi-server" variant="text" :label="'Estante ' + item.actual" @click="Ver(item)" />
+      <Button class="text-lg" icon="pi pi-server" variant="text" :label="'Estante ' + item.nombre" @click="Ver(item)" />
       <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
     </div>
   </div>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Estante"
-    :desabilitarAceptar="itemEdicion.actual.trim() === ''">
+    :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full">
-        <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none"  @keyup.enter="Guardar" />
+        <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
         <label for="nombre">Estante</label>
       </FloatLabel>
       <FloatLabel variant="on" class="w-full">
         <InputNumber id="niveles" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none" @keyup.enter="Guardar" showButtons :min="1" />
         <label for="niveles">Niveles</label>
       </FloatLabel>
+      <div class="flex gap-2 items-center">
+        <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />
+        <label for="ordenDescendente">Orden Descendente</label>
+      </div>
     </div>
   </DialogoEdicion>
 </template>

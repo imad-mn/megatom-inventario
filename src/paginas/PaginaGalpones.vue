@@ -13,12 +13,12 @@ const confirm = useConfirm();
 const router = useRouter();
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: null, nivel: null });
+const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: undefined });
 const esNuevo = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: null, nivel: null };
+  itemEdicion.value = { $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: undefined };
   dialogVisible.value = true;
 }
 
@@ -37,7 +37,7 @@ async function Guardar() {
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Galpón', params: { id: `${item.$id}-${item.actual}` } });
+  router.push({ name: 'Galpón', params: { id: `${item.$id}-${item.nombre}` } });
 }
 
 function Editar(item: Inventario) {
@@ -49,7 +49,7 @@ function Editar(item: Inventario) {
 function Quitar(item: Inventario): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar el Galpón: ${item.actual} ?`,
+    message: `¿Estás seguro de eliminar el Galpón: ${item.nombre} ?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
@@ -75,16 +75,16 @@ function Quitar(item: Inventario): void {
 
   <div class="flex flex-wrap gap-3">
     <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
-      <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.actual" @click="Ver(item)" />
+      <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.nombre" @click="Ver(item)" />
       <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
     </div>
   </div>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Galpón"
-    :desabilitarAceptar="itemEdicion.actual.trim() === ''">
+    :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
       <label for="nombre">Galpón</label>
-      <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none"  @keyup.enter="Guardar" />
+      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
     </FloatLabel>
   </DialogoEdicion>
 </template>

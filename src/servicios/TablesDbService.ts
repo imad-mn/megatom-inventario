@@ -67,3 +67,7 @@ export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
 export function ObtenerCantidadesEnCaja(cajonId: string): Promise<Cantidades[]> {
   return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonId), Query.select(['*', 'producto.*'])]);
 }
+
+export function ObtenerProductos(): Promise<Producto[]> {
+  return ObtenerConQuery<Producto>('productos', [Query.limit(1000)]);
+}

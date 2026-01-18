@@ -18,7 +18,7 @@ const productosFiltrados = ref<Producto[]>([]);
 
 const filtroGrupo = ref<Lista | null>(null);
 const filtroFabricante = ref<Lista | null>(null);
-const filtroNombre = ref<string>('');
+const filtroTexto = ref<string>('');
 
 const dialogVisible = ref(false);
 const itemEdicion = ref<Producto>();
@@ -35,7 +35,7 @@ const mostrarAdvertencia = ref(false);
 onMounted(async () => {
   grupos.value = ServicioBase.ObtenerLista('grupos');
   fabricantes.value = ServicioBase.ObtenerLista('fabricantes');
-  productos.value = await ServicioBase.ObtenerTodos<Producto>('productos');
+  productos.value = await ServicioBase.ObtenerProductos();
 
   grupoDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));;
   fabricanteDict.value = Object.fromEntries(fabricantes.value.map(x => [x.$id, x.nombre]));
@@ -43,10 +43,12 @@ onMounted(async () => {
 
 watchEffect(() => {
   productosFiltrados.value = productos.value.filter(p => {
-    return (filtroNombre.value.trim() === ''
-        || p.nombre.toLowerCase().includes(filtroNombre.value.toLowerCase())
-        || p.descripcion?.toLowerCase().includes(filtroNombre.value.toLowerCase())
-        || (p.codigo !== null && p.codigo.toLowerCase().includes(filtroNombre.value.toLowerCase())))
+    return (filtroTexto.value.trim() === ''
+        || p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase())
+        || p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase())
+        || (p.codigo !== null && p.codigo.toLowerCase().includes(filtroTexto.value.toLowerCase()))
+        || grupoDict.value[p.grupo]?.toLowerCase().includes(filtroTexto.value.toLowerCase())
+        || fabricanteDict.value[p.fabricante]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
       && (filtroGrupo.value === null || p.grupo === filtroGrupo.value.$id)
       && (filtroFabricante.value === null || p.fabricante === filtroFabricante.value.$id);
   });
@@ -144,7 +146,7 @@ function RevisarNombreUnico() {
     <Button v-if="Usuario" label="Agregar" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
     <IconField class="w-full md:w-auto">
       <InputIcon class="pi pi-search" />
-      <InputText v-model="filtroNombre" placeholder="Buscar por nombre" class="w-full md:w-auto" />
+      <InputText v-model="filtroTexto" placeholder="Buscar" class="w-full md:w-auto" />
     </IconField>
     <Select v-model="filtroGrupo" :options="grupos" optionLabel="nombre" placeholder="Grupo" showClear class="w-full md:w-auto" />
     <Select v-model="filtroFabricante" :options="fabricantes" optionLabel="nombre" placeholder="Fabricante" showClear class="w-full md:w-auto" />

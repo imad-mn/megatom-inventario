@@ -11,9 +11,10 @@ export type Producto = {
 
 export type Inventario = {
   $id: string;
-  actual: string;
+  nombre: string;
   padre: string | null;
   nivel: number | null;
+  ordenDescendente: boolean | undefined;
 }
 
 export type Cantidades = {

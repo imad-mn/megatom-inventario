@@ -14,10 +14,10 @@ const confirm = useConfirm();
 
 const estanteQueryString = (router.currentRoute.value.params.estante as string).split('-');
 const dialogoEstante = ref(false);
-const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', padre: estanteQueryString[1] ?? '', actual: estanteQueryString[2] ?? '', nivel: parseInt(estanteQueryString[3] ?? '0') });
+const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', padre: estanteQueryString[1] ?? '', nombre: estanteQueryString[2] ?? '', nivel: parseInt(estanteQueryString[3] ?? '0'), ordenDescendente: estanteQueryString[4] === 'true' });
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', actual: '', padre: estante.value.actual, nivel: null });
+const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: estante.value.nombre, nivel: null, ordenDescendente: undefined });
 const esNuevo = ref(false);
 const tipoEdicion = ref<'Sección' | 'Caja' | ''>('');
 
@@ -48,7 +48,7 @@ watchEffect(async () => {
 
 function Agregar(padre: string, tipoEdicionParam: 'Sección' | 'Caja') {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', actual: '', padre: padre, nivel: tipoEdicionParam === 'Sección' ? 1 : null };
+  itemEdicion.value = { $id: '', nombre: '', padre: padre, nivel: tipoEdicionParam === 'Sección' ? 1 : null, ordenDescendente: undefined };
   dialogVisible.value = true;
   tipoEdicion.value = tipoEdicionParam;
 }
@@ -77,7 +77,7 @@ async function Guardar() {
 function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Caja'): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar ${tipoEdicionParam}: ${item.actual} ?`,
+    message: `¿Estás seguro de eliminar ${tipoEdicionParam}: ${item.nombre} ?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
@@ -130,8 +130,8 @@ async function GuardarEstante() {
 
 <template>
   <div id="encabezado" class="flex justify-between items-center">
-    <Button :label="`Galpón ${estanteQueryString[4]}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${estanteQueryString[4]}`)" />
-    <div class="text-xl">ESTANTE {{estante.actual}}</div>
+    <Button :label="`Galpón ${estanteQueryString[5]}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${estanteQueryString[5]}`)" />
+    <div class="text-xl">ESTANTE {{estante.nombre}}</div>
     <div>
       <Button v-if="Usuario" label="Estante" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="() => dialogoEstante = true" />
       <Button v-if="Usuario" label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Sección')" />
@@ -139,12 +139,12 @@ async function GuardarEstante() {
   </div>
 
   <div v-for="nivel in estante.nivel" :key="nivel">
-     <Fieldset :legend="`Nivel ${nivel}`">
+     <Fieldset :legend="`Nivel ${estante.ordenDescendente ? (estante.nivel ?? 0) - nivel + 1 : nivel}`">
       <div class="flex flex-row gap-2">
-        <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == nivel).length === 0" class="italic text-muted-color">
+        <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == (estante.ordenDescendente ? (estante.nivel ?? 0) - nivel + 1 : nivel)).length === 0" class="italic text-muted-color">
           No hay cajones en este nivel.
         </div>
-        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == nivel)" :key="seccion.$id" :header="seccion.actual" :pt:header:class="Usuario ? '' : 'justify-center'">
+        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == (estante.ordenDescendente ? (estante.nivel ?? 0) - nivel + 1 : nivel))" :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'">
           <template #icons v-if="Usuario">
             <div class="flex">
               <Button label="Caja" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')" />
@@ -156,7 +156,7 @@ async function GuardarEstante() {
           </div>
           <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.actual" @click="VerCaja(caja)" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" />
                 <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja, 'Caja')" @quitar-click="Quitar(caja, 'Caja')" />
               </div>
@@ -167,11 +167,11 @@ async function GuardarEstante() {
   </div>
 
   <DialogoEdicion id="editarCajonCaja" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="tipoEdicion"
-    :desabilitarAceptar="itemEdicion.actual.trim() === ''">
+    :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full mt-1">
         <label for="nombre">{{ tipoEdicion }}</label>
-        <InputText id="nombre" v-model="itemEdicion.actual" autofocus class="w-full" :invalid="!itemEdicion?.actual" aria-autocomplete="none" @keyup.enter="Guardar" />
+        <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none" @keyup.enter="Guardar" />
       </FloatLabel>
       <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Sección'">
         <InputNumber id="nivel" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" showButtons :max="estante.nivel ?? 1" :min="1" />
@@ -192,7 +192,7 @@ async function GuardarEstante() {
     </div>
   </DialogoEdicion>
 
-  <Dialog v-model:visible="mostrarDialogoCaja" :header="`Caja ${cajaSeleccionada?.actual}`" :modal="true" class="md:w-2xl">
+  <Dialog v-model:visible="mostrarDialogoCaja" :header="`Caja ${cajaSeleccionada?.nombre}`" :modal="true" class="md:w-2xl">
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
     <div v-else v-for="item in productosEnCaja" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex justify-between">
@@ -213,16 +213,20 @@ async function GuardarEstante() {
   </Dialog>
 
   <DialogoEdicion id="editarEstante" v-model:mostrar="dialogoEstante" :esAgregar="false" :clickAceptar="GuardarEstante" nombre-objeto="Estante"
-    :desabilitarAceptar="estante.actual.trim() === ''">
+    :desabilitarAceptar="estante.nombre.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full">
-        <InputText id="nombre" v-model="estante.actual" autofocus class="w-full" :invalid="!estante?.actual" aria-autocomplete="none"  @keyup.enter="GuardarEstante" />
+        <InputText id="nombre" v-model="estante.nombre" autofocus class="w-full" :invalid="!estante.nombre" aria-autocomplete="none"  @keyup.enter="GuardarEstante" />
         <label for="nombre">Estante</label>
       </FloatLabel>
       <FloatLabel variant="on" class="w-full">
-        <InputNumber id="niveles" v-model="estante.nivel" class="w-full" :invalid="!estante?.nivel" aria-autocomplete="none"  @keyup.enter="GuardarEstante" showButtons :min="1" />
+        <InputNumber id="niveles" v-model="estante.nivel" class="w-full" :invalid="!estante.nivel" aria-autocomplete="none"  @keyup.enter="GuardarEstante" showButtons :min="1" />
         <label for="niveles">Niveles</label>
       </FloatLabel>
+      <div class="flex gap-2 items-center">
+        <label for="ordenDescendente">Orden Descendente</label>
+        <ToggleSwitch id="ordenDescendente" v-model="estante.ordenDescendente" />
+      </div>
     </div>
   </DialogoEdicion>
 </template>
