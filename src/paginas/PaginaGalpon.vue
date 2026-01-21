@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Inventario } from '@/servicios/modelos.ts';
-import { ref } from 'vue';
+import { ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
@@ -10,15 +10,23 @@ import { Usuario } from '@/servicios/appwrite';
 
 const confirm = useConfirm();
 const router = useRouter();
-const galpon = (router.currentRoute.value.params.id as string).split('-');
+const galponQueryString = (router.currentRoute.value.params.id as string).split('-');
+const galpon: Inventario = { $id: galponQueryString[0] ?? '', padre: null, nombre: galponQueryString[1] ?? '', nivel: null, ordenDescendente: galponQueryString[2] === 'true' };
+
+const estantes = ref<Inventario[]>([]);
+watchEffect(() =>
+  estantes.value = TablesDbService.Inventarios.value.filter(x => x.padre == galpon.$id)
+                  .sort((a, b) => galpon.ordenDescendente ? b.nombre.localeCompare(a.nombre) : a.nombre.localeCompare(b.nombre))
+);
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: galpon[0] ?? '', nivel: null, ordenDescendente: false });
+const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: galpon.$id ?? '', nivel: null, ordenDescendente: false });
 const esNuevo = ref(false);
+const editarGalpon = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', padre: galpon[0] ?? '', nivel: 3, ordenDescendente: false };
+  itemEdicion.value = { $id: '', nombre: '', padre: galpon.$id ?? '', nivel: 3, ordenDescendente: false };
   dialogVisible.value = true;
 }
 
@@ -37,7 +45,7 @@ async function Guardar() {
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Estante', params: { estante: `${item.$id}-${item.padre}-${item.nombre}-${item.nivel}-${item.ordenDescendente}-${galpon[1]}` } });
+  router.push({ name: 'Estante', params: { estante: `${item.$id}-${item.padre}-${item.nombre}-${item.nivel}-${item.ordenDescendente}-${galpon.nombre}` } });
 }
 
 function Editar(item: Inventario) {
@@ -62,17 +70,29 @@ function Quitar(item: Inventario): void {
     }
   });
 }
+
+function GuardarGalpon() {
+  TablesDbService.Actualizar('inventario', galpon);
+  const globalIndice = TablesDbService.Inventarios.value.findIndex(x => x.$id === galpon.$id);
+  if (globalIndice >= 0) {
+    TablesDbService.Inventarios.value[globalIndice] = { ...galpon };
+  }
+  editarGalpon.value = false;
+}
 </script>
 
 <template>
   <div class="flex justify-between items-center mb-3">
     <Button label="Galpones" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push('/galpones')" />
-    <div class="text-xl">GALPÓN {{galpon[1]}}</div>
-    <div><Button v-if="Usuario" label="Estante" icon="pi pi-plus" class="w-auto" severity="info" variant="outlined" @click="Agregar" /></div>
+    <div class="text-xl">GALPÓN {{galpon.nombre}}</div>
+    <div>
+      <Button v-if="Usuario" label="Galpón" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="() => editarGalpon = true" />
+      <Button v-if="Usuario" label="Estante" icon="pi pi-plus" class="w-auto" severity="info" variant="outlined" @click="Agregar" />
+    </div>
   </div>
-  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == galpon[0]).length === 0" class="italic text-muted-color">No hay estantes en este Galpón</div>
+  <div v-if="estantes.length === 0" class="italic text-muted-color">No hay estantes en este Galpón</div>
   <div class="flex flex-wrap gap-3">
-    <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == galpon[0])" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
+    <div v-for="item in estantes" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
       <Button class="text-lg" icon="pi pi-server" variant="text" :label="'Estante ' + item.nombre" @click="Ver(item)" />
       <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
     </div>
@@ -91,6 +111,20 @@ function Quitar(item: Inventario): void {
       </FloatLabel>
       <div class="flex gap-2 items-center">
         <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />
+        <label for="ordenDescendente">Orden Descendente</label>
+      </div>
+    </div>
+  </DialogoEdicion>
+
+  <DialogoEdicion id="editarGalpon" v-model:mostrar="editarGalpon" :esAgregar=false :clickAceptar="GuardarGalpon" nombre-objeto="Galpón"
+    :desabilitarAceptar="galpon.nombre.trim() === ''">
+    <div class="flex flex-col gap-3 pt-1">
+      <FloatLabel variant="on" class="w-full mt-1">
+        <label for="nombre">Galpón</label>
+        <InputText id="nombre" v-model="galpon.nombre" autofocus class="w-full" :invalid="!galpon?.nombre" aria-autocomplete="none"  @keyup.enter="GuardarGalpon" />
+      </FloatLabel>
+      <div class="flex gap-2 items-center">
+        <ToggleSwitch id="ordenDescendente" v-model="galpon.ordenDescendente" />
         <label for="ordenDescendente">Orden Descendente</label>
       </div>
     </div>

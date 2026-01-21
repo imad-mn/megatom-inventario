@@ -13,12 +13,12 @@ const confirm = useConfirm();
 const router = useRouter();
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: undefined });
+const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: false });
 const esNuevo = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: undefined };
+  itemEdicion.value = { $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: false };
   dialogVisible.value = true;
 }
 
@@ -37,7 +37,7 @@ async function Guardar() {
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Galpón', params: { id: `${item.$id}-${item.nombre}` } });
+  router.push({ name: 'Galpón', params: { id: `${item.$id}-${item.nombre}-${item.ordenDescendente}` } });
 }
 
 function Editar(item: Inventario) {
@@ -82,9 +82,15 @@ function Quitar(item: Inventario): void {
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Galpón"
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
-    <FloatLabel variant="on" class="w-full mt-1">
-      <label for="nombre">Galpón</label>
-      <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
-    </FloatLabel>
+    <div class="flex flex-col gap-3 pt-1">
+      <FloatLabel variant="on" class="w-full mt-1">
+        <label for="nombre">Galpón</label>
+        <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
+      </FloatLabel>
+      <div class="flex gap-2 items-center">
+        <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />
+        <label for="ordenDescendente">Orden Descendente</label>
+      </div>
+    </div>
   </DialogoEdicion>
 </template>
