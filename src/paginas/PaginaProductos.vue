@@ -4,15 +4,16 @@ import type { Lista, Producto } from '@/servicios/modelos.ts';
 import { onMounted, ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
-import type { FileUploadSelectEvent } from 'primevue';
+import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
 import { Usuario } from '@/servicios/appwrite';
+import { Importar } from '@/servicios/ImportarExportar';
 
 const confirm = useConfirm();
 
-const grupos = ref<Lista[]>([]);
-const fabricantes = ref<Lista[]>([]);
+const grupos = ServicioBase.ObtenerLista('grupos');
+const fabricantes = ServicioBase.ObtenerLista('fabricantes');
 const productos = ref<Producto[]>([]);
 const productosFiltrados = ref<Producto[]>([]);
 
@@ -26,19 +27,22 @@ const esNuevo = ref(false);
 
 const grupoDict = ref<Record<string, string>>({});
 const fabricanteDict = ref<Record<string, string>>({});
+grupoDict.value = Object.fromEntries(grupos.map(x => [x.$id, x.nombre]));;
+fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
 
-const fileUploadRef = ref<InstanceType<typeof FileUpload> | null>(null);
-let archivo: File | undefined;
+let archivoFoto: File | undefined;
 const imagenEdicion = ref<string>();
 const mostrarAdvertencia = ref(false);
 
-onMounted(async () => {
-  grupos.value = ServicioBase.ObtenerLista('grupos');
-  fabricantes.value = ServicioBase.ObtenerLista('fabricantes');
-  productos.value = await ServicioBase.ObtenerProductos();
+const dialogoImportar = ref(false);
+const fileupload = ref<FileUploadMethods>();
+const progresoImportacion = ref(0);
+const totalRegistros = ref(0);
+const mostrarMensajeImportacion = ref(false);
+const deshabilitarBotonImportar = ref(true);
 
-  grupoDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));;
-  fabricanteDict.value = Object.fromEntries(fabricantes.value.map(x => [x.$id, x.nombre]));
+onMounted(async () => {
+  productos.value = await ServicioBase.ObtenerProductos();
 })
 
 watchEffect(() => {
@@ -68,9 +72,9 @@ async function Guardar() {
     if (itemEdicion.value == undefined)
       return;
 
-    if (archivo) {
-      itemEdicion.value!.imagenId = await StorageService.Subir(archivo);
-      archivo = undefined;
+    if (archivoFoto) {
+      itemEdicion.value!.imagenId = await StorageService.Subir(archivoFoto);
+      archivoFoto = undefined;
     }
 
     if (esNuevo.value) {
@@ -121,15 +125,15 @@ function Quitar(item: Producto): void {
 
 // Al seleccionar la foto, la muestra en el diálogo de edición
 function SeleccionarFoto(e: FileUploadSelectEvent) {
-  archivo = (<File[]>e.files)[0];
-  if (archivo == null)
+  archivoFoto = (<File[]>e.files)[0];
+  if (archivoFoto == null)
       return;
   const reader = new FileReader();
   reader.onload = async (e) => {
     if (e.target?.result)
       imagenEdicion.value = <string>e.target.result;
   };
-  reader.readAsDataURL(archivo);
+  reader.readAsDataURL(archivoFoto);
 }
 
 function RevisarNombreUnico() {
@@ -137,6 +141,26 @@ function RevisarNombreUnico() {
     mostrarAdvertencia.value = true;
   else
     mostrarAdvertencia.value = false;
+}
+
+function AbrirDialogoImportar() {
+  dialogoImportar.value = true;
+  mostrarMensajeImportacion.value = false;
+  progresoImportacion.value = 0;
+  totalRegistros.value = 0;
+}
+
+async function ImportarProductos(e: FileUploadUploaderEvent) {
+  const archivo = (<File[]>e.files)[0];
+  if (!archivo)
+    return;
+
+  deshabilitarBotonImportar.value = true;
+  await Importar(
+    archivo,
+    (total) => totalRegistros.value = total,
+    (progreso) => progresoImportacion.value = progreso,
+    () => mostrarMensajeImportacion.value = true);
 }
 </script>
 
@@ -150,6 +174,7 @@ function RevisarNombreUnico() {
     </IconField>
     <Select v-model="filtroGrupo" :options="grupos" optionLabel="nombre" placeholder="Grupo" showClear class="w-full md:w-auto" />
     <Select v-model="filtroFabricante" :options="fabricantes" optionLabel="nombre" placeholder="Fabricante" showClear class="w-full md:w-auto" />
+    <Button v-if="Usuario" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" />
   </div>
 
   <DataView :value="productosFiltrados">
@@ -163,7 +188,7 @@ function RevisarNombreUnico() {
           <template #subtitle>{{ item.descripcion }}</template>
           <template #content>
             <div><b>Código:&nbsp;</b>{{ item.codigo }}</div>
-            <b class="text-sm">Grupo:&nbsp;</b>
+            <b>Grupo:&nbsp;</b>
             <div>{{ grupoDict[item.grupo] }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
@@ -207,9 +232,7 @@ function RevisarNombreUnico() {
         <label for="descripcion">Descripción</label>
       </FloatLabel>
       <FileUpload
-        ref="fileUploadRef"
         mode="basic"
-        :file-limit="1"
         accept="image/*"
         :maxFileSize="524288"
         choose-label="Escoger Foto"
@@ -220,4 +243,23 @@ function RevisarNombreUnico() {
       <Message severity="warn" v-if="mostrarAdvertencia">Ya existe un producto con ese nombre</Message>
     </div>
   </DialogoEdicion>
+
+  <!-- Dialogo para importar productos -->
+  <Dialog v-model:visible="dialogoImportar" header="Importar Productos" modal :closable="true" :dismissable-mask="true" :style="{ width: '400px' }">
+    <div class="flex flex-col gap-3">
+      <p>Seleccione el archivo CSV con los productos.</p>
+      <FileUpload
+        ref="fileupload"
+        mode="basic"
+        accept=".csv"
+        :maxFileSize="1048576"
+        class="p-button-outlined"
+        custom-upload
+        @select="() => deshabilitarBotonImportar = false"
+        @uploader="ImportarProductos" />
+      <Button label="Importar" icon="pi pi-file-import" severity="primary" variant="outlined" :disabled="deshabilitarBotonImportar" @click="fileupload?.upload()" />
+      <ProgressBar :value="progresoImportacion">{{ `${progresoImportacion}/${totalRegistros}` }}</ProgressBar>
+      <Message severity="success" v-show="mostrarMensajeImportacion">Los productos se han importado correctamente.</Message>
+    </div>
+  </Dialog>
 </template>

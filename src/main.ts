@@ -30,6 +30,7 @@ import Message from 'primevue/message';
 import Fieldset from 'primevue/fieldset';
 import Listbox from 'primevue/listbox';
 import ToggleSwitch from 'primevue/toggleswitch';
+import ProgressBar from 'primevue/progressbar';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -85,5 +86,6 @@ app.component('Message', Message);
 app.component('Fieldset', Fieldset);
 app.component('Listbox', Listbox);
 app.component('ToggleSwitch', ToggleSwitch);
+app.component('ProgressBar', ProgressBar);
 
 app.mount('#app')
