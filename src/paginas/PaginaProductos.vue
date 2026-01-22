@@ -40,6 +40,7 @@ const progresoImportacion = ref(0);
 const totalRegistros = ref(0);
 const mostrarMensajeImportacion = ref(false);
 const deshabilitarBotonImportar = ref(true);
+const permitirCerrarDialogoImportar = ref(true);
 
 onMounted(async () => {
   productos.value = await ServicioBase.ObtenerProductos();
@@ -156,11 +157,15 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
     return;
 
   deshabilitarBotonImportar.value = true;
+  permitirCerrarDialogoImportar.value = false;
   await Importar(
     archivo,
     (total) => totalRegistros.value = total,
     (progreso) => progresoImportacion.value = progreso,
-    () => mostrarMensajeImportacion.value = true);
+    () => {
+      mostrarMensajeImportacion.value = true;
+      permitirCerrarDialogoImportar.value = true;
+    });
 }
 </script>
 
@@ -245,7 +250,7 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
   </DialogoEdicion>
 
   <!-- Dialogo para importar productos -->
-  <Dialog v-model:visible="dialogoImportar" header="Importar Productos" modal :closable="true" :dismissable-mask="true" :style="{ width: '400px' }">
+  <Dialog v-model:visible="dialogoImportar" header="Importar Productos" modal :closable="permitirCerrarDialogoImportar" :style="{ width: '400px' }">
     <div class="flex flex-col gap-3">
       <p>Seleccione el archivo CSV con los productos.</p>
       <FileUpload
@@ -258,7 +263,7 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
         @select="() => deshabilitarBotonImportar = false"
         @uploader="ImportarProductos" />
       <Button label="Importar" icon="pi pi-file-import" severity="primary" variant="outlined" :disabled="deshabilitarBotonImportar" @click="fileupload?.upload()" />
-      <ProgressBar :value="progresoImportacion">{{ `${progresoImportacion}/${totalRegistros}` }}</ProgressBar>
+      <ProgressBar :value="(progresoImportacion * 100)/totalRegistros">{{ `${progresoImportacion}/${totalRegistros}` }}</ProgressBar>
       <Message severity="success" v-show="mostrarMensajeImportacion">Los productos se han importado correctamente.</Message>
     </div>
   </Dialog>
