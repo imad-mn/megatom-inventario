@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { Actualizar, Crear, Inventarios, Listas, ObtenerProductos, ObtenerTodos } from './TablesDbService';
+import { Actualizar, Crear, Inventarios, Listas, ObtenerTodos } from './TablesDbService';
 import type { Cantidades, Lista, Producto } from './modelos';
 
 type Fila = {
@@ -38,7 +38,7 @@ export async function Importar(file: File, reportarTotal: (total:number) => void
 
 async function ProcesarArchivo(data: Fila[], reportarProgreso: (cont:number) => void) {
   // Cargar datos existentes
-  const productos = await ObtenerProductos();
+  const productos = await ObtenerTodos<Producto>('productos');
   const grupos = Listas.value.filter(l => l.tipo === 'grupos');
   const fabricantes = Listas.value.filter(l => l.tipo === 'fabricantes');
   const cantidades = await ObtenerTodos<Cantidades>('cantidades');

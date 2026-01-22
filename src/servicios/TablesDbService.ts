@@ -11,7 +11,8 @@ export const Listas = ref<Lista[]>([]);
 export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
   const respuesta = await tablesDB.listRows({
     databaseId,
-    tableId
+    tableId,
+    queries: [Query.limit(1000)]
   });
   return respuesta.rows as T[];
 }
@@ -66,8 +67,4 @@ export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
 
 export function ObtenerCantidadesEnCaja(cajonId: string): Promise<Cantidades[]> {
   return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonId), Query.select(['*', 'producto.*'])]);
-}
-
-export function ObtenerProductos(): Promise<Producto[]> {
-  return ObtenerConQuery<Producto>('productos', [Query.limit(1000)]);
 }

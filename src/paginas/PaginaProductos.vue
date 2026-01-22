@@ -43,7 +43,7 @@ const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
 onMounted(async () => {
-  productos.value = await ServicioBase.ObtenerProductos();
+  productos.value = await ServicioBase.ObtenerTodos<Producto>('productos');
 })
 
 watchEffect(() => {
@@ -250,7 +250,7 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
   </DialogoEdicion>
 
   <!-- Dialogo para importar productos -->
-  <Dialog v-model:visible="dialogoImportar" header="Importar Productos" modal :closable="permitirCerrarDialogoImportar" :style="{ width: '400px' }">
+  <Dialog v-model:visible="dialogoImportar" header="Importar Productos" modal :closable="permitirCerrarDialogoImportar" :style="{ width: '450px' }">
     <div class="flex flex-col gap-3">
       <p>Seleccione el archivo CSV con los productos.</p>
       <FileUpload
