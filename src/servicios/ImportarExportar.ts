@@ -60,10 +60,10 @@ async function ProcesarFila(fila: Fila, productos: Producto[], grupos: Lista[], 
   if (!galpon) {
     galpon = {
       $id: '',
+      tipo: 'Galpon',
       nombre: fila.galpon,
       padre: null,
-      nivel: null,
-      ordenDescendente: undefined,
+      ordenDescendente: false,
     };
     await Crear('inventario', galpon);
     Inventarios.value.push(galpon);
@@ -73,23 +73,36 @@ async function ProcesarFila(fila: Fila, productos: Producto[], grupos: Lista[], 
   if (!estante) {
     estante = {
       $id: '',
+      tipo: 'Estante',
       nombre: fila.estante,
       padre: galpon.$id,
-      nivel: 1,
-      ordenDescendente: undefined,
+      ordenDescendente: false,
     };
     await Crear('inventario', estante);
     Inventarios.value.push(estante);
   }
 
-  let seccion = Inventarios.value.find(x => x.nombre == fila.seccion && x.padre == estante.$id);
+  let nivel = Inventarios.value.find(x => x.nombre == fila.nivel && x.padre == estante.$id);
+  if (!nivel) {
+    nivel = {
+      $id: '',
+      tipo: 'Nivel',
+      nombre: fila.nivel,
+      padre: estante.$id,
+      ordenDescendente: false,
+    };
+    await Crear('inventario', nivel);
+    Inventarios.value.push(nivel);
+  }
+
+  let seccion = Inventarios.value.find(x => x.nombre == fila.seccion && x.padre == nivel.$id);
   if (!seccion) {
     seccion = {
       $id: '',
+      tipo: 'Sección',
       nombre: fila.seccion,
-      padre: estante.$id,
-      nivel: fila.nivel ? Number(fila.nivel) : 1,
-      ordenDescendente: undefined,
+      padre: nivel.$id,
+      ordenDescendente: false,
     };
     await Crear('inventario', seccion);
     Inventarios.value.push(seccion);
@@ -99,10 +112,10 @@ async function ProcesarFila(fila: Fila, productos: Producto[], grupos: Lista[], 
   if (!cajon) {
     cajon = {
       $id: '',
+      tipo: 'Caja',
       nombre: fila.cajon,
       padre: seccion.$id,
-      nivel: null,
-      ordenDescendente: undefined,
+      ordenDescendente: false,
     };
     await Crear('inventario', cajon);
     Inventarios.value.push(cajon);

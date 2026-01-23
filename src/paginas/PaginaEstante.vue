@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Cantidades, Inventario, Lista, Producto } from '@/servicios/modelos.ts';
+import type { Cantidades, Inventario, Lista, Producto, TipoInventario } from '@/servicios/modelos.ts';
 import { onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
@@ -13,13 +13,13 @@ const router = useRouter();
 const confirm = useConfirm();
 
 const estanteQueryString = (router.currentRoute.value.params.estante as string).split('-');
-const dialogoEstante = ref(false);
-const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', padre: estanteQueryString[1] ?? '', nombre: estanteQueryString[2] ?? '', nivel: parseInt(estanteQueryString[3] ?? '0'), ordenDescendente: estanteQueryString[4] === 'true' });
+const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', tipo: 'Estante', padre: estanteQueryString[1] ?? '', nombre: estanteQueryString[2] ?? '', ordenDescendente: estanteQueryString[3] === 'true' });
+const galponNombre = estanteQueryString[4] ?? '';
+const galponOrdenDescendente = estanteQueryString[5];
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: estante.value.nombre, nivel: null, ordenDescendente: undefined });
+const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Sección', nombre: '', padre: estante.value.nombre, ordenDescendente: false });
 const esNuevo = ref(false);
-const tipoEdicion = ref<'Sección' | 'Caja' | ''>('');
 
 const mostrarDialogoProducto = ref(false);
 const grupos = ref<Lista[]>([]);
@@ -46,18 +46,16 @@ watchEffect(async () => {
   }
 });
 
-function Agregar(padre: string, tipoEdicionParam: 'Sección' | 'Caja') {
+function Agregar(padre: string, tipoEdicion: TipoInventario) {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', padre: padre, nivel: tipoEdicionParam === 'Sección' ? 1 : null, ordenDescendente: undefined };
+  itemEdicion.value = { $id: '', nombre: '', tipo: tipoEdicion, padre: padre, ordenDescendente: false };
   dialogVisible.value = true;
-  tipoEdicion.value = tipoEdicionParam;
 }
 
-function Editar(item: Inventario, tipoEdicionParam: 'Sección' | 'Caja') {
+function Editar(item: Inventario) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
   dialogVisible.value = true;
-  tipoEdicion.value = tipoEdicionParam;
 }
 
 async function Guardar() {
@@ -70,24 +68,22 @@ async function Guardar() {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
       TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
     }
+    if (itemEdicion.value.$id === estante.value.$id) {
+      estante.value.nombre = itemEdicion.value.nombre;
+      estante.value.ordenDescendente = itemEdicion.value.ordenDescendente;
+    }
   }
   dialogVisible.value = false;
 }
 
-function Quitar(item: Inventario, tipoEdicionParam: 'Sección' | 'Caja'): void {
+function Quitar(item: Inventario): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar ${tipoEdicionParam}: ${item.nombre} ?`,
+    message: `¿Estás seguro de eliminar ${item.tipo}: "${item.nombre}" y sus descendientes?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
-    accept: async () => {
-      const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === item.$id);
-      if (indice >= 0) {
-        await TablesDbService.Eliminar('inventario', item.$id);
-        TablesDbService.Inventarios.value.splice(indice, 1);
-      }
-    }
+    accept: async () => await TablesDbService.EliminarItemInventario(item)
   });
 }
 
@@ -118,37 +114,42 @@ async function VerCaja(caja: Inventario) {
   mostrarDialogoCaja.value = true;
 }
 
-async function GuardarEstante() {
-  await TablesDbService.Actualizar('inventario', estante.value);
-  const globalIndice = TablesDbService.Inventarios.value.findIndex(x => x.$id === estante.value.$id);
-  if (globalIndice >= 0) {
-    TablesDbService.Inventarios.value[globalIndice] = { ...estante.value };
-  }
-  dialogoEstante.value = false;
+function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): number {
+  return ordenDescendente ? b.nombre.localeCompare(a.nombre) : a.nombre.localeCompare(b.nombre);
 }
 </script>
 
 <template>
   <div id="encabezado" class="flex justify-between items-center">
-    <Button :label="`Galpón ${estanteQueryString[5]}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${estanteQueryString[5]}`)" />
+    <Button :label="`Galpón ${galponNombre}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${galponNombre}-${galponOrdenDescendente}`)" />
     <div class="text-xl">ESTANTE {{estante.nombre}}</div>
     <div>
-      <Button v-if="Usuario" label="Estante" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="() => dialogoEstante = true" />
-      <Button v-if="Usuario" label="Sección" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Sección')" />
+      <Button v-if="Usuario" label="Estante" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="Editar(estante)" />
+      <Button v-if="Usuario" label="Nivel" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Nivel')" />
     </div>
   </div>
 
-  <div v-for="nivel in estante.nivel" :key="nivel">
-     <Fieldset :legend="`Nivel ${estante.ordenDescendente ? (estante.nivel ?? 0) - nivel + 1 : nivel}`">
-      <div class="flex flex-row gap-2">
-        <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == (estante.ordenDescendente ? (estante.nivel ?? 0) - nivel + 1 : nivel)).length === 0" class="italic text-muted-color">
-          No hay cajones en este nivel.
+  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).length === 0" class="italic text-muted-color mt-3">
+      No hay niveles en este estante. Agrega niveles.
+  </div>
+  <div v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
+     <Fieldset :pt="{ root: 'border-2 border-gray-400' }">
+      <template #legend>
+        <div class="flex items-center">
+          <div class="mr-2">Nivel {{ nivel.nombre }}</div>
+          <Button v-if="Usuario" label="Sección" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')" />
+          <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(nivel)" @quitar-click="Quitar(nivel)" />
         </div>
-        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id && x.nivel == (estante.ordenDescendente ? (estante.nivel ?? 0) - nivel + 1 : nivel))" :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'">
+      </template>
+      <div class="flex flex-row gap-2">
+        <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
+          No hay secciones en este nivel. Agrega secciones.
+        </div>
+        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) " :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'">
           <template #icons v-if="Usuario">
             <div class="flex">
               <Button label="Caja" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')" />
-              <EditarQuitar @editar-click="Editar(seccion, 'Sección')" @quitar-click="Quitar(seccion, 'Sección')" />
+              <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" />
             </div>
           </template>
           <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id).length === 0" class="italic text-muted-color m-1">
@@ -157,8 +158,8 @@ async function GuardarEstante() {
           <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
                 <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" />
-                <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja, 'Caja')" @quitar-click="Quitar(caja, 'Caja')" />
+                <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja)" @quitar-click="Quitar(caja)" />
               </div>
           </div>
         </Panel>
@@ -166,17 +167,17 @@ async function GuardarEstante() {
     </Fieldset>
   </div>
 
-  <DialogoEdicion id="editarCajonCaja" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="tipoEdicion"
+  <DialogoEdicion id="editar" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="itemEdicion.tipo"
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full mt-1">
-        <label for="nombre">{{ tipoEdicion }}</label>
+        <label for="nombre">{{ itemEdicion.tipo }}</label>
         <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none" @keyup.enter="Guardar" />
       </FloatLabel>
-      <FloatLabel variant="on" class="w-full" v-if="tipoEdicion === 'Sección'">
-        <InputNumber id="nivel" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none"  @keyup.enter="Guardar" showButtons :max="estante.nivel ?? 1" :min="1" />
-        <label for="nivel">Nivel</label>
-      </FloatLabel>
+      <div v-if="itemEdicion.tipo === 'Estante' || itemEdicion.tipo === 'Nivel'" class="flex gap-2 items-center">
+        <label for="ordenDescendente">Orden Descendente</label>
+        <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />
+      </div>
     </div>
   </DialogoEdicion>
 
@@ -211,22 +212,4 @@ async function GuardarEstante() {
       <div><b>Descripción: </b>{{ (item.producto as Producto).descripcion }}</div>
     </div>
   </Dialog>
-
-  <DialogoEdicion id="editarEstante" v-model:mostrar="dialogoEstante" :esAgregar="false" :clickAceptar="GuardarEstante" nombre-objeto="Estante"
-    :desabilitarAceptar="estante.nombre.trim() === ''">
-    <div class="flex flex-col gap-3 pt-1">
-      <FloatLabel variant="on" class="w-full">
-        <InputText id="nombre" v-model="estante.nombre" autofocus class="w-full" :invalid="!estante.nombre" aria-autocomplete="none"  @keyup.enter="GuardarEstante" />
-        <label for="nombre">Estante</label>
-      </FloatLabel>
-      <FloatLabel variant="on" class="w-full">
-        <InputNumber id="niveles" v-model="estante.nivel" class="w-full" :invalid="!estante.nivel" aria-autocomplete="none"  @keyup.enter="GuardarEstante" showButtons :min="1" />
-        <label for="niveles">Niveles</label>
-      </FloatLabel>
-      <div class="flex gap-2 items-center">
-        <label for="ordenDescendente">Orden Descendente</label>
-        <ToggleSwitch id="ordenDescendente" v-model="estante.ordenDescendente" />
-      </div>
-    </div>
-  </DialogoEdicion>
 </template>

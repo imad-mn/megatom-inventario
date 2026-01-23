@@ -11,7 +11,7 @@ import { Usuario } from '@/servicios/appwrite';
 const confirm = useConfirm();
 const router = useRouter();
 const galponQueryString = (router.currentRoute.value.params.id as string).split('-');
-const galpon: Inventario = { $id: galponQueryString[0] ?? '', padre: null, nombre: galponQueryString[1] ?? '', nivel: null, ordenDescendente: galponQueryString[2] === 'true' };
+const galpon: Inventario = { $id: galponQueryString[0] ?? '', padre: null, tipo: 'Galpon', nombre: galponQueryString[1] ?? '', ordenDescendente: galponQueryString[2] === 'true' };
 
 const estantes = ref<Inventario[]>([]);
 watchEffect(() =>
@@ -20,13 +20,12 @@ watchEffect(() =>
 );
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: galpon.$id ?? '', nivel: null, ordenDescendente: false });
+const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Estante', nombre: '', padre: galpon.$id ?? '', ordenDescendente: false });
 const esNuevo = ref(false);
-const editarGalpon = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', padre: galpon.$id ?? '', nivel: 3, ordenDescendente: false };
+  itemEdicion.value = { $id: '', tipo: 'Estante', nombre: '', padre: galpon.$id ?? '', ordenDescendente: false };
   dialogVisible.value = true;
 }
 
@@ -40,12 +39,16 @@ async function Guardar() {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
       TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
     }
+    if (itemEdicion.value.$id === galpon.$id) {
+      galpon.nombre = itemEdicion.value.nombre;
+      galpon.ordenDescendente = itemEdicion.value.ordenDescendente;
+    }
   }
   dialogVisible.value = false;
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Estante', params: { estante: `${item.$id}-${item.padre}-${item.nombre}-${item.nivel}-${item.ordenDescendente}-${galpon.nombre}` } });
+  router.push({ name: 'Estante', params: { estante: `${item.$id}-${item.padre}-${item.nombre}-${item.ordenDescendente}-${galpon.nombre}-${galpon.ordenDescendente}` } });
 }
 
 function Editar(item: Inventario) {
@@ -57,27 +60,12 @@ function Editar(item: Inventario) {
 function Quitar(item: Inventario): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar el Estante: ${item.nombre} ?`,
+    message: `¿Estás seguro de eliminar el Estante: "${item.nombre}" y sus descendientes?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
-    accept: async () => {
-      const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === item.$id);
-      if (indice >= 0) {
-        await TablesDbService.Eliminar('inventario', item.$id);
-        TablesDbService.Inventarios.value.splice(indice, 1);
-      }
-    }
+    accept: async () => await TablesDbService.EliminarItemInventario(item)
   });
-}
-
-function GuardarGalpon() {
-  TablesDbService.Actualizar('inventario', galpon);
-  const globalIndice = TablesDbService.Inventarios.value.findIndex(x => x.$id === galpon.$id);
-  if (globalIndice >= 0) {
-    TablesDbService.Inventarios.value[globalIndice] = { ...galpon };
-  }
-  editarGalpon.value = false;
 }
 </script>
 
@@ -86,7 +74,7 @@ function GuardarGalpon() {
     <Button label="Galpones" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push('/galpones')" />
     <div class="text-xl">GALPÓN {{galpon.nombre}}</div>
     <div>
-      <Button v-if="Usuario" label="Galpón" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="() => editarGalpon = true" />
+      <Button v-if="Usuario" label="Galpón" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="Editar(galpon)" />
       <Button v-if="Usuario" label="Estante" icon="pi pi-plus" class="w-auto" severity="info" variant="outlined" @click="Agregar" />
     </div>
   </div>
@@ -105,26 +93,8 @@ function GuardarGalpon() {
         <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
         <label for="nombre">Estante</label>
       </FloatLabel>
-      <FloatLabel variant="on" class="w-full">
-        <InputNumber id="niveles" v-model="itemEdicion.nivel" class="w-full" :invalid="!itemEdicion?.nivel" aria-autocomplete="none" @keyup.enter="Guardar" showButtons :min="1" />
-        <label for="niveles">Niveles</label>
-      </FloatLabel>
       <div class="flex gap-2 items-center">
         <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />
-        <label for="ordenDescendente">Orden Descendente</label>
-      </div>
-    </div>
-  </DialogoEdicion>
-
-  <DialogoEdicion id="editarGalpon" v-model:mostrar="editarGalpon" :esAgregar=false :clickAceptar="GuardarGalpon" nombre-objeto="Galpón"
-    :desabilitarAceptar="galpon.nombre.trim() === ''">
-    <div class="flex flex-col gap-3 pt-1">
-      <FloatLabel variant="on" class="w-full mt-1">
-        <label for="nombre">Galpón</label>
-        <InputText id="nombre" v-model="galpon.nombre" autofocus class="w-full" :invalid="!galpon?.nombre" aria-autocomplete="none"  @keyup.enter="GuardarGalpon" />
-      </FloatLabel>
-      <div class="flex gap-2 items-center">
-        <ToggleSwitch id="ordenDescendente" v-model="galpon.ordenDescendente" />
         <label for="ordenDescendente">Orden Descendente</label>
       </div>
     </div>

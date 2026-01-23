@@ -68,3 +68,14 @@ export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
 export function ObtenerCantidadesEnCaja(cajonId: string): Promise<Cantidades[]> {
   return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonId), Query.select(['*', 'producto.*'])]);
 }
+
+export async function EliminarItemInventario(item: Inventario) {
+  // Eliminar hijos primero
+  Inventarios.value.filter(x => x.padre === item.$id).forEach(async (subItem) => {
+    await EliminarItemInventario(subItem);
+  });
+  // Luego eliminar el item
+  await Eliminar('inventario', item.$id);
+  const indice = Inventarios.value.findIndex(x => x.$id === item.$id);
+  Inventarios.value.splice(indice, 1);
+}

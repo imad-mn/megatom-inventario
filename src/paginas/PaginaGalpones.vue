@@ -13,12 +13,12 @@ const confirm = useConfirm();
 const router = useRouter();
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: false });
+const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false });
 const esNuevo = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', padre: null, nivel: null, ordenDescendente: false };
+  itemEdicion.value = { $id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false };
   dialogVisible.value = true;
 }
 
@@ -49,17 +49,11 @@ function Editar(item: Inventario) {
 function Quitar(item: Inventario): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar el Galpón: ${item.nombre} ?`,
+    message: `¿Estás seguro de eliminar el Galpón: "${item.nombre}" y sus descendientes?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
-    accept: async () => {
-      const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
-      if (indice >= 0) {
-        await TablesDbService.Eliminar('inventario', item.$id);
-        TablesDbService.Inventarios.value.splice(indice, 1);
-      }
-    }
+    accept: async () => await TablesDbService.EliminarItemInventario(item)
   });
 }
 </script>
@@ -73,6 +67,7 @@ function Quitar(item: Inventario): void {
     </div>
   </div>
 
+  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == null).length === 0" class="italic text-muted-color mt-3">No hay estantes en este Galpón</div>
   <div class="flex flex-wrap gap-3">
     <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
       <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.nombre" @click="Ver(item)" />

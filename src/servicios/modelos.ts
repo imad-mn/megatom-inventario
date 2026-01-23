@@ -8,13 +8,13 @@ export type Producto = {
   fabricante: string;
   imagenId: string | null;
 }
-
+export type TipoInventario = 'Galpon' | 'Estante' | 'Nivel' | 'Sección' | 'Caja';
 export type Inventario = {
   $id: string;
+  tipo: TipoInventario;
   nombre: string;
   padre: string | null;
-  nivel: number | null;
-  ordenDescendente: boolean | undefined;
+  ordenDescendente: boolean;
 }
 
 export type Cantidades = {
