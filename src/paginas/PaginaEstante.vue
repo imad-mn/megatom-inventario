@@ -133,32 +133,33 @@ function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): numbe
       No hay niveles en este estante. Agrega niveles.
   </div>
   <div v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
-     <Fieldset :pt="{ root: 'border-2 border-gray-400' }">
+     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1' }">
       <template #legend>
         <div class="flex items-center">
           <div class="mr-2">Nivel {{ nivel.nombre }}</div>
-          <Button v-if="Usuario" label="Sección" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')" />
+          <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" />
           <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(nivel)" @quitar-click="Quitar(nivel)" />
         </div>
       </template>
-      <div class="flex flex-row gap-2">
+      <div class="flex flex-row gap-1">
         <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
           No hay secciones en este nivel. Agrega secciones.
         </div>
-        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) " :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'">
+        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) "
+            :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'">
           <template #icons v-if="Usuario">
             <div class="flex">
-              <Button label="Caja" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')" />
+              <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
               <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" />
             </div>
           </template>
           <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id).length === 0" class="italic text-muted-color m-1">
             No hay cajas en esta Sección.
           </div>
-          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id" class="mt-2 p-1 border-1 rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id" class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" />
-                <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="'Ver contenido de la Caja'" />
+                <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar producto a Caja'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja)" @quitar-click="Quitar(caja)" />
               </div>
           </div>

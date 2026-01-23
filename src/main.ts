@@ -31,6 +31,7 @@ import Fieldset from 'primevue/fieldset';
 import Listbox from 'primevue/listbox';
 import ToggleSwitch from 'primevue/toggleswitch';
 import ProgressBar from 'primevue/progressbar';
+import Tooltip from 'primevue/tooltip';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -67,6 +68,7 @@ app.use(PrimeVue, {
 app.use(ConfirmationService)
 
 // Registro de componentes globales
+app.directive('tooltip', Tooltip);
 app.component('Menubar', Menubar);
 app.component('Button', Button);
 app.component('DataView', DataView);

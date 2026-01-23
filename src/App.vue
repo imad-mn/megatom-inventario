@@ -58,11 +58,11 @@ async function cerrarSesion() {
       <div v-if="Usuario">
         <span><i class="pi pi-user" />&nbsp;{{ Usuario.name }}</span>
         <Button
-          label="Cerrar Sesión"
           icon="pi pi-sign-out"
           variant="text"
           severity="secondary"
           @click="cerrarSesion"
+          v-tooltip.bottom="'Cerrar sesión'"
         />
       </div>
       <Button

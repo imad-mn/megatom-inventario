@@ -69,9 +69,14 @@ function Quitar(item: Inventario): void {
 
   <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == null).length === 0" class="italic text-muted-color mt-3">No hay estantes en este Galpón</div>
   <div class="flex flex-wrap gap-3">
-    <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
-      <Button class="text-lg" icon="pi pi-warehouse" variant="text" :label="'Galpón ' + item.nombre" @click="Ver(item)" />
-      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
+    <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id" class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
+      <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
+        <div>
+        <i class="pi pi-warehouse text-8xl"></i>
+        <div>{{ 'Galpón ' + item.nombre }}</div>
+        </div>
+      </Button>
+      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" />
     </div>
   </div>
 
