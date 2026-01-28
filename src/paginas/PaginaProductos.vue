@@ -42,6 +42,8 @@ const mostrarMensajeImportacion = ref(false);
 const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
+const ubicacionDict = ref<Record<string, string>>({});
+
 onMounted(async () => {
   productos.value = await ServicioBase.ObtenerTodos<Producto>('productos');
 })
@@ -167,6 +169,31 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
       permitirCerrarDialogoImportar.value = true;
     });
 }
+
+async function VerUbicacion(productoId: string) {
+  const cantidades = await ServicioBase.ObtenerCantidadesPorProducto(productoId);
+  let ubicaciones: string = '';
+  cantidades.forEach(cantidad => {
+    const cajon = ServicioBase.Inventarios.value.find(x => x.$id === cantidad.cajon);
+    if (cajon) {
+      const seccion = ServicioBase.Inventarios.value.find(x => x.$id === cajon.padre);
+      if (seccion) {
+        const estante = ServicioBase.Inventarios.value.find(x => x.$id === seccion.padre);
+        if (estante) {
+          const galpon = ServicioBase.Inventarios.value.find(x => x.$id === estante.padre);
+          if (galpon) {
+            ubicaciones += `Galpón ${galpon.nombre} / Estante ${estante.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre}: ${cantidad.cantidad} unidades\n`;
+          }
+        }
+      }
+    }
+  });
+
+  if (ubicaciones === '')
+    ubicaciones = 'No hay ubicaciones.';
+
+  ubicacionDict.value[productoId] = ubicaciones;
+}
 </script>
 
 <template>
@@ -197,9 +224,11 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
             <div>{{ grupoDict[item.grupo] }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
+            <Button v-if="!ubicacionDict[item.$id]" label="Ubicación" icon="pi pi-map-marker" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.$id)" />
+            <div v-else class="w-full"><b>Ubicación:&nbsp;</b>{{ ubicacionDict[item.$id] }}</div>
           </template>
           <template #footer v-if="Usuario">
-            <div class="flex gap-5">
+            <div class="flex gap-2">
               <Button icon="pi pi-pen-to-square" label="Editar" severity="success" size="small" variant="outlined" class="w-full" @click="Editar(item)" />
               <Button icon="pi pi-trash" label="Eliminar" severity="danger" size="small" variant="outlined" class="w-full" @click="Quitar(item)" />
             </div>

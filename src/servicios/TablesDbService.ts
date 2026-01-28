@@ -69,6 +69,10 @@ export function ObtenerCantidadesEnCaja(cajonId: string): Promise<Cantidades[]> 
   return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonId), Query.select(['*', 'producto.*'])]);
 }
 
+export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantidades[]> {
+  return ObtenerFiltroEqual<Cantidades>('cantidades', 'producto', productoId);
+}
+
 export async function EliminarItemInventario(item: Inventario) {
   // Eliminar hijos primero
   Inventarios.value.filter(x => x.padre === item.$id).forEach(async (subItem) => {
