@@ -63,17 +63,18 @@ function Quitar(item: Inventario): void {
     <div></div>
     <div class="text-xl justify-self-center">GALPONES</div>
     <div>
-      <Button v-if="Usuario" label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
+      <Button v-if="Usuario" label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Galpón'" />
     </div>
   </div>
 
   <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == null).length === 0" class="italic text-muted-color mt-3">No hay estantes en este Galpón</div>
-  <div class="flex flex-wrap gap-3">
-    <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id" class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
+  <div class="flex flex-wrap gap-3 justify-center">
+    <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id"
+      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>
-        <i class="pi pi-warehouse text-8xl"></i>
-        <div>{{ 'Galpón ' + item.nombre }}</div>
+          <i class="pi pi-warehouse text-7xl mb-2"></i>
+          <div>{{ 'Galpón ' + item.nombre }}</div>
         </div>
       </Button>
       <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" />

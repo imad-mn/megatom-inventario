@@ -33,6 +33,9 @@ const mostrarDialogoCaja = ref(false);
 const gruposDict = ref<Record<string, string>>({});
 const fabricantesDict = ref<Record<string, string>>({});
 
+const deshabilitarSiguienteCaja = ref(false);
+const deshabilitarCajaAnterior = ref(false);
+
 onMounted(() => {
   grupos.value = TablesDbService.ObtenerLista('grupos');
   gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));
@@ -114,6 +117,99 @@ async function VerCaja(caja: Inventario) {
   mostrarDialogoCaja.value = true;
 }
 
+async function CajaAnterior() {
+  if (cajaSeleccionada.value == null)
+    return;
+  if (deshabilitarSiguienteCaja.value)
+    deshabilitarSiguienteCaja.value = false;
+
+  // Revisa si hay una caja anterior en la misma sección
+  const cajasEnSeccion = TablesDbService.Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
+  const indiceCaja = cajasEnSeccion.indexOf(cajaSeleccionada.value);
+  if (cajasEnSeccion.length > 1 && indiceCaja > 0) {
+    const cajaAnterior = cajasEnSeccion[indiceCaja - 1];
+    if (cajaAnterior)
+      await VerCaja(cajaAnterior);
+    return;
+  }
+
+  // Si no hay caja anterior en la misma sección, busca en la sección anterior del mismo nivel
+  const seccionActual = TablesDbService.Inventarios.value.find(x => x.$id == cajaSeleccionada.value?.padre);
+  if (!seccionActual)
+    return;
+  const nivelActual = TablesDbService.Inventarios.value.find(x => x.$id == seccionActual.padre);
+  if (!nivelActual)
+    return;
+
+  const seccionesNivel = TablesDbService.Inventarios.value.filter(x => x.padre == nivelActual.$id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
+  const indiceSeccion = seccionesNivel.indexOf(seccionActual);
+  if (indiceSeccion > 0) {
+    const seccionAnterior = seccionesNivel[indiceSeccion - 1];
+    if (!seccionAnterior) {
+      deshabilitarCajaAnterior.value = true;
+      return;
+    }
+
+    const cajasSeccionAnterior = TablesDbService.Inventarios.value.filter(x => x.padre == seccionAnterior.$id);
+    if (cajasSeccionAnterior.length > 0) {
+      const cajaAnterior = cajasSeccionAnterior[cajasSeccionAnterior.length - 1];
+      if (cajaAnterior)
+        await VerCaja(cajaAnterior);
+    } else {
+      deshabilitarCajaAnterior.value = true;
+    }
+  } else {
+    deshabilitarCajaAnterior.value = true;
+  }
+}
+
+async function CajaSiguiente() {
+  if (cajaSeleccionada.value == null)
+    return;
+
+  if (deshabilitarCajaAnterior.value)
+    deshabilitarCajaAnterior.value = false;
+
+  // Revisa si hay una caja siguiente en la misma sección
+  const cajasEnSeccion = TablesDbService.Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
+  const indiceCaja = cajasEnSeccion.indexOf(cajaSeleccionada.value);
+  if (cajasEnSeccion.length > 1 && indiceCaja < cajasEnSeccion.length - 1) {
+    const cajaSiguiente = cajasEnSeccion[indiceCaja + 1];
+    if (cajaSiguiente)
+      await VerCaja(cajaSiguiente);
+    return;
+  }
+
+    // Si no hay caja anterior en la misma sección, busca en la sección siguiente del mismo nivel
+  const seccionActual = TablesDbService.Inventarios.value.find(x => x.$id == cajaSeleccionada.value?.padre);
+  if (!seccionActual)
+    return;
+  const nivelActual = TablesDbService.Inventarios.value.find(x => x.$id == seccionActual.padre);
+  if (!nivelActual)
+    return;
+
+  const seccionesNivel = TablesDbService.Inventarios.value.filter(x => x.padre == nivelActual.$id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
+  const indiceSeccion = seccionesNivel.indexOf(seccionActual);
+  if (indiceSeccion < seccionesNivel.length - 1) {
+    const seccionSiguiente = seccionesNivel[indiceSeccion + 1];
+    if (!seccionSiguiente) {
+      deshabilitarSiguienteCaja.value = true;
+      return;
+    }
+
+    const cajasSeccionSiguiente = TablesDbService.Inventarios.value.filter(x => x.padre == seccionSiguiente.$id);
+    if (cajasSeccionSiguiente.length > 0) {
+      const cajaSiguiente = cajasSeccionSiguiente[0];
+      if (cajaSiguiente)
+        await VerCaja(cajaSiguiente);
+    } else {
+      deshabilitarSiguienteCaja.value = true;
+    }
+  } else {
+    deshabilitarSiguienteCaja.value = true;
+  }
+}
+
 function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): number {
   return ordenDescendente ? b.nombre.localeCompare(a.nombre) : a.nombre.localeCompare(b.nombre);
 }
@@ -133,15 +229,15 @@ function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): numbe
       No hay niveles en este estante. Agrega niveles.
   </div>
   <div v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
-     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1' }">
+     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1', legend: { style: 'margin-left: 50%' } }">
       <template #legend>
         <div class="flex items-center">
-          <div class="mr-2">Nivel {{ nivel.nombre }}</div>
-          <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" />
+          <div class="font-medium">Nivel {{ nivel.nombre }}</div>
+          <Button v-if="Usuario" icon="pi pi-plus" everity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
           <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(nivel)" @quitar-click="Quitar(nivel)" />
         </div>
       </template>
-      <div class="flex flex-row gap-1">
+      <div class="flex flex-row gap-2">
         <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
           No hay secciones en este nivel. Agrega secciones.
         </div>
@@ -156,10 +252,11 @@ function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): numbe
           <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id).length === 0" class="italic text-muted-color m-1">
             No hay cajas en esta Sección.
           </div>
-          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id" class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id"
+              class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="'Ver contenido de la Caja'" />
-                <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar producto a Caja'" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="'Ver Contenido'" />
+                <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja)" @quitar-click="Quitar(caja)" />
               </div>
           </div>
@@ -194,7 +291,14 @@ function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): numbe
     </div>
   </DialogoEdicion>
 
-  <Dialog v-model:visible="mostrarDialogoCaja" :header="`Caja ${cajaSeleccionada?.nombre}`" :modal="true" class="md:w-2xl">
+  <Dialog v-model:visible="mostrarDialogoCaja" :modal="true" class="md:w-2xl">
+    <template #header>
+      <div class="flex justify-center items-center w-full">
+        <Button icon="pi pi-arrow-left" severity="secondary" variant="text"  v-tooltip.bottom="'Anterior'" @click="CajaAnterior" :disabled="deshabilitarCajaAnterior" />
+        <div class="mx-2 text-xl font-medium">Caja {{ cajaSeleccionada?.nombre }}</div>
+        <Button icon="pi pi-arrow-right" severity="secondary" variant="text" v-tooltip.bottom="'Siguiente'" @click="CajaSiguiente" :disabled="deshabilitarSiguienteCaja" />
+      </div>
+    </template>
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
     <div v-else v-for="item in productosEnCaja" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex justify-between">

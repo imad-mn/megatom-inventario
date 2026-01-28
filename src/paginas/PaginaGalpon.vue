@@ -74,15 +74,21 @@ function Quitar(item: Inventario): void {
     <Button label="Galpones" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push('/galpones')" />
     <div class="text-xl">GALPÓN {{galpon.nombre}}</div>
     <div>
-      <Button v-if="Usuario" label="Galpón" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="Editar(galpon)" />
-      <Button v-if="Usuario" label="Estante" icon="pi pi-plus" class="w-auto" severity="info" variant="outlined" @click="Agregar" />
+      <Button v-if="Usuario" label="Galpón" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="Editar(galpon)" v-tooltip.bottom="'Editar Galpón'" />
+      <Button v-if="Usuario" label="Estante" icon="pi pi-plus" class="w-auto" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Estante'"/>
     </div>
   </div>
   <div v-if="estantes.length === 0" class="italic text-muted-color">No hay estantes en este Galpón</div>
-  <div class="flex flex-wrap gap-3">
-    <div v-for="item in estantes" :key="item.$id" class="w-full md:w-2xs flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
-      <Button class="text-lg" icon="pi pi-server" variant="text" :label="'Estante ' + item.nombre" @click="Ver(item)" v-tooltip.bottom="'Ver Estante'" />
-      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
+  <div class="flex flex-wrap gap-3 justify-center">
+    <div v-for="item in estantes" :key="item.$id"
+      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
+      <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Estante'">
+        <div>
+          <i class="pi pi-server text-7xl mb-2"></i>
+          <div>{{ 'Estante ' + item.nombre }}</div>
+        </div>
+      </Button>
+      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" />
     </div>
   </div>
 
