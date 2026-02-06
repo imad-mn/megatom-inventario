@@ -211,7 +211,9 @@ async function CajaSiguiente() {
 }
 
 function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): number {
-  return ordenDescendente ? b.nombre.localeCompare(a.nombre) : a.nombre.localeCompare(b.nombre);
+  const numeroA = parseInt(a.nombre.replace(/[a-z]/gi, ''));
+  const numeroB = parseInt(b.nombre.replace(/[a-z]/gi, ''));
+  return ordenDescendente ? numeroB - numeroA : numeroA - numeroB;
 }
 </script>
 

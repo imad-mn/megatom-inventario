@@ -70,7 +70,7 @@ function Quitar(item: Inventario): void {
 </script>
 
 <template>
-  <div class="flex justify-between items-center mb-3">
+  <div class="flex justify-between items-center mb-10">
     <Button label="Galpones" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push('/galpones')" />
     <div class="text-xl">GALPÓN {{galpon.nombre}}</div>
     <div>
@@ -84,7 +84,7 @@ function Quitar(item: Inventario): void {
       class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Estante'">
         <div>
-          <i class="pi pi-server text-7xl mb-2"></i>
+          <i class="pi pi-server text-7xl mb-4"></i>
           <div>{{ 'Estante ' + item.nombre }}</div>
         </div>
       </Button>

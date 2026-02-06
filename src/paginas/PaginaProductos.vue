@@ -182,7 +182,7 @@ async function VerUbicacion(productoId: string) {
         if (estante) {
           const galpon = ServicioBase.Inventarios.value.find(x => x.$id === estante.padre);
           if (galpon) {
-            ubicaciones += `Galpón ${galpon.nombre} / Estante ${estante.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre}: ${cantidad.cantidad} unidades\n`;
+            ubicaciones += `Galpón ${galpon.nombre} / Estante ${estante.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre} / ${cantidad.cantidad} unidades\n`;
           }
         }
       }
@@ -224,7 +224,7 @@ async function VerUbicacion(productoId: string) {
             <div>{{ grupoDict[item.grupo] }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
-            <Button v-if="!ubicacionDict[item.$id]" label="Ubicación" icon="pi pi-map-marker" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.$id)" />
+            <Button v-if="!ubicacionDict[item.$id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.$id)" />
             <div v-else class="w-full"><b>Ubicación:&nbsp;</b>{{ ubicacionDict[item.$id] }}</div>
           </template>
           <template #footer v-if="Usuario">
