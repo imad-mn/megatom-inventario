@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Cantidades, Inventario, Lista, Producto, TipoInventario } from '@/servicios/modelos.ts';
-import { onMounted, ref, watchEffect } from 'vue';
+import { onMounted, ref, watchEffect, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
@@ -35,6 +35,17 @@ const fabricantesDict = ref<Record<string, string>>({});
 
 const deshabilitarSiguienteCaja = ref(false);
 const deshabilitarCajaAnterior = ref(false);
+
+const mostrarDialogoMover = ref(false);
+const elementoAMover = ref<Inventario | null>(null);
+const nuevoPadreNivel = ref<Inventario | null>(null);
+const nuevoPadreSeccion = ref<Inventario | null>(null);
+
+const seccionesNivel = computed(() => {
+  if (nuevoPadreNivel.value == null || elementoAMover.value == null)
+    return [];
+  return TablesDbService.Inventarios.value.filter(x => x.padre == nuevoPadreNivel.value?.$id && x.$id !== elementoAMover.value?.padre);
+})
 
 onMounted(() => {
   grupos.value = TablesDbService.ObtenerLista('grupos');
@@ -211,9 +222,36 @@ async function CajaSiguiente() {
 }
 
 function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): number {
-  const numeroA = parseInt(a.nombre.replace(/[a-z]/gi, ''));
-  const numeroB = parseInt(b.nombre.replace(/[a-z]/gi, ''));
+  const numeroA = parseInt(a.nombre.replace(/\D/g, ''));
+  const numeroB = parseInt(b.nombre.replace(/\D/g, ''));
   return ordenDescendente ? numeroB - numeroA : numeroA - numeroB;
+}
+
+function MostrarDialogoMover(elemento: Inventario) {
+  mostrarDialogoMover.value = true;
+  elementoAMover.value = elemento;
+  nuevoPadreNivel.value = null;
+  nuevoPadreSeccion.value = null;
+}
+
+async function Mover() {
+  if (elementoAMover.value == null)
+    return;
+
+  if (elementoAMover.value.tipo === 'Caja' && nuevoPadreSeccion.value != null) {
+    elementoAMover.value.padre = nuevoPadreSeccion.value.$id;
+  } else if (elementoAMover.value.tipo === 'Sección' && nuevoPadreNivel.value != null) {
+    elementoAMover.value.padre = nuevoPadreNivel.value.$id;
+  } else {
+    return;
+  }
+
+  const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === elementoAMover.value?.$id);
+  if (indice >= 0) {
+    await TablesDbService.Actualizar('inventario', elementoAMover.value);
+    TablesDbService.Inventarios.value[indice] = { ...elementoAMover.value };
+  }
+  mostrarDialogoMover.value = false;
 }
 </script>
 
@@ -248,6 +286,7 @@ function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): numbe
           <template #icons v-if="Usuario">
             <div class="flex">
               <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
+              <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(seccion)" v-tooltip.bottom="'Mover Sección'" />
               <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" />
             </div>
           </template>
@@ -259,6 +298,7 @@ function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): numbe
               <div class="flex">
                 <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="'Ver Contenido'" />
                 <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
+                <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja)" @quitar-click="Quitar(caja)" />
               </div>
           </div>
@@ -319,4 +359,20 @@ function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): numbe
       <div><b>Descripción: </b>{{ (item.producto as Producto).descripcion }}</div>
     </div>
   </Dialog>
+
+  <DialogoEdicion id="mover" v-model:mostrar="mostrarDialogoMover" :encabezado="'Mover ' + elementoAMover?.tipo + ' ' + elementoAMover?.nombre"
+    :clickAceptar="Mover" :desabilitarAceptar="elementoAMover?.tipo === 'Caja' ? nuevoPadreSeccion == null : nuevoPadreNivel == null">
+    <div class="flex flex-col gap-2">
+      <div class="flex gap-2 items-center">
+        <label for="nuevoPadreNivel">Nuevo Nivel: </label>
+        <Select id="nuevoPadreNivel" v-model="nuevoPadreNivel" option-label="nombre"
+          :options="TablesDbService.Inventarios.value.filter(x => x.padre == estante?.$id && x.$id !== elementoAMover?.padre)">
+        </Select>
+      </div>
+      <div class="flex gap-2 items-center" v-if="elementoAMover?.tipo === 'Caja'">
+        <label for="nuevoPadreSeccion">Nueva Sección: </label>
+        <Select id="nuevoPadreSeccion" v-model="nuevoPadreSeccion" option-label="nombre" :options="seccionesNivel" />
+      </div>
+    </div>
+  </DialogoEdicion>
 </template>
