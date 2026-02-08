@@ -256,7 +256,7 @@ async function Mover() {
 </script>
 
 <template>
-  <div id="encabezado" class="flex justify-between items-center">
+  <div id="encabezado" class="flex justify-between items-center mb-4">
     <Button :label="`Galpón ${galponNombre}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${galponNombre}-${galponOrdenDescendente}`)" />
     <div class="text-xl">ESTANTE {{estante.nombre}}</div>
     <div>
@@ -265,24 +265,24 @@ async function Mover() {
     </div>
   </div>
 
-  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).length === 0" class="italic text-muted-color mt-3">
+  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).length === 0" class="italic text-muted-color">
       No hay niveles en este estante. Agrega niveles.
   </div>
-  <div v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
-     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1', legend: { style: 'margin-left: 50%' } }">
+  <div v-else v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
+     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1 flex justify-center', legend: { style: 'margin-left: 50%' } }">
       <template #legend>
         <div class="flex items-center">
           <div class="font-medium">Nivel {{ nivel.nombre }}</div>
-          <Button v-if="Usuario" icon="pi pi-plus" everity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
-          <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(nivel)" @quitar-click="Quitar(nivel)" />
+          <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
+          <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel)" @quitarClick="Quitar(nivel)" />
         </div>
       </template>
       <div class="flex flex-row gap-2">
         <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
-          No hay secciones en este nivel. Agrega secciones.
+          No hay secciones en este nivel.
         </div>
         <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) "
-            :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'">
+            :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-25'">
           <template #icons v-if="Usuario">
             <div class="flex">
               <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
@@ -296,10 +296,10 @@ async function Mover() {
           <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id"
               class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="'Ver Contenido'" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" class="grow" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="'Ver Contenido'" />
                 <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(caja)" @quitar-click="Quitar(caja)" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" />
               </div>
           </div>
         </Panel>
