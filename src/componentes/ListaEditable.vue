@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { Lista, TipoLista } from '@/servicios/modelos.ts';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
@@ -15,6 +15,10 @@ const confirm = useConfirm();
 const dialogVisible = ref(false);
 const itemEdicion = ref<Lista>({ $id: '', tipo: props.tipo, nombre: '' });
 const esNuevo = ref(false);
+
+const itemsFiltrados = computed(() =>
+  TablesDbService.Listas.value.filter(x => x.tipo === props.tipo)
+);
 
 function Agregar() {
   esNuevo.value = true;
@@ -65,9 +69,9 @@ function Quitar(item: Lista): void {
     <template #icons>
       <Button label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>
-    <div v-for="item in TablesDbService.Listas.value.filter(x => x.tipo == tipo)" :key="item.$id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
+    <div v-for="item in itemsFiltrados" :key="item.$id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
       <div>{{ item.nombre }}</div>
-      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitar-click="Quitar(item)" />
+      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" />
     </div>
   </Panel>
 

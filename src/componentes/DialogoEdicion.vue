@@ -1,7 +1,7 @@
 <script setup lang="ts">
 interface DialogoEdicionProps {
   esAgregar?: boolean,
-  clickAceptar(): void
+  clickAceptar: () => Promise<void>,
   desabilitarAceptar: boolean,
   nombreObjeto?: string,
   class?: string,
@@ -16,7 +16,7 @@ const mostrar = defineModel<boolean>('mostrar')
     <slot></slot>
     <template #footer>
       <Button label="Cancelar" icon="pi pi-times" @click="mostrar = false" severity="secondary" variant="outlined" />
-      <Button label="Guardar" icon="pi pi-save" @click="$props.clickAceptar" :disabled="$props.desabilitarAceptar" variant="outlined" />
+      <Button label="Guardar" icon="pi pi-save" @click="async () => await props.clickAceptar()" :disabled="props.desabilitarAceptar" variant="outlined" />
     </template>
   </Dialog>
 </template>

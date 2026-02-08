@@ -74,12 +74,11 @@ export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantid
 }
 
 export async function EliminarItemInventario(item: Inventario) {
-  // Eliminar hijos primero
-  Inventarios.value.filter(x => x.padre === item.$id).forEach(async (subItem) => {
+  const hijos = Inventarios.value.filter(x => x.padre === item.$id);
+  for (const subItem of hijos) {
     await EliminarItemInventario(subItem);
-  });
-  // Luego eliminar el item
+  }
   await Eliminar('inventario', item.$id);
   const indice = Inventarios.value.findIndex(x => x.$id === item.$id);
-  Inventarios.value.splice(indice, 1);
+  if (indice >= 0) Inventarios.value.splice(indice, 1);
 }

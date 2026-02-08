@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import PaginaListas from './paginas/PaginaListas.vue'
-import PaginaInventario from './paginas/PaginaGalpones.vue'
+import PaginaGalpones from './paginas/PaginaGalpones.vue'
 import PaginaProductos from './paginas/PaginaProductos.vue'
 import PaginaGalpon from './paginas/PaginaGalpon.vue'
 import PaginaEstante from './paginas/PaginaEstante.vue'
@@ -13,7 +13,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/listas', component: PaginaListas, name: 'Listas' },
-    { path: '/galpones', component: PaginaInventario, name: 'Galpones' },
+    { path: '/galpones', component: PaginaGalpones, name: 'Galpones' },
     { path: '/productos', component: PaginaProductos, name: 'Productos' },
     { path: '/galpon/:id', component: PaginaGalpon, name: 'Galpón', sensitive: true },
     { path: '/estante/:estante', component: PaginaEstante, name: 'Estante', sensitive: true },

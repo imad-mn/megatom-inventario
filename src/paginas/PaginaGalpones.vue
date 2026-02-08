@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Inventario } from '@/servicios/modelos.ts';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
@@ -15,6 +15,8 @@ const router = useRouter();
 const dialogVisible = ref(false);
 const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false });
 const esNuevo = ref(false);
+
+const galpones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === null));
 
 function Agregar() {
   esNuevo.value = true;
@@ -67,9 +69,9 @@ function Quitar(item: Inventario): void {
     </div>
   </div>
 
-  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == null).length === 0" class="italic text-muted-color mt-3">No hay estantes en este Galpón</div>
+  <div v-if="galpones.length === 0" class="italic text-muted-color mt-3">No hay galpones</div>
   <div class="flex flex-wrap gap-3 justify-center">
-    <div v-for="item in TablesDbService.Inventarios.value.filter(x => x.padre == null)" :key="item.$id"
+    <div v-for="item in galpones" :key="item.$id"
       class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>

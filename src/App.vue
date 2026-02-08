@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
@@ -32,6 +32,10 @@ const menuItems = ref<MenuItem[]>([
   },
 ]);
 
+const menuItemsVisibles = computed(() =>
+  menuItems.value.filter(item => !(item as MenuItem & { isAdmin?: boolean }).isAdmin || Usuario.value)
+);
+
 onMounted(async () => {
   Inventarios.value = await ObtenerTodos('inventario');
   Listas.value = await ObtenerTodos('listas');
@@ -45,7 +49,7 @@ async function cerrarSesion() {
 </script>
 
 <template>
-  <Menubar :model="menuItems.filter(item => item.isAdmin ? Usuario : true)" class="mb-3!" breakpoint="768px">
+  <Menubar :model="menuItemsVisibles" class="mb-3!" breakpoint="768px">
     <template #start>
       <RouterLink to="/">
         <div class="flex items-center">
