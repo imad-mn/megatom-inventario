@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import * as ServicioBase from '@/servicios/TablesDbService';
-import type { Lista, Producto } from '@/servicios/modelos.ts';
-import { onMounted, ref, watchEffect } from 'vue';
+import * as TablesDbService from '@/servicios/TablesDbService';
+import type { Cantidades, Lista, Producto } from '@/servicios/modelos.ts';
+import { computed, onMounted, ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
@@ -12,8 +12,8 @@ import { Importar } from '@/servicios/ImportarExportar';
 
 const confirm = useConfirm();
 
-const grupos = ServicioBase.ObtenerLista('grupos');
-const fabricantes = ServicioBase.ObtenerLista('fabricantes');
+const grupos = TablesDbService.ObtenerLista('grupos');
+const fabricantes = TablesDbService.ObtenerLista('fabricantes');
 const productos = ref<Producto[]>([]);
 const productosFiltrados = ref<Producto[]>([]);
 
@@ -43,9 +43,12 @@ const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
 const ubicacionDict = ref<Record<string, string>>({});
+let cantidadesConProductos: Cantidades[] = [];
 
 onMounted(async () => {
-  productos.value = await ServicioBase.ObtenerTodos<Producto>('productos');
+  productos.value = await TablesDbService.ObtenerTodos<Producto>('productos');
+  cantidadesConProductos = await TablesDbService.ObtenerTodos<Cantidades>('cantidades');
+  productos.value.forEach(x => VerUbicacion(x.$id));
 })
 
 watchEffect(() => {
@@ -62,12 +65,30 @@ watchEffect(() => {
   productosFiltrados.value.sort((a,b) => a.nombre.localeCompare(b.nombre));
 });
 
+const galponSeleccionado = ref<string | null>(null);
+const estanteSeleccionado = ref<string | null>(null);
+const nivelSeleccionado = ref<string | null>(null);
+const seccionSeleccionada = ref<string | null>(null);
+const cajaSeleccionada = ref<string | null>(null);
+const cantidadInicial = ref<number>(1);
+const galpones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === null));
+const estantes = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
+const niveles = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
+const secciones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
+const cajas = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
+
 function Agregar() {
   esNuevo.value = true;
   imagenEdicion.value = undefined;
   itemEdicion.value = { $id: '', nombre: '', grupo: '', fabricante: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenId: null };
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
+  galponSeleccionado.value = null;
+  estanteSeleccionado.value = null;
+  nivelSeleccionado.value = null;
+  seccionSeleccionada.value = null;
+  cajaSeleccionada.value = null;
+  cantidadInicial.value = 1;
 }
 
 async function Guardar() {
@@ -76,18 +97,28 @@ async function Guardar() {
       return;
 
     if (archivoFoto) {
-      itemEdicion.value!.imagenId = await StorageService.Subir(archivoFoto);
+      itemEdicion.value.imagenId = await StorageService.Subir(archivoFoto);
       archivoFoto = undefined;
     }
 
     if (esNuevo.value) {
-      await ServicioBase.Crear('productos', itemEdicion.value!);
+      await TablesDbService.Crear('productos', itemEdicion.value!);
       productos.value.push({ ...itemEdicion.value! });
+
+      if (cajaSeleccionada.value && cantidadInicial.value > 0) {
+        const item: Cantidades = {
+          $id: '',
+          producto: itemEdicion.value.$id,
+          cantidad: cantidadInicial.value,
+          cajon: cajaSeleccionada.value
+        };
+        await TablesDbService.Crear('cantidades', item);
+      }
       dialogVisible.value = false;
     } else {
       const indice = productos.value.findIndex(x => x.$id === itemEdicion.value!.$id);
       if (indice >= 0) {
-        await ServicioBase.Actualizar('productos', itemEdicion.value!);
+        await TablesDbService.Actualizar('productos', itemEdicion.value!);
         productos.value[indice] = { ...itemEdicion.value! };
         dialogVisible.value = false;
       }
@@ -115,7 +146,7 @@ function Quitar(item: Producto): void {
     accept: () => {
       const indice = productos.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        ServicioBase.Eliminar('productos', item.$id).then(() => {
+        TablesDbService.Eliminar('productos', item.$id).then(() => {
           productos.value.splice(indice, 1);
         });
         StorageService.Eliminar(item.$id).catch(error => {
@@ -170,19 +201,22 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
     });
 }
 
-async function VerUbicacion(productoId: string) {
-  const cantidades = await ServicioBase.ObtenerCantidadesPorProducto(productoId);
+function VerUbicacion(productoId: string) {
+  const cantidades = cantidadesConProductos.filter(x => x.producto === productoId);
   let ubicaciones: string = '';
   cantidades.forEach(cantidad => {
-    const cajon = ServicioBase.Inventarios.value.find(x => x.$id === cantidad.cajon);
+    const cajon = TablesDbService.Inventarios.value.find(x => x.$id === cantidad.cajon);
     if (cajon) {
-      const seccion = ServicioBase.Inventarios.value.find(x => x.$id === cajon.padre);
+      const seccion = TablesDbService.Inventarios.value.find(x => x.$id === cajon.padre);
       if (seccion) {
-        const estante = ServicioBase.Inventarios.value.find(x => x.$id === seccion.padre);
-        if (estante) {
-          const galpon = ServicioBase.Inventarios.value.find(x => x.$id === estante.padre);
-          if (galpon) {
-            ubicaciones += `Galpón ${galpon.nombre} / Estante ${estante.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre} / ${cantidad.cantidad} unidades\n`;
+        const nivel = TablesDbService.Inventarios.value.find(x => x.$id === seccion.padre);
+        if (nivel) {
+          const estante = TablesDbService.Inventarios.value.find(x => x.$id === nivel?.padre);
+          if (estante) {
+            const galpon = TablesDbService.Inventarios.value.find(x => x.$id === estante.padre);
+            if (galpon) {
+              ubicaciones += `Galpón ${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre} / ${cantidad.cantidad} unidades\n`;
+            }
           }
         }
       }
@@ -224,8 +258,7 @@ async function VerUbicacion(productoId: string) {
             <div>{{ grupoDict[item.grupo] }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
-            <Button v-if="!ubicacionDict[item.$id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.$id)" />
-            <div v-else class="w-full"><b>Ubicación:&nbsp;</b>{{ ubicacionDict[item.$id] }}</div>
+            <div><b>Ubicación:&nbsp;</b>{{ ubicacionDict[item.$id] }}</div>
           </template>
           <template #footer v-if="Usuario">
             <div class="flex gap-2">
@@ -273,8 +306,36 @@ async function VerUbicacion(productoId: string) {
         :custom-upload="true"
         class="p-button-outlined"
         @select="SeleccionarFoto" />
+      <div class="text-sm text-gray-500">Tamaño máximo de la foto: 512 KB.</div>
       <img v-if="imagenEdicion" :src="imagenEdicion" alt="Foto" class="rounded-xl w-full" />
       <Message severity="warn" v-if="mostrarAdvertencia">Ya existe un producto con ese nombre</Message>
+      <div v-if="esNuevo" class="flex flex-col gap-3">
+        <b>Ubicación</b>
+        <FloatLabel variant="on">
+          <Select v-model="galponSeleccionado" :options="galpones" optionLabel="nombre" optionValue="$id" showClear class="w-full" />
+          <label>Galpón</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <Select v-model="estanteSeleccionado" :options="estantes" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!galponSeleccionado" />
+          <label>Estante</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <Select v-model="nivelSeleccionado" :options="niveles" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!estanteSeleccionado" />
+          <label>Nivel</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <Select v-model="seccionSeleccionada" :options="secciones" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!nivelSeleccionado" />
+          <label>Sección</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <Select v-model="cajaSeleccionada" :options="cajas" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!seccionSeleccionada" />
+          <label>Caja</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <InputNumber v-model="cantidadInicial" :minFractionDigits="0" :maxFractionDigits="0" :min="1" class="w-full" :disabled="!cajaSeleccionada" />
+          <label>Cantidad</label>
+        </FloatLabel>
+      </div>
     </div>
   </DialogoEdicion>
 

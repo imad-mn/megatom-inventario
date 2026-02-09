@@ -278,7 +278,7 @@ async function Mover() {
       No hay niveles en este estante. Agrega niveles.
   </div>
   <div v-else v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
-     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1 flex justify-center', legend: { style: 'margin-left: 50%' } }">
+     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1 flex justify-center', legend: { style: 'margin-left: auto;' } }">
       <template #legend>
         <div class="flex items-center">
           <div class="font-medium">Nivel {{ nivel.nombre }}</div>
