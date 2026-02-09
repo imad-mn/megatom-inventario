@@ -19,9 +19,13 @@ export type Inventario = {
 
 export type Cantidades = {
   $id: string;
-  producto: string | Producto;
+  producto: string;
   cantidad: number;
   cajon: string;
+}
+
+export type CantidadesConProducto = Omit<Cantidades, 'producto'> & {
+  producto: Producto;
 }
 
 export type Movimientos = {

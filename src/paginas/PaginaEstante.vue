@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Cantidades, Inventario, Lista, Producto, TipoInventario } from '@/servicios/modelos.ts';
+import type { Cantidades, CantidadesConProducto, Inventario, Lista, Producto, TipoInventario } from '@/servicios/modelos.ts';
 import { onMounted, ref, watchEffect, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
@@ -28,7 +28,8 @@ const productosDelGrupo = ref<Producto[]>([]);
 const productoSeleccionado = ref<Producto | null>(null);
 const cantidad = ref<number>(1);
 const cajaSeleccionada = ref<Inventario | null>(null);
-const productosEnCaja = ref<Cantidades[]>([]);
+const productosEnCaja = ref<CantidadesConProducto[]>([]);
+const productosEnCajas = ref<CantidadesConProducto[]>([]);
 const mostrarDialogoCaja = ref(false);
 const gruposDict = ref<Record<string, string>>({});
 const fabricantesDict = ref<Record<string, string>>({});
@@ -47,17 +48,25 @@ const seccionesNivel = computed(() => {
   return TablesDbService.Inventarios.value.filter(x => x.padre == nuevoPadreNivel.value?.$id && x.$id !== elementoAMover.value?.padre);
 })
 
-onMounted(() => {
+onMounted(async () => {
   grupos.value = TablesDbService.ObtenerLista('grupos');
   gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
   fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
+  productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos();
 })
 
 watchEffect(async () => {
   if (grupoSeleccionado.value) {
     productosDelGrupo.value = (await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value)).sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
+});
+
+const productosNombresEnCaja = computed(() => {
+  return productosEnCajas.value.reduce((dict, cantidad) => {
+    dict[cantidad.cajon] = dict[cantidad.cajon] ? `${dict[cantidad.cajon]}\n• ${cantidad.producto.nombre} (${cantidad.cantidad})` : `• ${cantidad.producto.nombre} (${cantidad.cantidad})`;
+    return dict;
+  }, {} as Record<string, string>);
 });
 
 function Agregar(padre: string, tipoEdicion: TipoInventario) {
@@ -118,12 +127,12 @@ async function GuardarProducto() {
     cajon: cajaSeleccionada.value.$id
   };
   await TablesDbService.Crear('cantidades', item);
-  productosEnCaja.value.push({ ...item, producto: productoSeleccionado.value });
+  productosEnCajas.value.push({ ...item, producto: productoSeleccionado.value });
   mostrarDialogoProducto.value = false;
 }
 
 async function VerCaja(caja: Inventario) {
-  productosEnCaja.value = await TablesDbService.ObtenerCantidadesEnCaja(caja.$id);
+  productosEnCaja.value = productosEnCajas.value.filter(x => x.cajon === caja.$id);
   cajaSeleccionada.value = caja;
   mostrarDialogoCaja.value = true;
 }
@@ -296,7 +305,7 @@ async function Mover() {
           <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id"
               class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre" @click="VerCaja(caja)" class="grow" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="'Ver Contenido'" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" class="grow" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="productosNombresEnCaja[caja.$id] ?? 'No hay productos en esta caja'" />
                 <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" />
@@ -345,18 +354,18 @@ async function Mover() {
     <div v-else v-for="item in productosEnCaja" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex justify-between">
         <div>
-          <div><b>Nombre: </b>{{ (item.producto as Producto).nombre }}</div>
-          <div><b>Grupo: </b>{{ gruposDict[(item.producto as Producto).grupo] }}</div>
-          <div><b>Fabricante: </b>{{ fabricantesDict[(item.producto as Producto).fabricante] }}</div>
-          <div><b>Código: </b>{{ (item.producto as Producto).codigo }}</div>
+          <div><b>Nombre: </b>{{ item.producto.nombre }}</div>
+          <div><b>Grupo: </b>{{ gruposDict[item.producto.grupo] }}</div>
+          <div><b>Fabricante: </b>{{ fabricantesDict[item.producto.fabricante] }}</div>
+          <div><b>Código: </b>{{ item.producto.codigo }}</div>
           <br />
           <div><b>Cantidad: </b>{{ item.cantidad }}</div>
-          <div><b>Peso Unitario: </b>{{ (item.producto as Producto).pesoUnitario }} Kg.</div>
-          <div><b>Peso Total: </b>{{ ((item.producto as Producto).pesoUnitario * item.cantidad).toFixed(2) }} Kg.</div>
+          <div><b>Peso Unitario: </b>{{ item.producto.pesoUnitario }} Kg.</div>
+          <div><b>Peso Total: </b>{{ (item.producto.pesoUnitario * item.cantidad).toFixed(2) }} Kg.</div>
         </div>
-        <img :src="(item.producto as Producto).imagenId ? StorageService.Url((item.producto as Producto).imagenId ?? '') : undefined" alt="Foto" class="rounded-xl w-49 h-49" />
+        <img :src="item.producto.imagenId ? StorageService.Url(item.producto.imagenId ?? '') : undefined" alt="Foto" class="rounded-xl w-49 h-49" />
       </div>
-      <div><b>Descripción: </b>{{ (item.producto as Producto).descripcion }}</div>
+      <div><b>Descripción: </b>{{ item.producto.descripcion }}</div>
     </div>
   </Dialog>
 

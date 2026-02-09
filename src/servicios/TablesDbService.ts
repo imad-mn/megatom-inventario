@@ -1,6 +1,6 @@
 import { Query, type Models } from 'appwrite';
 import { tablesDB, ID } from './appwrite.ts';
-import type { Cantidades, Inventario, Lista, Producto } from './modelos.ts';
+import type { Cantidades, CantidadesConProducto, Inventario, Lista, Producto } from './modelos.ts';
 import { ref } from 'vue';
 
 const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
@@ -65,8 +65,8 @@ export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
   return ObtenerFiltroEqual<Producto>('productos', 'grupo', grupoId);
 }
 
-export function ObtenerCantidadesEnCaja(cajonId: string): Promise<Cantidades[]> {
-  return ObtenerConQuery<Cantidades>('cantidades', [Query.equal('cajon', cajonId), Query.select(['*', 'producto.*'])]);
+export function ObtenerCantidadesConProductos(): Promise<CantidadesConProducto[]> {
+  return ObtenerConQuery<CantidadesConProducto>('cantidades', [Query.select(['*', 'producto.*'])]);
 }
 
 export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantidades[]> {
