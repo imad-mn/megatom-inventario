@@ -45,20 +45,21 @@ const iniciarSesion = async () => {
               v-model="email"
               type="email"
               placeholder="Ingrese su email"
-              class="w-full"
+              fluid
               required
             />
           </div>
 
           <div class="mb-3">
             <label for="password">Contraseña</label>
-            <InputText
+            <Password
               id="password"
               v-model="password"
               placeholder="Ingrese su contraseña"
-              type="password"
-              class="w-full"
+              fluid
               required
+              toggleMask
+              :feedback="false"
             />
           </div>
           <Message v-if="mensaje != ''" :severity="severidad" :closable="false" class="mb-4">{{ mensaje }}</Message>

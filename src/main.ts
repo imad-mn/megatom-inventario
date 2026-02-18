@@ -32,6 +32,7 @@ import Listbox from 'primevue/listbox';
 import ToggleSwitch from 'primevue/toggleswitch';
 import ProgressBar from 'primevue/progressbar';
 import Tooltip from 'primevue/tooltip';
+import Password from 'primevue/password';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -89,5 +90,6 @@ app.component('Fieldset', Fieldset);
 app.component('Listbox', Listbox);
 app.component('ToggleSwitch', ToggleSwitch);
 app.component('ProgressBar', ProgressBar);
+app.component('Password', Password);
 
 app.mount('#app')

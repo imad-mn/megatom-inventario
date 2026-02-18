@@ -42,13 +42,10 @@ const mostrarMensajeImportacion = ref(false);
 const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
-const ubicacionDict = ref<Record<string, string>>({});
-let cantidadesConProductos: Cantidades[] = [];
+const ubicacionDict = ref<Record<string, string[]>>({});
 
 onMounted(async () => {
   productos.value = await TablesDbService.ObtenerTodos<Producto>('productos');
-  cantidadesConProductos = await TablesDbService.ObtenerTodos<Cantidades>('cantidades');
-  productos.value.forEach(x => VerUbicacion(x.$id));
 })
 
 watchEffect(() => {
@@ -201,9 +198,9 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
     });
 }
 
-function VerUbicacion(productoId: string) {
-  const cantidades = cantidadesConProductos.filter(x => x.producto === productoId);
-  let ubicaciones: string = '';
+async function VerUbicacion(productoId: string) {
+  const cantidades = await TablesDbService.ObtenerCantidadesPorProducto(productoId);
+  const ubicaciones: string[] = [];
   cantidades.forEach(cantidad => {
     const cajon = TablesDbService.Inventarios.value.find(x => x.$id === cantidad.cajon);
     if (cajon) {
@@ -215,7 +212,7 @@ function VerUbicacion(productoId: string) {
           if (estante) {
             const galpon = TablesDbService.Inventarios.value.find(x => x.$id === estante.padre);
             if (galpon) {
-              ubicaciones += `Galpón ${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre} / ${cantidad.cantidad} unidades\n`;
+              ubicaciones.push(`Galpón ${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre} / ${cantidad.cantidad} unidades\n`);
             }
           }
         }
@@ -223,8 +220,8 @@ function VerUbicacion(productoId: string) {
     }
   });
 
-  if (ubicaciones === '')
-    ubicaciones = 'No hay ubicaciones.';
+  if (ubicaciones.length === 0)
+    ubicaciones.push('No hay ubicaciones.');
 
   ubicacionDict.value[productoId] = ubicaciones;
 }
@@ -258,7 +255,13 @@ function VerUbicacion(productoId: string) {
             <div>{{ grupoDict[item.grupo] }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
-            <div><b>Ubicación:&nbsp;</b>{{ ubicacionDict[item.$id] }}</div>
+            <Button v-if="!ubicacionDict[item.$id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.$id)" />
+            <div v-else>
+              <div><b>Ubicación:</b></div>
+              <ul class="list-disc list-inside">
+                <li v-for="(ubic, index) in ubicacionDict[item.$id]" :key="index">{{ ubic }}</li>
+              </ul>
+            </div>
           </template>
           <template #footer v-if="Usuario">
             <div class="flex gap-2">
