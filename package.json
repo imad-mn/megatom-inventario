@@ -17,7 +17,7 @@
   "dependencies": {
     "@primeuix/themes": "^1.2.5",
     "@tailwindcss/vite": "^4.1.18",
-    "appwrite": "^21.5.0",
+    "appwrite": "^22.4.1",
     "papaparse": "^5.5.3",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",

@@ -25,6 +25,12 @@ const menuItems = ref<MenuItem[]>([
     command: () => router.push('/movimientos')
   },
   {
+    label: 'HISTORIAL',
+    icon: PrimeIcons.HISTORY,
+    isAdmin: true,
+    command: () => router.push('/historial')
+  },
+  {
     label: 'DATA',
     icon: PrimeIcons.LIST,
     isAdmin: true,

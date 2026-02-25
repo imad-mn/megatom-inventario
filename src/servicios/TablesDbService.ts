@@ -1,7 +1,8 @@
 import { Query, type Models } from 'appwrite';
-import { tablesDB, ID } from './appwrite.ts';
-import type { Cantidades, CantidadesConProducto, Inventario, Lista, Producto } from './modelos.ts';
+import { tablesDB, ID, Usuario } from './appwrite.ts';
+import type { Cantidades, CantidadesConProducto, Historial, Inventario, Lista, Producto } from './modelos.ts';
 import { ref } from 'vue';
+import type { DataTableFilterMeta, DataTableFilterMetaData } from 'primevue';
 
 const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 
@@ -24,6 +25,31 @@ async function ObtenerConQuery<T>(tableId: string, queries: string[]): Promise<T
     queries: queries
   });
   return respuesta.rows as T[];
+}
+
+export async function ObtenerConPaginacion<T extends Models.Row>(tableId: string, pagina: number, limit: number, sortOrder: 1 | 0 | -1 = -1, filtros: DataTableFilterMeta): Promise<Models.RowList<T>> {
+  const offset = pagina * limit;
+  const queries = [Query.offset(offset), Query.limit(limit), sortOrder === 1 ? Query.orderAsc('$createdAt') : sortOrder === -1 ? Query.orderDesc('$createdAt') : ''];
+
+  for (const key in filtros) {
+    const filtro = filtros[key] as DataTableFilterMetaData;
+    if (filtro.value) {
+      switch (filtro.matchMode) {
+        case 'equals':
+          queries.push(Query.equal(key, filtro.value));
+          break;
+        case 'contains':
+          queries.push(Query.search(key, filtro.value));
+          break;
+      }
+    }
+  }
+
+  return await tablesDB.listRows<T>({
+    databaseId,
+    tableId,
+    queries: queries
+  });
 }
 
 export async function Crear(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
@@ -81,4 +107,20 @@ export async function EliminarItemInventario(item: Inventario) {
   await Eliminar('inventario', item.$id);
   const indice = Inventarios.value.findIndex(x => x.$id === item.$id);
   if (indice >= 0) Inventarios.value.splice(indice, 1);
+}
+
+export async function RegistrarHistorial(idElemento: string, accion: string): Promise<void> {
+  if (!Usuario.value) return;
+
+  const historialEntry = {
+    idElemento,
+    usuario: Usuario.value.name,
+    accion,
+  };
+
+  await Crear('Historial', historialEntry);
+}
+
+export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
+  return await ObtenerConQuery<Historial>('Historial', [Query.equal('idElemento', idElemento)]);
 }

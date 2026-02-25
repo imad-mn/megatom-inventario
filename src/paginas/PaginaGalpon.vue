@@ -32,11 +32,13 @@ function Agregar() {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[Estante] Creado: ${itemEdicion.value.nombre}`);
     TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
   } else {
     const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[Estante] Modificado: ${itemEdicion.value.nombre}`);
       TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
     }
     if (itemEdicion.value.$id === galpon.$id) {
@@ -64,7 +66,10 @@ function Quitar(item: Inventario): void {
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
-    accept: async () => await TablesDbService.EliminarItemInventario(item)
+    accept: async () => {
+      await TablesDbService.RegistrarHistorial(item.$id, `[Estante] Eliminado: ${item.nombre}`);
+      await TablesDbService.EliminarItemInventario(item);
+    }
   });
 }
 </script>

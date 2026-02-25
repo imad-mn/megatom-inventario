@@ -100,6 +100,7 @@ async function Guardar() {
 
     if (esNuevo.value) {
       await TablesDbService.Crear('productos', itemEdicion.value!);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, `[Producto] Creado: ${itemEdicion.value!.nombre}`);
       productos.value.push({ ...itemEdicion.value! });
 
       if (cajaSeleccionada.value && cantidadInicial.value > 0) {
@@ -110,12 +111,15 @@ async function Guardar() {
           cajon: cajaSeleccionada.value
         };
         await TablesDbService.Crear('cantidades', item);
+        const caja = TablesDbService.Inventarios.value.find(x => x.$id === cajaSeleccionada.value);
+        await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, `'${itemEdicion.value!.nombre}' agregado a caja: ${caja?.nombre} (${cantidadInicial.value} unidades)`);
       }
       dialogVisible.value = false;
     } else {
       const indice = productos.value.findIndex(x => x.$id === itemEdicion.value!.$id);
       if (indice >= 0) {
         await TablesDbService.Actualizar('productos', itemEdicion.value!);
+        await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, `[Producto] Modificado: ${itemEdicion.value!.nombre}`);
         productos.value[indice] = { ...itemEdicion.value! };
         dialogVisible.value = false;
       }
@@ -140,13 +144,14 @@ function Quitar(item: Producto): void {
     acceptClass: 'p-button-danger p-button-outlined',
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
-    accept: () => {
+    accept: async () => {
       const indice = productos.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
-        TablesDbService.Eliminar('productos', item.$id).then(() => {
+        await TablesDbService.RegistrarHistorial(item.$id, `[Producto] Eliminado: ${item.nombre}`);
+        await TablesDbService.Eliminar('productos', item.$id).then(() => {
           productos.value.splice(indice, 1);
         });
-        StorageService.Eliminar(item.$id).catch(error => {
+        await StorageService.Eliminar(item.$id).catch(error => {
           console.error('Error al eliminar la imagen del producto:', error);
         });
       }

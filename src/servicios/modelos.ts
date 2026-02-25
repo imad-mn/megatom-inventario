@@ -1,3 +1,5 @@
+import type { Models } from "appwrite";
+
 export type Producto = {
   $id: string;
   nombre: string;
@@ -38,9 +40,15 @@ export type Movimientos = {
   $createdAt: Date;
 }
 
-export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas';
+export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas' | 'usuario';
 export type Lista = {
   $id: string;
   tipo: TipoLista;
   nombre: string;
+}
+
+export type Historial = Models.Row & {
+  idElemento: string;
+  usuario: string;
+  accion: string;
 }

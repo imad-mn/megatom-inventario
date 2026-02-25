@@ -35,11 +35,15 @@ function Editar(item: Lista) {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('listas', itemEdicion.value);
+    const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${tipoElemento}] Creado: ${itemEdicion.value.nombre}`);
     TablesDbService.Listas.value.push({ ...itemEdicion.value });
   } else {
     const indice = TablesDbService.Listas.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('listas', itemEdicion.value);
+      const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${tipoElemento}] Modificado: ${itemEdicion.value.nombre}`);
       TablesDbService.Listas.value[indice] = { ...itemEdicion.value };
     }
   }
@@ -56,6 +60,8 @@ function Quitar(item: Lista): void {
     accept: async () => {
       const indice = TablesDbService.Listas.value.findIndex(x => x.$id === item.$id);
       if (indice >= 0) {
+        const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
+        await TablesDbService.RegistrarHistorial(item.$id, `[${tipoElemento}] Eliminado: ${item.nombre}`);
         await TablesDbService.Eliminar('listas', item.$id);
         TablesDbService.Listas.value.splice(indice, 1);
       }
