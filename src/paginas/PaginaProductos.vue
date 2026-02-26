@@ -98,9 +98,10 @@ async function Guardar() {
       archivoFoto = undefined;
     }
 
+    const productoNuevo = Stringify(itemEdicion.value);
     if (esNuevo.value) {
       await TablesDbService.Crear('productos', itemEdicion.value!);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, `[Producto] Creado: ${itemEdicion.value!.nombre}`);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, '[Producto] Creado', null, productoNuevo);
       productos.value.push({ ...itemEdicion.value! });
 
       if (cajaSeleccionada.value && cantidadInicial.value > 0) {
@@ -116,10 +117,12 @@ async function Guardar() {
       }
       dialogVisible.value = false;
     } else {
-      const indice = productos.value.findIndex(x => x.$id === itemEdicion.value!.$id);
-      if (indice >= 0) {
+      const anterior = productos.value.find(x => x.$id === itemEdicion.value!.$id);
+      if (anterior) {
         await TablesDbService.Actualizar('productos', itemEdicion.value!);
-        await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, `[Producto] Modificado: ${itemEdicion.value!.nombre}`);
+        const productoAnterior = Stringify(anterior);
+        await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, '[Producto] Modificado', productoAnterior, productoNuevo);
+        const indice = productos.value.indexOf(anterior);
         productos.value[indice] = { ...itemEdicion.value! };
         dialogVisible.value = false;
       }
@@ -145,15 +148,14 @@ function Quitar(item: Producto): void {
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
     accept: async () => {
-      const indice = productos.value.findIndex(x => x.$id === item.$id);
-      if (indice >= 0) {
-        await TablesDbService.RegistrarHistorial(item.$id, `[Producto] Eliminado: ${item.nombre}`);
-        await TablesDbService.Eliminar('productos', item.$id).then(() => {
-          productos.value.splice(indice, 1);
-        });
-        await StorageService.Eliminar(item.$id).catch(error => {
-          console.error('Error al eliminar la imagen del producto:', error);
-        });
+      const anterior = productos.value.find(x => x.$id === item.$id);
+      if (anterior) {
+        await TablesDbService.Eliminar('productos', item.$id)
+        const anteriorJson = Stringify(anterior);
+        await TablesDbService.RegistrarHistorial(item.$id, '[Producto] Eliminado', anteriorJson, null);
+        const indice = productos.value.indexOf(anterior);
+        productos.value.splice(indice, 1);
+        await StorageService.Eliminar(item.$id);
       }
     }
   });
@@ -229,6 +231,10 @@ async function VerUbicacion(productoId: string) {
     ubicaciones.push('No hay ubicaciones.');
 
   ubicacionDict.value[productoId] = ubicaciones;
+}
+
+function Stringify(item: Producto): string {
+  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${grupoDict.value[item.grupo]} | Fabricante: ${fabricanteDict.value[item.fabricante]} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
 }
 </script>
 

@@ -109,13 +109,15 @@ export async function EliminarItemInventario(item: Inventario) {
   if (indice >= 0) Inventarios.value.splice(indice, 1);
 }
 
-export async function RegistrarHistorial(idElemento: string, accion: string): Promise<void> {
+export async function RegistrarHistorial(idElemento: string, accion: string, anterior: string | null = null, actual: string | null = null): Promise<void> {
   if (!Usuario.value) return;
 
   const historialEntry = {
     idElemento,
     usuario: Usuario.value.name,
     accion,
+    anterior,
+    actual
   };
 
   await Crear('Historial', historialEntry);

@@ -51,4 +51,6 @@ export type Historial = Models.Row & {
   idElemento: string;
   usuario: string;
   accion: string;
+  anterior: string | null;
+  actual: string | null;
 }

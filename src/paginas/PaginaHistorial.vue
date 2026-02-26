@@ -15,6 +15,8 @@ const first = ref(0);
 const filters = ref<DataTableFilterMeta>({
   usuario: { value: null, matchMode: 'equals' },
   accion: { value: null, matchMode: 'contains' },
+  anterior: { value: null, matchMode: 'contains' },
+  actual: { value: null, matchMode: 'contains' },
 });
 const usuarios = TablesDbService.ObtenerLista('usuario').map(x => x.nombre);
 
@@ -54,20 +56,30 @@ function onFilter() {
 
 <template>
   <div class="text-2xl mb-4 text-center">HISTORIAL</div>
-  <DataTable :value="historial" striped-rows paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"
+  <DataTable :value="historial" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"
     :lazy="true" :loading="loading" :totalRecords="totalRecords" @page="onPage" @sort="onSort"
     @filter="onFilter" filter-display="row" v-model:filters="filters">
-    <Column field="$createdAt" header="Fecha" style="width: 20%" sortable>
+    <Column field="$createdAt" header="Fecha" style="width: 18%" sortable :pt="{ columnHeaderContent: 'justify-center' }">
       <template #body="slotProps">
         {{ new Date(slotProps.data.$createdAt).toLocaleString() }}
       </template>
     </Column>
-    <Column field="usuario" header="Usuario" style="min-width: 15%" :showFilterMenu="false">
+    <Column field="usuario" header="Usuario" style="max-width: 12%" :showFilterMenu="false">
       <template #filter="{ filterModel, filterCallback }">
         <Select id="usuario" v-model="filterModel.value" :options="usuarios" showClear fluid  @change="filterCallback()" />
       </template>
     </Column>
-    <Column field="accion" header="Acción" style="width: 65%" :showFilterMenu="false">
+    <Column field="accion" header="Acción" style="width: 20%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }">
+      <template #filter="{ filterModel, filterCallback }">
+        <InputText v-model="filterModel.value" type="search" placeholder="Buscar..." @input="filterCallback()" fluid />
+      </template>
+    </Column>
+    <Column field="anterior" header="Anterior" style="max-width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }">
+      <template #filter="{ filterModel, filterCallback }">
+        <InputText v-model="filterModel.value" type="search" placeholder="Buscar..." @input="filterCallback()" fluid />
+      </template>
+    </Column>
+    <Column field="actual" header="Actual" style="width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }">
       <template #filter="{ filterModel, filterCallback }">
         <InputText v-model="filterModel.value" type="search" placeholder="Buscar..." @input="filterCallback()" fluid />
       </template>

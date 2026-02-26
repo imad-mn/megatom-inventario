@@ -15,25 +15,18 @@
   --p-panel-header-background: var(--p-gray-100);
 
   --p-dialog-header-padding: 0.5rem 1.25rem;
+
+  --p-datatable-header-cell-background: var(--p-gray-100);
 }
 
 @media (prefers-color-scheme: dark) {
   #app {
     --p-panel-header-background: var(--p-gray-800);
+    --p-datatable-header-cell-background: var(--p-gray-800);
   }
 }
 
 /* Todas las etiquetas en negrita*/
 label {
   font-weight:600;
-}
-
-table, th, td {
-  border: 1px solid var(--p-surface-300);
-}
-table {
-  border-collapse: collapse; /* Merges borders into a single line */
-}
-th, td {
-  padding: 5px; /* Adds some spacing so text isn't against the border */
 }

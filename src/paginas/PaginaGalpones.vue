@@ -27,13 +27,13 @@ function Agregar() {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[Galpón] Creado: ${itemEdicion.value.nombre}`);
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, '[Galpón] Creado', null, itemEdicion.value.nombre);
     TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
   } else {
     const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[Galpón] Modificado: ${itemEdicion.value.nombre}`);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, '[Galpón] Modificado', TablesDbService.Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
       TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
     }
   }
@@ -58,7 +58,7 @@ function Quitar(item: Inventario): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await TablesDbService.RegistrarHistorial(item.$id, `[Galpón] Eliminado: ${item.nombre}`);
+      await TablesDbService.RegistrarHistorial(item.$id, '[Galpón] Eliminado', item.nombre, null);
       await TablesDbService.EliminarItemInventario(item);
     }
   });

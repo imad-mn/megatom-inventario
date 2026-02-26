@@ -84,13 +84,13 @@ function Editar(item: Inventario) {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Creado: ${itemEdicion.value.nombre}`);
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Creado`, null, itemEdicion.value.nombre);
     TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
   } else {
     const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Modificado: ${itemEdicion.value.nombre}`);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Modificado`, TablesDbService.Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
       TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
     }
     if (itemEdicion.value.$id === estante.value.$id) {
@@ -109,7 +109,7 @@ function Quitar(item: Inventario): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await TablesDbService.RegistrarHistorial(item.$id, `[${item.tipo}] Eliminado: ${item.nombre}`);
+      await TablesDbService.RegistrarHistorial(item.$id, `[${item.tipo}] Eliminado`, item.nombre, null);
       await TablesDbService.EliminarItemInventario(item);
     }
   });
@@ -253,17 +253,29 @@ async function Mover() {
   if (elementoAMover.value == null)
     return;
 
+  const padreAnterior = TablesDbService.Inventarios.value.find(x => x.$id === elementoAMover.value?.padre);
+  let padreNuevo: Inventario | undefined;
+
   if (elementoAMover.value.tipo === 'Caja' && nuevoPadreSeccion.value != null) {
     elementoAMover.value.padre = nuevoPadreSeccion.value.$id;
+    padreNuevo = nuevoPadreSeccion.value;
   } else if (elementoAMover.value.tipo === 'Sección' && nuevoPadreNivel.value != null) {
     elementoAMover.value.padre = nuevoPadreNivel.value.$id;
+    padreNuevo = nuevoPadreNivel.value;
   } else {
     return;
   }
 
+  await TablesDbService.Actualizar('inventario', elementoAMover.value);
+
+  if (elementoAMover.value.tipo == 'Caja') {
+    await TablesDbService.RegistrarHistorial(elementoAMover.value.$id, `[${elementoAMover.value.tipo}] Movida`, `De sección: ${padreAnterior?.nombre}`, `A sección: ${padreNuevo?.nombre}`);
+  } else if (elementoAMover.value.tipo == 'Sección') {
+    await TablesDbService.RegistrarHistorial(elementoAMover.value.$id, `[${elementoAMover.value.tipo}] Movida`, `De nivel: ${padreAnterior?.nombre}`, `A nivel: ${padreNuevo?.nombre}`);
+  }
+
   const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === elementoAMover.value?.$id);
   if (indice >= 0) {
-    await TablesDbService.Actualizar('inventario', elementoAMover.value);
     TablesDbService.Inventarios.value[indice] = { ...elementoAMover.value };
   }
   mostrarDialogoMover.value = false;
