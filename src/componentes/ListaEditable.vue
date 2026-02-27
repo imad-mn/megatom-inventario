@@ -77,7 +77,7 @@ function Quitar(item: Lista): void {
     </template>
     <div v-for="item in itemsFiltrados" :key="item.$id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
       <div>{{ item.nombre }}</div>
-      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" />
+      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" :id-elemento="item.$id" :nombre-elemento="item.nombre" />
     </div>
   </Panel>
 

@@ -93,7 +93,7 @@ function Quitar(item: Inventario): void {
           <div>{{ 'Estante ' + item.nombre }}</div>
         </div>
       </Button>
-      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" />
+      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.$id" :nombre-elemento="item.nombre" />
     </div>
   </div>
 

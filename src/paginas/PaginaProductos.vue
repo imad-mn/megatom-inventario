@@ -9,6 +9,7 @@ import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
 import { Usuario } from '@/servicios/appwrite';
 import { Importar } from '@/servicios/ImportarExportar';
+import { dialogoHistorial } from '@/servicios/TablesDbService';
 
 const confirm = useConfirm();
 
@@ -236,6 +237,12 @@ async function VerUbicacion(productoId: string) {
 function Stringify(item: Producto): string {
   return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${grupoDict.value[item.grupo]} | Fabricante: ${fabricanteDict.value[item.fabricante]} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
 }
+
+function onHistorialClick(item: Producto) {
+  dialogoHistorial.value.mostrar = true;
+  dialogoHistorial.value.idElemento = item.$id;
+  dialogoHistorial.value.nombreElemento = item.nombre;
+}
 </script>
 
 <template>
@@ -276,8 +283,9 @@ function Stringify(item: Producto): string {
           </template>
           <template #footer v-if="Usuario">
             <div class="flex gap-2">
-              <Button icon="pi pi-pen-to-square" label="Editar" severity="success" size="small" variant="outlined" class="w-full" @click="Editar(item)" />
-              <Button icon="pi pi-trash" label="Eliminar" severity="danger" size="small" variant="outlined" class="w-full" @click="Quitar(item)" />
+              <Button icon="pi pi-history" label="Historial" severity="info" size="small" variant="outlined" @click="onHistorialClick(item)" />
+              <Button icon="pi pi-pen-to-square" label="Editar" severity="success" size="small" variant="outlined" @click="Editar(item)" />
+              <Button icon="pi pi-trash" label="Eliminar" severity="danger" size="small" variant="outlined" @click="Quitar(item)" />
             </div>
           </template>
         </Card>

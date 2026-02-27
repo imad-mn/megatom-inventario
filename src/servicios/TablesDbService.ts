@@ -9,6 +9,13 @@ const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 export const Inventarios = ref<Inventario[]>([]);
 export const Listas = ref<Lista[]>([]);
 
+interface DialogoHistorial {
+  mostrar: boolean;
+  idElemento: string;
+  nombreElemento: string;
+}
+export const dialogoHistorial = ref<DialogoHistorial>({ mostrar: false, idElemento: '', nombreElemento: '' });
+
 export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
   const respuesta = await tablesDB.listRows({
     databaseId,

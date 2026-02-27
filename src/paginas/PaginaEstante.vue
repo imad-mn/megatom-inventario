@@ -301,7 +301,7 @@ async function Mover() {
         <div class="flex items-center">
           <div class="font-medium">Nivel {{ nivel.nombre }}</div>
           <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
-          <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel)" @quitarClick="Quitar(nivel)" />
+          <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel)" @quitarClick="Quitar(nivel)" :id-elemento="nivel.$id" :nombre-elemento="nivel.nombre" />
         </div>
       </template>
       <div class="flex flex-row gap-2">
@@ -314,7 +314,7 @@ async function Mover() {
             <div class="flex">
               <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
               <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(seccion)" v-tooltip.bottom="'Mover Sección'" />
-              <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" />
+              <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" :id-elemento="seccion.$id" :nombre-elemento="seccion.nombre" />
             </div>
           </template>
           <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id).length === 0" class="italic text-muted-color m-1">
@@ -326,7 +326,7 @@ async function Mover() {
                 <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" class="grow" :pt="{ label: 'text-nowrap' }" v-tooltip.bottom="productosNombresEnCaja[caja.$id] ?? 'No hay productos en esta caja'" />
                 <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.$id" :nombre-elemento="caja.nombre" />
               </div>
           </div>
         </Panel>

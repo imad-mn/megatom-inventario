@@ -3,8 +3,9 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
-import { Inventarios, Listas, ObtenerTodos } from './servicios/TablesDbService';
+import {  Inventarios, Listas, dialogoHistorial, ObtenerTodos } from './servicios/TablesDbService';
 import { account, Usuario } from './servicios/appwrite';
+import DialogoHistorial from './componentes/DialogoHistorial.vue';
 
 const router = useRouter();
 
@@ -87,4 +88,5 @@ async function cerrarSesion() {
   </Menubar>
   <RouterView />
   <ConfirmDialog />
+  <DialogoHistorial v-model:mostrar="dialogoHistorial.mostrar" :id="dialogoHistorial.idElemento" :nombre="dialogoHistorial.nombreElemento" />
 </template>
