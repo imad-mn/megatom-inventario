@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { Actualizar, Crear, Inventarios, Listas, ObtenerTodos } from './TablesDbService';
+import { Actualizar, Crear, Inventarios, Listas, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
 import type { Cantidades, Inventario, Lista, Producto, TipoInventario } from './modelos';
 
 export type Fila = {
@@ -99,6 +99,7 @@ async function obtenerOCrearNodoInventario(
   };
   await Crear('inventario', nodo);
   inventarios.push(nodo);
+  await RegistrarHistorial(nodo.$id, `[${tipo}] Creado`, null, nombre);
   return nodo;
 }
 
@@ -136,9 +137,12 @@ async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void>
     };
     await Crear('cantidades', nuevo);
     ctx.cantidades.push(nuevo);
+    await RegistrarHistorial(producto.$id, `[Importación] '${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`, null, `${cantidad} unidades`);
   } else {
+    const cantidadAnterior = itemCantidad.cantidad;
     itemCantidad.cantidad = cantidad;
     await Actualizar('cantidades', itemCantidad);
+    await RegistrarHistorial(producto.$id, `[Importación] Cantidad actualizada en caja ${cajon.nombre}`, String(cantidadAnterior), String(cantidad));
   }
 }
 
@@ -154,6 +158,8 @@ async function obtenerOCrearLista(
   await Crear('listas', item);
   Listas.value.push(item);
   lista.push(item);
+  const etiqueta = tipo === 'grupos' ? 'Grupo' : tipo === 'fabricantes' ? 'Fabricante' : 'Almacenista';
+  await RegistrarHistorial(item.$id, `[${etiqueta}] Creado`, null, nombre);
   return item;
 }
 
@@ -180,6 +186,8 @@ async function obtenerOCrearProducto(
   };
   await Crear('productos', producto);
   productos.push(producto);
+  const productoDesc = `Nombre: ${producto.nombre} | Código: ${producto.codigo} | Grupo: ${fila.grupo} | Fabricante: ${fila.fabricante} | Descripción: ${producto.descripcion} | Peso Unitario: ${producto.pesoUnitario} Kg`;
+  await RegistrarHistorial(producto.$id, '[Producto] Creado', null, productoDesc);
   return producto;
 }
 
