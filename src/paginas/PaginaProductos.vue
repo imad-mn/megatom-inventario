@@ -8,7 +8,7 @@ import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent 
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
 import { Usuario } from '@/servicios/appwrite';
-import { Importar } from '@/servicios/ImportarExportar';
+import { Importar, Exportar } from '@/servicios/ImportarExportar';
 import { dialogoHistorial } from '@/servicios/TablesDbService';
 
 const confirm = useConfirm();
@@ -243,6 +243,17 @@ function onHistorialClick(item: Producto) {
   dialogoHistorial.value.idElemento = item.$id;
   dialogoHistorial.value.nombreElemento = item.nombre;
 }
+
+async function DescargarExportacion() {
+  const csv = await Exportar();
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `productos-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <template>
@@ -256,6 +267,7 @@ function onHistorialClick(item: Producto) {
     <Select v-model="filtroGrupo" :options="grupos" optionLabel="nombre" placeholder="Grupo" showClear class="w-full md:w-auto" />
     <Select v-model="filtroFabricante" :options="fabricantes" optionLabel="nombre" placeholder="Fabricante" showClear class="w-full md:w-auto" />
     <Button v-if="Usuario" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" />
+    <Button v-if="Usuario" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarExportacion" />
   </div>
 
   <DataView :value="productosFiltrados">
