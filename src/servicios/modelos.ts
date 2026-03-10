@@ -1,5 +1,10 @@
 import type { Models } from "appwrite";
 
+export type IdNombre = {
+  $id: string;
+  nombre: string;
+}
+
 export type Producto = {
   $id: string;
   nombre: string;
@@ -46,6 +51,12 @@ export type Movimientos = {
   creadoPor: string;
   caja: string | null;
   $createdAt: string;
+}
+
+export type MovimientosExtendido = Omit<Movimientos, 'producto' | 'caja' | 'almacenista'> & {
+  producto: IdNombre | null;
+  caja: IdNombre | null;
+  almacenista: IdNombre | null;
 }
 
 export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas' | 'usuario';
