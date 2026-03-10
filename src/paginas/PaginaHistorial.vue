@@ -55,7 +55,7 @@ function onFilter() {
 </script>
 
 <template>
-  <div class="text-2xl mb-4 text-center">HISTORIAL</div>
+  <div class="text-2xl mb-2 text-center">HISTORIAL</div>
   <DataTable :value="historial" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"
     :lazy="true" :loading="loading" :totalRecords="totalRecords" @page="onPage" @sort="onSort"
     @filter="onFilter" filter-display="row" v-model:filters="filters">

@@ -30,14 +30,22 @@ export type CantidadesConProducto = Omit<Cantidades, 'producto'> & {
   producto: Producto;
 }
 
+export type CajasConCantidad = {
+  $id: string;
+  nombre: string;
+  cantidad: number;
+}
+
 export type Movimientos = {
   $id: string;
-  producto: Producto;
+  producto: string | null;
   cantidad: number;
-  almacenista: Lista;
+  almacenista: string | null;
   justificacion: string | null;
+  esIngreso: boolean;
   creadoPor: string;
-  $createdAt: Date;
+  caja: string | null;
+  $createdAt: string;
 }
 
 export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas' | 'usuario';

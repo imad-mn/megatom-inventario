@@ -10,6 +10,7 @@ import * as StorageService from '@/servicios/StorageService.ts';
 import { Usuario } from '@/servicios/appwrite';
 import { Importar, Exportar } from '@/servicios/ImportarExportar';
 import { dialogoHistorial } from '@/servicios/TablesDbService';
+import { ObtenerUbicaciones } from '@/servicios/shared';
 
 const confirm = useConfirm();
 
@@ -208,29 +209,7 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
 
 async function VerUbicacion(productoId: string) {
   const cantidades = await TablesDbService.ObtenerCantidadesPorProducto(productoId);
-  const ubicaciones: string[] = [];
-  cantidades.forEach(cantidad => {
-    const cajon = TablesDbService.Inventarios.value.find(x => x.$id === cantidad.cajon);
-    if (cajon) {
-      const seccion = TablesDbService.Inventarios.value.find(x => x.$id === cajon.padre);
-      if (seccion) {
-        const nivel = TablesDbService.Inventarios.value.find(x => x.$id === seccion.padre);
-        if (nivel) {
-          const estante = TablesDbService.Inventarios.value.find(x => x.$id === nivel?.padre);
-          if (estante) {
-            const galpon = TablesDbService.Inventarios.value.find(x => x.$id === estante.padre);
-            if (galpon) {
-              ubicaciones.push(`Galpón ${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${cajon.nombre} / ${cantidad.cantidad} unidades\n`);
-            }
-          }
-        }
-      }
-    }
-  });
-
-  if (ubicaciones.length === 0)
-    ubicaciones.push('No hay ubicaciones.');
-
+  const ubicaciones = ObtenerUbicaciones(cantidades);
   ubicacionDict.value[productoId] = ubicaciones;
 }
 
@@ -266,8 +245,8 @@ async function DescargarExportacion() {
     </IconField>
     <Select v-model="filtroGrupo" :options="grupos" optionLabel="nombre" placeholder="Grupo" showClear class="w-full md:w-auto" />
     <Select v-model="filtroFabricante" :options="fabricantes" optionLabel="nombre" placeholder="Fabricante" showClear class="w-full md:w-auto" />
-    <Button v-if="Usuario" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" />
-    <Button v-if="Usuario" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarExportacion" />
+    <Button v-if="Usuario" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" v-tooltip.bottom="'Importar productos desde un archivo CSV'" />
+    <Button v-if="Usuario" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarExportacion" v-tooltip.bottom="'Exportar productos a un archivo CSV'" />
   </div>
 
   <DataView :value="productosFiltrados">

@@ -1,6 +1,6 @@
 import { Query, type Models } from 'appwrite';
 import { tablesDB, ID, Usuario } from './appwrite.ts';
-import type { Cantidades, CantidadesConProducto, Historial, Inventario, Lista, Producto } from './modelos.ts';
+import type { Cantidades, CantidadesConProducto, Historial, Inventario, Lista, Movimientos, Producto } from './modelos.ts';
 import { ref } from 'vue';
 import type { DataTableFilterMeta, DataTableFilterMetaData } from 'primevue';
 
@@ -131,5 +131,9 @@ export async function RegistrarHistorial(idElemento: string, accion: string, ant
 }
 
 export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
-  return await ObtenerConQuery<Historial>('Historial', [Query.equal('idElemento', idElemento)]);
+  return await ObtenerFiltroEqual<Historial>('Historial', 'idElemento', idElemento);
+}
+
+export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<Movimientos[]> {
+  return await ObtenerConQuery<Movimientos>('movimientos', [Query.limit(100), Query.orderDesc('$createdAt'), Query.greaterThanEqual('$createdAt', fechaDesde.toISOString()), Query.lessThanEqual('$createdAt', fechaHasta.toISOString())]);
 }

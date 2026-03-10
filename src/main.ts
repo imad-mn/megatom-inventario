@@ -33,6 +33,8 @@ import ToggleSwitch from 'primevue/toggleswitch';
 import ProgressBar from 'primevue/progressbar';
 import Tooltip from 'primevue/tooltip';
 import Password from 'primevue/password';
+import DatePicker from 'primevue/datepicker';
+import ToggleButton from 'primevue/togglebutton';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -91,5 +93,7 @@ app.component('Listbox', Listbox);
 app.component('ToggleSwitch', ToggleSwitch);
 app.component('ProgressBar', ProgressBar);
 app.component('Password', Password);
+app.component('DatePicker', DatePicker);
+app.component('ToggleButton', ToggleButton);
 
 app.mount('#app')
