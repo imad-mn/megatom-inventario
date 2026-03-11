@@ -60,8 +60,8 @@ async function cerrarSesion() {
     <template #start>
       <RouterLink to="/">
         <div class="flex items-center">
-          <img src="/48.png" alt="Megatom Logo" class="h-8 mr-2" />
-          <div class="text-lg">Megatom Inventario</div>
+          <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8 mr-2" />
+          <div class="text-lg megatom-color">Megatom Inventario</div>
         </div>
       </RouterLink>
     </template>
@@ -71,7 +71,6 @@ async function cerrarSesion() {
         <Button
           icon="pi pi-sign-out"
           variant="text"
-          severity="secondary"
           @click="cerrarSesion"
           v-tooltip.bottom="'Cerrar sesión'"
         />
@@ -81,7 +80,6 @@ async function cerrarSesion() {
         label="Administrador"
         icon="pi pi-key"
         variant="text"
-        severity="secondary"
         @click="router.push('/login')"
       />
     </template>

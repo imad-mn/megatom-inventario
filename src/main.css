@@ -1,10 +1,8 @@
 @import "tailwindcss";
 @import "tailwindcss-primeui";
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 1rem 1rem 1rem;
+:root {
+  --azul-megatom: rgb(38,44,83);
 
   --p-card-title-font-size: 1rem;
   --p-card-body-padding: 0.75rem;
@@ -17,6 +15,15 @@
   --p-dialog-header-padding: 0.5rem 1.25rem;
 
   --p-datatable-header-cell-background: var(--p-gray-100);
+
+  --p-menubar-item-color: var(--azul-megatom);
+  --p-primary-color: var(--azul-megatom);
+}
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem 1rem 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,4 +36,8 @@
 /* Todas las etiquetas en negrita*/
 label {
   font-weight:600;
+}
+
+.megatom-color {
+  color: var(--azul-megatom);
 }
