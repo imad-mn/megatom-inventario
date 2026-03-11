@@ -59,9 +59,9 @@ async function cerrarSesion() {
   <Menubar :model="menuItemsVisibles" class="mb-3!" breakpoint="768px">
     <template #start>
       <RouterLink to="/">
-        <div class="flex items-center">
+        <div class="flex items-center mr-5">
           <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8 mr-2" />
-          <div class="text-lg megatom-color">INVENTARIO</div>
+          <div class="text-md megatom-color">INVENTARIO</div>
         </div>
       </RouterLink>
     </template>
