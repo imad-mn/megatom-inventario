@@ -37,7 +37,7 @@ const iniciarSesion = async () => {
         <div class="text-lg">Iniciar Sesión como Administrador</div>
       </template>
       <template #content>
-        <form @submit.prevent="iniciarSesion">
+        <form @submit.prevent="iniciarSesion" class="mt-6">
           <div class="mb-3">
             <label for="email">Email</label>
             <InputText
@@ -50,7 +50,7 @@ const iniciarSesion = async () => {
             />
           </div>
 
-          <div class="mb-3">
+          <div class="mb-4">
             <label for="password">Contraseña</label>
             <Password
               id="password"
@@ -62,8 +62,8 @@ const iniciarSesion = async () => {
               :feedback="false"
             />
           </div>
-          <Message v-if="mensaje != ''" :severity="severidad" :closable="false" class="mb-4">{{ mensaje }}</Message>
-          <Button type="submit" label="Iniciar Sesión" class="w-full" :loading="isLoading" />
+          <Message v-if="mensaje != ''" :severity="severidad" :closable="false">{{ mensaje }}</Message>
+          <Button type="submit" label="Iniciar Sesión" class="w-full mt-3" :loading="isLoading" />
         </form>
       </template>
     </Card>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Usuario } from '@/servicios/appwrite';
 import type { Cantidades, Lista, Movimientos, MovimientosExtendido, Producto } from '@/servicios/modelos';
 import * as TablesDbService from '@/servicios/TablesDbService';
@@ -19,36 +19,58 @@ const dialogVisible = ref(false);
 const itemEdicion = ref<Movimientos | null>(null);
 const movimientos = ref<MovimientosExtendido[]>([]);
 const fechaDesde = ref<Date>(new Date(new Date().setDate(new Date().getDate() - 7)));
-const fechaHasta = ref<Date>(new Date());
+const fechaHasta = ref<Date>(new Date(new Date().setHours(23,59)));
+const cargando = ref<boolean>(false);
+
 const almacenistas = ref<Lista[]>([]);
 const grupos = ref<Lista[]>([]);
-const grupoSeleccionado = ref<string>('');
+const grupoSeleccionado = ref<string | null>(null);
 const productosDelGrupo = ref<Producto[]>([]);
 const productoSeleccionado = ref<Producto | null>(null);
 const fabricanteDict = ref<Record<string, string>>({});
 let cantidadesDelProducto: Cantidades[] = [];
 const ubicacionesDelProducto = ref<string[]>([]);
 const cajasDelProducto = ref<CajaSimple[]>([]);
-const cajaSeleccionada = ref<CajaSimple | null>(null);
+const cajaDelProductoSeleccionada = ref<CajaSimple | null>(null);
+
+const galponSeleccionado = ref<string | null>(null);
+const estanteSeleccionado = ref<string | null>(null);
+const nivelSeleccionado = ref<string | null>(null);
+const seccionSeleccionada = ref<string | null>(null);
+const cajaSeleccionada = ref<string | null>(null);
+const galpones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === null));
+const estantes = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
+const niveles = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
+const secciones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
+const cajas = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
+
 
 onMounted(async () => {
+  cargando.value = true;
   movimientos.value = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
   almacenistas.value = TablesDbService.ObtenerLista('almacenistas');
   grupos.value = TablesDbService.ObtenerLista('grupos');
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
   fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
+  cargando.value = false;
 });
 
 watch(fechaDesde, async () => {
+  cargando.value = true;
   movimientos.value = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
+  cargando.value = false;
 });
 
 watch(fechaHasta, async () => {
+  fechaHasta.value.setHours(23,59);
+  cargando.value = true;
   movimientos.value = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
+  cargando.value = false;
 });
 
 watch(grupoSeleccionado, async () => {
-  productosDelGrupo.value = await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value);
+  if (grupoSeleccionado.value)
+    productosDelGrupo.value = await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value);
 });
 
 watch(productoSeleccionado, async () => {
@@ -66,26 +88,39 @@ watch(productoSeleccionado, async () => {
 });
 
 function Agregar() {
-  itemEdicion.value = { $id: '', producto: null, cantidad: 0, almacenista: null, justificacion: null, esIngreso: false, creadoPor: Usuario?.value?.name ?? '', $createdAt: '', caja: null };
-  productoSeleccionado.value = null;
-  cajaSeleccionada.value = null;
   dialogVisible.value = true;
+  itemEdicion.value = { $id: '', producto: null, cantidad: 0, almacenista: null, justificacion: null, esIngreso: false, creadoPor: Usuario?.value?.name ?? '', $createdAt: '', caja: null };
+
+  grupoSeleccionado.value = null;
+  productoSeleccionado.value = null;
+  cajasDelProducto.value = [];
+  cajaDelProductoSeleccionada.value = null;
 }
 
 async function Guardar() {
   // Validaciones
-  if (itemEdicion.value == null || productoSeleccionado.value == null || (!itemEdicion.value.esIngreso && cajaSeleccionada.value == null))
+  if (itemEdicion.value == null || productoSeleccionado.value == null 
+    || (!itemEdicion.value.esIngreso && (cajaDelProductoSeleccionada.value == null || cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad))
+    || (itemEdicion.value.esIngreso && cajaSeleccionada.value == null))
     return;
 
+  const cajaId = itemEdicion.value.esIngreso ? cajaSeleccionada.value : cajaDelProductoSeleccionada.value?.id;
+
   // Guarda el registro del movimiento
-  await TablesDbService.Crear('movimientos', { ...itemEdicion.value, producto: productoSeleccionado.value?.$id, caja: cajaSeleccionada.value?.id });
+  await TablesDbService.Crear('movimientos', { ...itemEdicion.value, producto: productoSeleccionado.value?.$id, caja: cajaId });
 
   // Actualiza la cantidad en cantidad existente o agrega a una caja
-  let cantidadAModificar: Cantidades | undefined;
+  let cantidadAModificar = cantidadesDelProducto.find(x => x.cajon == cajaId);
   if (itemEdicion.value.esIngreso) {
-
+    if (cantidadAModificar) {
+      cantidadAModificar.cantidad += itemEdicion.value.cantidad;
+      await TablesDbService.Actualizar('cantidades', cantidadAModificar);
+    }
+    else {
+      cantidadAModificar = { $id: '', producto: productoSeleccionado.value.$id, cantidad: itemEdicion.value.cantidad, cajon: cajaId || ''};
+      await TablesDbService.Crear('cantidades', cantidadAModificar);
+    }
   } else {
-    cantidadAModificar = cantidadesDelProducto.find(x => x.cajon == cajaSeleccionada.value?.id);
     if (cantidadAModificar) {
       cantidadAModificar.cantidad -= itemEdicion.value.cantidad;
       await TablesDbService.Actualizar('cantidades', cantidadAModificar);
@@ -107,39 +142,29 @@ async function Guardar() {
     <Button v-if="Usuario" label="Gestionar Inventario" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
   </div>
 
-  <DataTable :value="movimientos" show-gridlines striped-rows size="small">
-    <Column field="$createdAt" header="Fecha" style="width: 14%">
+  <DataTable :value="movimientos" show-gridlines striped-rows size="small" :paginator="movimientos.length > 10" :rows="10" 
+      :loading="cargando" sortField="$createdAt" :sortOrder="-1">
+    <Column field="$createdAt" header="Fecha" style="width: 16%" sortable>
       <template #body="{ data }">
         {{ new Date(data.$createdAt).toLocaleString() }}
       </template>
     </Column>
-    <Column field="esIngreso" header="Tipo" style="width: 8%">
+    <Column field="esIngreso" header="Tipo" style="width: 7%" sortable>
       <template #body="{ data }">
         {{ data.esIngreso ? 'Ingreso' : 'Egreso' }}
       </template>
     </Column>
-    <Column field="producto" header="Producto" style="width: 10%">
-      <template #body="{ data }">
-        {{ data.producto?.nombre ?? '—' }}
-      </template>
-    </Column>
-    <Column field="caja" header="Caja" style="width: 10%">
-      <template #body="{ data }">
-        {{ data.caja?.nombre ?? '—' }}
-      </template>
-    </Column>
-    <Column field="cantidad" header="Cantidad" style="width: 8%" />
-    <Column field="almacenista" header="Almacenista" style="width: 12%">
-      <template #body="{ data }">
-        {{ data.almacenista?.nombre ?? '—' }}
-      </template>
-    </Column>
+    <Column field="producto.nombre" header="Producto" style="width: 24%" sortable />
+    <Column field="caja.nombre" header="Caja" style="width: 5%" sortable />
+    <Column field="cantidad" header="Cantidad" style="width: 7%" sortable />
+    <Column field="almacenista.nombre" header="Almacenista" style="width: 9%" sortable />
     <Column field="justificacion" header="Justificación" />
-    <Column field="creadoPor" header="Creado por" style="width: 10%" />
+    <Column field="creadoPor" header="Creado por" style="width: 10%" sortable />
   </DataTable>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="Gestionar Inventario" :clickAceptar="Guardar" class="w-2xl"
-    :desabilitarAceptar="itemEdicion?.producto == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenista === null || (!itemEdicion.esIngreso && cajaSeleccionada == null)">
+    :desabilitarAceptar="itemEdicion?.producto == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenista === null 
+    || (itemEdicion.esIngreso && cajaSeleccionada == null) || (!itemEdicion.esIngreso && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))">
     <div class="flex gap-3">
       <Fieldset legend="Producto" class="w-3/5 p-3" :pt="{ contentWrapper: 'min-w-0' }">
         <FloatLabel variant="on" class="mb-3">
@@ -166,17 +191,40 @@ async function Guardar() {
           <Select id="almacenista" v-model="itemEdicion!.almacenista" :options="almacenistas" optionValue="$id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.almacenista" />
           <label for="almacenista">Almacenista</label>
         </FloatLabel>
-        <FloatLabel variant="on" v-if="!itemEdicion!.esIngreso">
-          <Select id="cajas" v-model="cajaSeleccionada" :options="cajasDelProducto" optionLabel="nombre" class="w-full" :invalid="cajaSeleccionada == null" />
-          <label for="cajas">Cajas</label>
+        <div v-if="itemEdicion!.esIngreso" class="flex flex-col gap-3">
+          <FloatLabel variant="on">
+            <Select v-model="galponSeleccionado" :options="galpones" optionLabel="nombre" optionValue="$id" showClear class="w-full" />
+            <label>Galpón</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select v-model="estanteSeleccionado" :options="estantes" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!galponSeleccionado" />
+            <label>Estante</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select v-model="nivelSeleccionado" :options="niveles" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!estanteSeleccionado" />
+            <label>Nivel</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select v-model="seccionSeleccionada" :options="secciones" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!nivelSeleccionado" />
+            <label>Sección</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select v-model="cajaSeleccionada" :options="cajas" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!seccionSeleccionada" :invalid="cajaSeleccionada == null" />
+            <label>Caja</label>
+          </FloatLabel>
+        </div>
+        <FloatLabel v-else variant="on">
+          <Select id="cajas" v-model="cajaDelProductoSeleccionada" :options="cajasDelProducto" optionLabel="nombre" class="w-full" :invalid="cajaDelProductoSeleccionada == null" />
+          <label for="cajas">Caja</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <InputNumber id="cantidad" v-model="itemEdicion!.cantidad" :min="0" class="w-full" :invalid="!itemEdicion?.cantidad" />
+          <InputNumber id="cantidad" v-model="itemEdicion!.cantidad" :min="0" class="w-full" :invalid="!itemEdicion?.cantidad || itemEdicion.cantidad <= 0 || (!itemEdicion.esIngreso && cajaDelProductoSeleccionada != null && itemEdicion.cantidad > cajaDelProductoSeleccionada?.cantidad)" />
           <label for="cantidad">Cantidad</label>
+          <Message v-if="itemEdicion != null && cajaDelProductoSeleccionada != null && !itemEdicion.esIngreso && itemEdicion.cantidad > cajaDelProductoSeleccionada.cantidad" severity="error" size="small" variant="simple">La cantidad no puede ser mayor al contenido de la caja</Message>
         </FloatLabel>
         <FloatLabel variant="on">        
           <Textarea id="justificacion" v-model="itemEdicion!.justificacion" class="w-full" maxlength="100" :rows="2" auto-resize />
-          <label for="justificacion">Justificación (máx. 100 caracteres)</label>
+          <label for="justificacion">Justificación</label>
         </FloatLabel>
       </div>
     </div>

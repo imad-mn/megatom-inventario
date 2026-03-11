@@ -332,7 +332,7 @@ async function Mover() {
               class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex justify-center">
                 <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" 
-                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'Caja vacía', pt: { root: 'min-w-xs', text: 'text-sm' } }" />
+                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
                 <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.$id" :nombre-elemento="caja.nombre" />
