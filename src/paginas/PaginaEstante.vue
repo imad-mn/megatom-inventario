@@ -71,7 +71,7 @@ const productosNombresEnCaja = computed(() => {
 
 function Agregar(padre: string, tipoEdicion: TipoInventario) {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: '', tipo: tipoEdicion, padre: padre, ordenDescendente: false };
+  itemEdicion.value = { $id: '', nombre: tipoEdicion === 'Sección' ? estante.value.nombre : '', tipo: tipoEdicion, padre: padre, ordenDescendente: false };
   dialogVisible.value = true;
 }
 
@@ -86,6 +86,14 @@ async function Guardar() {
     await TablesDbService.Crear('inventario', itemEdicion.value);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Creado`, null, itemEdicion.value.nombre);
     TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
+    // Crear una caja con el mismo nombre de la sección si se está creando la sección
+    if (itemEdicion.value.tipo === 'Sección') {
+      const cajaNombre = itemEdicion.value.nombre.replace(/\D/g, '');
+      const cajaNueva: Inventario = { $id: '', nombre: cajaNombre, tipo: 'Caja', padre: itemEdicion.value.$id, ordenDescendente: false };
+      await TablesDbService.Crear('inventario', cajaNueva);
+      await TablesDbService.RegistrarHistorial(cajaNueva.$id, `[Caja Creado`, null, cajaNombre);
+      TablesDbService.Inventarios.value.push(cajaNueva);
+    }
   } else {
     const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
     if (indice >= 0) {
@@ -283,7 +291,7 @@ async function Mover() {
 </script>
 
 <template>
-  <div id="encabezado" class="flex justify-between items-center mb-4">
+  <div id="encabezado" class="flex justify-between items-center">
     <Button :label="`Galpón ${galponNombre}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${galponNombre}-${galponOrdenDescendente}`)" />
     <div class="text-xl">ESTANTE {{estante.nombre}}</div>
     <div>
@@ -293,7 +301,7 @@ async function Mover() {
   </div>
 
   <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).length === 0" class="italic text-muted-color">
-      No hay niveles en este estante. Agrega niveles.
+      No hay niveles en este Estante.
   </div>
   <div v-else v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
      <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1 flex justify-center', legend: { style: 'margin-left: auto;' } }">
@@ -306,10 +314,10 @@ async function Mover() {
       </template>
       <div class="flex flex-row gap-2">
         <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
-          No hay secciones en este nivel.
+          No hay secciones en este Nivel.
         </div>
         <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) "
-            :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-25'">
+            :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-21'">
           <template #icons v-if="Usuario">
             <div class="flex">
               <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
@@ -322,9 +330,9 @@ async function Mover() {
           </div>
           <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id"
               class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
-              <div class="flex">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" class="grow" :pt="{ label: 'text-nowrap' }" 
-                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'No hay productos en esta caja', pt: { root: 'min-w-xs', text: 'text-sm' } }" />
+              <div class="flex justify-center">
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" 
+                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'Caja vacía', pt: { root: 'min-w-xs', text: 'text-sm' } }" />
                 <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.$id" :nombre-elemento="caja.nombre" />
