@@ -144,3 +144,7 @@ export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Pr
   ];
   return await ObtenerConQuery<MovimientosExtendido>('movimientos', queries);
 }
+
+export function ObtenerHistorialExportacion(): Promise<Historial[]> {
+  return ObtenerConQuery<Historial>('Historial', [Query.limit(10000)]);
+}

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Cantidades, CantidadesConProducto, Inventario, Lista, Producto, TipoInventario } from '@/servicios/modelos.ts';
-import { onMounted, ref, watchEffect, computed } from 'vue';
+import type { CantidadesConProducto, Inventario, Lista, TipoInventario } from '@/servicios/modelos.ts';
+import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
@@ -21,12 +21,7 @@ const dialogVisible = ref(false);
 const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Sección', nombre: '', padre: estante.value.nombre, ordenDescendente: false });
 const esNuevo = ref(false);
 
-const mostrarDialogoProducto = ref(false);
 const grupos = ref<Lista[]>([]);
-const grupoSeleccionado = ref<string>('');
-const productosDelGrupo = ref<Producto[]>([]);
-const productoSeleccionado = ref<Producto | null>(null);
-const cantidad = ref<number>(1);
 const cajaSeleccionada = ref<Inventario | null>(null);
 const productosEnCaja = ref<CantidadesConProducto[]>([]);
 const productosEnCajas = ref<CantidadesConProducto[]>([]);
@@ -55,12 +50,6 @@ onMounted(async () => {
   fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
   productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos();
 })
-
-watchEffect(async () => {
-  if (grupoSeleccionado.value) {
-    productosDelGrupo.value = (await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value)).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }
-});
 
 const productosNombresEnCaja = computed(() => {
   return productosEnCajas.value.reduce((dict, cantidad) => {
@@ -121,28 +110,6 @@ function Quitar(item: Inventario): void {
       await TablesDbService.EliminarItemInventario(item);
     }
   });
-}
-
-function AgregarProductoACaja(caja: Inventario) {
-  mostrarDialogoProducto.value = true;
-  productoSeleccionado.value = null;
-  cantidad.value = 1;
-  cajaSeleccionada.value = caja;
-}
-
-async function GuardarProducto() {
-  if (productoSeleccionado.value == null || cajaSeleccionada.value == null || cantidad.value <= 0)
-    return;
-  const item: Cantidades = {
-    $id: '',
-    producto: productoSeleccionado.value.$id,
-    cantidad: cantidad.value,
-    cajon: cajaSeleccionada.value.$id
-  };
-  await TablesDbService.Crear('cantidades', item);
-  await TablesDbService.RegistrarHistorial(productoSeleccionado.value.$id, `'${productoSeleccionado.value.nombre}' agregado a caja: ${cajaSeleccionada.value.nombre} (${cantidad.value} unidades)`);
-  productosEnCajas.value.push({ ...item, producto: productoSeleccionado.value });
-  mostrarDialogoProducto.value = false;
 }
 
 async function VerCaja(caja: Inventario) {
@@ -333,7 +300,6 @@ async function Mover() {
               <div class="flex justify-center">
                 <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" 
                   v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
-                <Button v-if="Usuario" icon="pi pi-file-plus" severity="info" size="small" variant="text" @click="AgregarProductoACaja(caja)" v-tooltip.bottom="'Agregar Producto'" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.$id" :nombre-elemento="caja.nombre" />
               </div>
@@ -354,18 +320,6 @@ async function Mover() {
         <label for="ordenDescendente">Orden Descendente</label>
         <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />
       </div>
-    </div>
-  </DialogoEdicion>
-
-  <DialogoEdicion id="agregarProducto" v-model:mostrar="mostrarDialogoProducto" :esAgregar="true" :clickAceptar="GuardarProducto" nombre-objeto="Producto"
-    :desabilitarAceptar="productoSeleccionado == null || cantidad <= 0" class="w-sm md:w-md">
-    <label for="grupo">Grupo</label>
-    <Select id="grupo" v-model="grupoSeleccionado" :options="grupos" optionValue="$id" optionLabel="nombre" class="w-full mb-3" />
-    <label for="productos">Productos</label>
-    <Listbox id="productos" v-model="productoSeleccionado" :options="productosDelGrupo" :optionLabel="(data: Producto) => data.nombre + ' - ' + (data.codigo ?? '')" class="w-full" />
-    <div class="mt-3 flex gap-3 items-center">
-      <label for="cantidad">Cantidad</label>
-      <InputNumber id="cantidad" v-model="cantidad" :min="1" class="w-full" />
     </div>
   </DialogoEdicion>
 

@@ -245,8 +245,8 @@ async function DescargarExportacion() {
     </IconField>
     <Select v-model="filtroGrupo" :options="grupos" optionLabel="nombre" placeholder="Grupo" showClear class="w-full md:w-auto" />
     <Select v-model="filtroFabricante" :options="fabricantes" optionLabel="nombre" placeholder="Fabricante" showClear class="w-full md:w-auto" />
-    <Button v-if="Usuario" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" v-tooltip.bottom="'Importar productos desde un archivo CSV'" />
-    <Button v-if="Usuario" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarExportacion" v-tooltip.bottom="'Exportar productos a un archivo CSV'" />
+    <Button v-if="Usuario != null && ['Imad', 'Giovanni'].includes(Usuario.name)" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" v-tooltip.bottom="'Importar productos desde un archivo CSV'" />
+    <Button v-if="Usuario != null && ['Imad', 'Giovanni'].includes(Usuario.name)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarExportacion" v-tooltip.bottom="'Exportar productos a un archivo CSV'" />
   </div>
 
   <DataView :value="productosFiltrados">

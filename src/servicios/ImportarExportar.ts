@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { Actualizar, Crear, Inventarios, Listas, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
+import { Actualizar, Crear, Inventarios, Listas, ObtenerHistorialExportacion, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
 import type { Cantidades, Inventario, Lista, Producto, TipoInventario } from './modelos';
 
 export type Fila = {
@@ -256,3 +256,8 @@ export async function Exportar(): Promise<string> {
   return Papa.unparse(filas, { delimiter: ';', header: true });
 }
 
+export async function ExportarHistorial(): Promise<string> {
+  const historial = await ObtenerHistorialExportacion();
+  const filas = historial.map(x => ({ Fecha: x.$createdAt.toLocaleString(), Usuario: x.usuario, Accion: x.accion, Anterior: x.anterior, Actual: x.actual }))
+  return Papa.unparse(filas, { delimiter: ';', header: true });
+}

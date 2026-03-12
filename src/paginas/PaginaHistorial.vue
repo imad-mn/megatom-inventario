@@ -4,6 +4,8 @@ import type { Historial } from '@/servicios/modelos.ts';
 import { onMounted, ref } from 'vue';
 import DataTable, { type DataTableFilterMeta, type DataTablePageEvent, type DataTableSortEvent } from 'primevue/datatable';
 import Column from 'primevue/column';
+import { ExportarHistorial } from '@/servicios/ImportarExportar';
+import { Usuario } from '@/servicios/appwrite';
 
 const historial = ref<Historial[]>([]);
 const currentPage = ref(0);
@@ -52,10 +54,25 @@ function onFilter() {
   currentPage.value = 0;
   cargarHistorial();
 }
+
+async function DescargarHistorial() {
+  const csv = await ExportarHistorial();
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Historial-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <template>
-  <div class="text-2xl mb-2 text-center">HISTORIAL</div>
+  <div class="flex justify-between items-center mb-3">
+    <div></div>
+    <div class="text-2xl mb-2 text-center">HISTORIAL</div>
+    <Button v-if="Usuario != null && ['Imad', 'Giovanni'].includes(Usuario.name)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
+  </div>
   <DataTable :value="historial" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"
     :lazy="true" :loading="loading" :totalRecords="totalRecords" @page="onPage" @sort="onSort"
     @filter="onFilter" filter-display="row" v-model:filters="filters">
