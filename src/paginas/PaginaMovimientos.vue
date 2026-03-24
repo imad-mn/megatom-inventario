@@ -99,7 +99,7 @@ function Agregar() {
 
 async function Guardar() {
   // Validaciones
-  if (itemEdicion.value == null || productoSeleccionado.value == null 
+  if (itemEdicion.value == null || productoSeleccionado.value == null
     || (!itemEdicion.value.esIngreso && (cajaDelProductoSeleccionada.value == null || cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad))
     || (itemEdicion.value.esIngreso && cajaSeleccionada.value == null))
     return;
@@ -133,16 +133,20 @@ async function Guardar() {
 </script>
 
 <template>
-  <div id="encabezado" class="flex items-center mb-4 gap-3">
+  <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-3">
     <div class="text-xl mr-5">MOVIMIENTOS</div>
-    <label for="fechaDesde">Desde</label>
-    <DatePicker v-model="fechaDesde" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
-    <label for="fechaHasta">Hasta</label>
-    <DatePicker v-model="fechaHasta" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
+    <div>
+      <label for="fechaDesde" class="mr-2">Desde</label>
+      <DatePicker v-model="fechaDesde" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
+    </div>
+    <div>
+      <label for="fechaHasta" class="mr-2">Hasta</label>
+      <DatePicker v-model="fechaHasta" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
+    </div>
     <Button v-if="Usuario" label="Gestionar Inventario" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
   </div>
 
-  <DataTable :value="movimientos" show-gridlines striped-rows size="small" :paginator="movimientos.length > 10" :rows="10" 
+  <DataTable :value="movimientos" show-gridlines striped-rows size="small" :paginator="movimientos.length > 10" :rows="10"
       :loading="cargando" sortField="$createdAt" :sortOrder="-1">
     <Column field="$createdAt" header="Fecha" style="width: 16%" sortable>
       <template #body="{ data }">
@@ -163,7 +167,7 @@ async function Guardar() {
   </DataTable>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="Gestionar Inventario" :clickAceptar="Guardar" class="w-2xl"
-    :desabilitarAceptar="itemEdicion?.producto == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenista === null 
+    :desabilitarAceptar="itemEdicion?.producto == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenista === null
     || (itemEdicion.esIngreso && cajaSeleccionada == null) || (!itemEdicion.esIngreso && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))">
     <div class="flex gap-3">
       <Fieldset legend="Producto" class="w-3/5 p-3" :pt="{ contentWrapper: 'min-w-0' }">
@@ -184,7 +188,7 @@ async function Guardar() {
             <li v-for="ubic in ubicacionesDelProducto" :key="ubic">{{ ubic }}</li>
           </ul>
         </div>
-      </Fieldset>      
+      </Fieldset>
       <div class="w-2/5 flex flex-col gap-3">
         <ToggleButton v-model="itemEdicion!.esIngreso" onLabel="Ingreso" offLabel="Egreso" off-icon="pi pi-arrow-left" on-icon="pi pi-arrow-right" />
         <FloatLabel variant="on">
@@ -222,7 +226,7 @@ async function Guardar() {
           <label for="cantidad">Cantidad</label>
           <Message v-if="itemEdicion != null && cajaDelProductoSeleccionada != null && !itemEdicion.esIngreso && itemEdicion.cantidad > cajaDelProductoSeleccionada.cantidad" severity="error" size="small" variant="simple">La cantidad no puede ser mayor al contenido de la caja</Message>
         </FloatLabel>
-        <FloatLabel variant="on">        
+        <FloatLabel variant="on">
           <Textarea id="justificacion" v-model="itemEdicion!.justificacion" class="w-full" maxlength="100" :rows="2" auto-resize />
           <label for="justificacion">Justificación</label>
         </FloatLabel>

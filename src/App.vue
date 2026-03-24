@@ -59,9 +59,9 @@ async function cerrarSesion() {
   <Menubar :model="menuItemsVisibles" class="mb-3!" breakpoint="768px">
     <template #start>
       <RouterLink to="/">
-        <div class="flex items-center mr-5">
+        <div class="flex items-center">
           <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8 mr-2" />
-          <div class="text-md megatom-color">INVENTARIO</div>
+          <div class="text-md megatom-color hidden md:block mr-5">INVENTARIO</div>
         </div>
       </RouterLink>
     </template>
@@ -77,7 +77,7 @@ async function cerrarSesion() {
       </div>
       <Button
         v-if="!Usuario"
-        label="Administrador"
+        label="Admin"
         icon="pi pi-key"
         variant="text"
         @click="router.push('/login')"

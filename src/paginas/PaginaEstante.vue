@@ -259,11 +259,20 @@ async function Mover() {
 
 <template>
   <div id="encabezado" class="flex justify-between items-center">
-    <Button :label="`Galpón ${galponNombre}`" icon="pi pi-arrow-left" severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${galponNombre}-${galponOrdenDescendente}`)" />
+    <Button severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${galponNombre}-${galponOrdenDescendente}`)">
+      <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
+      <span class="p-button-label hidden md:inline">Galpón {{galponNombre}}</span>
+    </Button>
     <div class="text-xl">ESTANTE {{estante.nombre}}</div>
     <div>
-      <Button v-if="Usuario" label="Estante" icon="pi pi-pen-to-square" severity="success" variant="outlined" class="mr-2" @click="Editar(estante)" />
-      <Button v-if="Usuario" label="Nivel" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Nivel')" />
+      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(estante)">
+        <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
+        <span class="p-button-label hidden md:inline">Estante</span>
+      </Button>
+      <Button v-if="Usuario" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Nivel')">
+        <span class="p-button-icon p-button-icon-left pi pi-plus" />
+        <span class="p-button-label hidden md:inline">Nivel</span>
+      </Button>
     </div>
   </div>
 
@@ -298,7 +307,7 @@ async function Mover() {
           <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id"
               class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex justify-center">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }" 
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }"
                   v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
                 <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.$id" :nombre-elemento="caja.nombre" />

@@ -237,7 +237,7 @@ async function DescargarExportacion() {
 
 <template>
   <div class="flex flex-wrap gap-2 items-center mb-3">
-    <div class="text-xl mr-3">Productos</div>
+    <div class="text-xl mr-3">PRODUCTOS</div>
     <Button v-if="Usuario" label="Agregar" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" />
     <IconField class="w-full md:w-auto">
       <InputIcon class="pi pi-search" />

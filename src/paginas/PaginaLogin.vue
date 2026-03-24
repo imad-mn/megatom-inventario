@@ -34,7 +34,7 @@ const iniciarSesion = async () => {
   <div class="flex items-center justify-center">
     <Card class="shadow-lg w-xs">
       <template #title>
-        <div class="text-lg">Iniciar Sesión como Administrador</div>
+        <div class="text-lg text-center">Iniciar Sesión Administrador</div>
       </template>
       <template #content>
         <form @submit.prevent="iniciarSesion" class="mt-6">

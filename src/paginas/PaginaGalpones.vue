@@ -75,12 +75,12 @@ function Quitar(item: Inventario): void {
   </div>
 
   <div v-if="galpones.length === 0" class="italic text-muted-color mt-3">No hay galpones</div>
-  <div class="flex flex-wrap gap-3 justify-center">
+  <div class="flex flex-wrap gap-2 justify-center">
     <div v-for="item in galpones" :key="item.$id"
-      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-2">
+      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>
-          <i class="pi pi-warehouse text-7xl mb-4"></i>
+          <i class="pi pi-warehouse text-6xl mb-4"></i>
           <div>{{ 'Galpón ' + item.nombre }}</div>
         </div>
       </Button>
