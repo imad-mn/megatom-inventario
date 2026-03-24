@@ -70,7 +70,7 @@ async function DescargarHistorial() {
 <template>
   <div class="flex justify-between items-center mb-3">
     <div></div>
-    <div class="text-2xl mb-2 text-center">HISTORIAL</div>
+    <div class="text-xl mb-2 text-center">HISTORIAL</div>
     <Button v-if="Usuario != null && ['Imad', 'Giovanni'].includes(Usuario.name)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
   </div>
   <DataTable :value="historial" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"

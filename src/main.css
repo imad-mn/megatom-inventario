@@ -18,7 +18,7 @@
 
   --p-menubar-item-color: var(--azul-megatom);
   --p-menubar-item-icon-color: var(--azul-megatom);
-  
+
   --p-primary-color: var(--azul-megatom);
 }
 
@@ -42,4 +42,10 @@ label {
 
 .megatom-color {
   color: var(--azul-megatom);
+}
+
+@media screen and (max-width: 768px) {
+  .p-tooltip {
+    display: none !important;
+  }
 }

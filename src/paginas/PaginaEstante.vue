@@ -288,7 +288,7 @@ async function Mover() {
           <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel)" @quitarClick="Quitar(nivel)" :id-elemento="nivel.$id" :nombre-elemento="nivel.nombre" />
         </div>
       </template>
-      <div class="flex flex-row gap-2">
+      <div class="flex flex-wrap md:flex-nowrap gap-2">
         <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
           No hay secciones en este Nivel.
         </div>
@@ -342,20 +342,20 @@ async function Mover() {
     </template>
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
     <div v-else v-for="item in productosEnCaja" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
-      <div class="flex justify-between">
+      <div class="flex flex-wrap gap-4">
+        <img :hidden="!item.producto.imagenId" :src="item.producto.imagenId ? StorageService.Url(item.producto.imagenId ?? '') : undefined" alt="Foto" class="rounded-xl md:w-49 md:h-49" />
         <div>
           <div><b>Nombre: </b>{{ item.producto.nombre }}</div>
           <div><b>Grupo: </b>{{ gruposDict[item.producto.grupo] }}</div>
           <div><b>Fabricante: </b>{{ fabricantesDict[item.producto.fabricante] }}</div>
           <div><b>Código: </b>{{ item.producto.codigo }}</div>
-          <br />
-          <div><b>Cantidad: </b>{{ item.cantidad }}</div>
+          <div class="mt-3"><b>Cantidad: </b>{{ item.cantidad }}</div>
           <div><b>Peso Unitario: </b>{{ item.producto.pesoUnitario }} Kg.</div>
           <div><b>Peso Total: </b>{{ (item.producto.pesoUnitario * item.cantidad).toFixed(2) }} Kg.</div>
         </div>
-        <img :src="item.producto.imagenId ? StorageService.Url(item.producto.imagenId ?? '') : undefined" alt="Foto" class="rounded-xl w-49 h-49" />
+
       </div>
-      <div><b>Descripción: </b>{{ item.producto.descripcion }}</div>
+      <div class="mt-3"><b>Descripción: </b>{{ item.producto.descripcion }}</div>
     </div>
   </Dialog>
 

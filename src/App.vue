@@ -60,8 +60,8 @@ async function cerrarSesion() {
     <template #start>
       <RouterLink to="/">
         <div class="flex items-center">
-          <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8 mr-2" />
-          <div class="text-md megatom-color hidden md:block mr-5">INVENTARIO</div>
+          <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8" />
+          <div class="text-md megatom-color hidden md:block mr-5 ml-2">INVENTARIO</div>
         </div>
       </RouterLink>
     </template>

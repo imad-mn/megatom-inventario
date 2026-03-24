@@ -32,7 +32,7 @@ const iniciarSesion = async () => {
 
 <template>
   <div class="flex items-center justify-center">
-    <Card class="shadow-lg w-xs">
+    <Card class="shadow-lg w-xs bg-sky-50">
       <template #title>
         <div class="text-lg text-center">Iniciar Sesión Administrador</div>
       </template>
