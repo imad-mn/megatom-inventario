@@ -63,7 +63,7 @@ function Quitar(item: Lista): void {
       if (indice >= 0) {
         const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
         await TablesDbService.RegistrarHistorial(item.id, `[${tipoElemento}] Eliminado`, item.nombre, null);
-        await TablesDbService.Eliminar('listas', item.id);
+        await TablesDbService.Eliminar('listas', item);
         Listas.value.splice(indice, 1);
       }
     }

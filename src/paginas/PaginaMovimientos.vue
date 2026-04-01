@@ -89,7 +89,7 @@ watch(productoSeleccionado, async () => {
 
 function Agregar() {
   dialogVisible.value = true;
-  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: null, esIngreso: false, creadoPor: Usuario?.value?.user.displayName ?? '', fechaCreacion: '', cajaId: '' };
+  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: null, esIngreso: false, creadoPor: Usuario?.value?.user.displayName ?? '', fechaCreacion: new Date(), cajaId: '' };
 
   grupoSeleccionado.value = null;
   productoSeleccionado.value = null;

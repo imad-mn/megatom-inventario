@@ -1,10 +1,10 @@
 import type { QueryDocumentSnapshot } from "firebase/firestore";
 
-export type Base = {
+export type ModeloBase = {
   id: string;
 }
 
-type IdNombre = Base & {
+type IdNombre = ModeloBase & {
   nombre: string;
 }
 
@@ -24,7 +24,7 @@ export type Inventario = IdNombre & {
   ordenDescendente: boolean;
 }
 
-export type Galpon = Base & {
+export type Galpon = ModeloBase & {
   nombre: string;
   estantes: [{
     nombre: string;
@@ -38,7 +38,7 @@ export type Galpon = Base & {
   }]
 }
 
-export type Cantidades = Base & {
+export type Cantidades = ModeloBase & {
   productoId: string;
   cajaId: string;
   cantidad: number;
@@ -48,7 +48,11 @@ export type CantidadesConProducto = Cantidades & {
   producto: Producto;
 }
 
-export type Movimientos = Base & {
+export type ConFechaCreacion = ModeloBase & {
+  fechaCreacion: Date;
+}
+
+export type Movimientos = ConFechaCreacion & {
   productoId: string;
   cantidad: number;
   almacenistaId: string;
@@ -56,7 +60,6 @@ export type Movimientos = Base & {
   esIngreso: boolean;
   creadoPor: string;
   cajaId: string;
-  fechaCreacion: string;
 }
 
 export type MovimientosExtendido = Movimientos & {
@@ -70,13 +73,12 @@ export type Lista = IdNombre & {
   tipo: TipoLista;
 }
 
-export type Historial = Base & {
+export type Historial = ConFechaCreacion & {
   idElemento: string;
   usuario: string;
   accion: string;
   anterior: string | null;
   actual: string | null;
-  fechaCreacion: string;
 }
 
 export type Paginacion<T> = {

@@ -15,16 +15,19 @@ const sortOrder = ref<1 | 0 | -1>(-1);
 const first = ref(0);
 const filters = ref<DataTableFilterMeta>({
   usuario: { value: null, matchMode: 'equals' },
-  accion: { value: null, matchMode: 'contains' },
-  anterior: { value: null, matchMode: 'contains' },
-  actual: { value: null, matchMode: 'contains' },
+  accion: { value: null, matchMode: 'equals' },
+  anterior: { value: null, matchMode: 'equals' },
+  actual: { value: null, matchMode: 'equals' },
 });
 const usuarios = TablesDbService.ObtenerLista('usuario').map(x => x.nombre);
 
 async function cargarHistorial() {
   loading.value = true;
   try {
-    historial.value = await TablesDbService.ObtenerHistorial(historial.value.lastVisibleDoc, rowsPerPage.value, sortOrder.value, filters.value);
+    const filtros = Object.fromEntries(
+      Object.entries(filters.value).map(([k, v]) => [k, (v as { value: string | null }).value])
+    ) as Record<string, string | null>;
+    historial.value = await TablesDbService.ObtenerHistorial(historial.value.lastVisibleDoc, rowsPerPage.value, sortOrder.value, filtros);
   } finally {
     loading.value = false;
   }

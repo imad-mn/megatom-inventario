@@ -151,7 +151,7 @@ function Quitar(item: Producto): void {
     accept: async () => {
       const anterior = productos.value.find(x => x.id === item.id);
       if (anterior) {
-        await TablesDbService.Eliminar('productos', item.id)
+        await TablesDbService.Eliminar('productos', item)
         const anteriorJson = Stringify(anterior);
         await TablesDbService.RegistrarHistorial(item.id, '[Producto] Eliminado', anteriorJson, null);
         const indice = productos.value.indexOf(anterior);
