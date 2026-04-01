@@ -7,18 +7,18 @@ import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
 import * as StorageService from '@/servicios/StorageService.ts';
-import { Usuario } from '@/servicios/appwrite';
+import { Inventarios, Usuario } from '@/servicios/shared';
 
 const router = useRouter();
 const confirm = useConfirm();
 
 const estanteQueryString = (router.currentRoute.value.params.estante as string).split('-');
-const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', tipo: 'Estante', padre: estanteQueryString[1] ?? '', nombre: estanteQueryString[2] ?? '', ordenDescendente: estanteQueryString[3] === 'true' });
+const estante = ref<Inventario>({ id: estanteQueryString[0] ?? '', tipo: 'Estante', padre: estanteQueryString[1] ?? '', nombre: estanteQueryString[2] ?? '', ordenDescendente: estanteQueryString[3] === 'true' });
 const galponNombre = estanteQueryString[4] ?? '';
 const galponOrdenDescendente = estanteQueryString[5];
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Sección', nombre: '', padre: estante.value.nombre, ordenDescendente: false });
+const itemEdicion = ref<Inventario>({ id: '', tipo: 'Sección', nombre: '', padre: estante.value.nombre, ordenDescendente: false });
 const esNuevo = ref(false);
 
 const grupos = ref<Lista[]>([]);
@@ -40,27 +40,30 @@ const nuevoPadreSeccion = ref<Inventario | null>(null);
 const seccionesNivel = computed(() => {
   if (nuevoPadreNivel.value == null || elementoAMover.value == null)
     return [];
-  return TablesDbService.Inventarios.value.filter(x => x.padre == nuevoPadreNivel.value?.$id && x.$id !== elementoAMover.value?.padre);
+  return Inventarios.value.filter(x => x.padre == nuevoPadreNivel.value?.id && x.id !== elementoAMover.value?.padre);
 })
 
 onMounted(async () => {
   grupos.value = TablesDbService.ObtenerLista('grupos');
-  gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));
+  gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.id, x.nombre]));
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
-  fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
-  productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos();
+  fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
+
+  // TODO: Traer las cajas del Estante
+  const cajaIds = Inventarios.value.filter(x => x.padre == estante.value.id).flatMap(nivel => Inventarios.value.filter(x => x.padre == nivel.id).flatMap(seccion => Inventarios.value.filter(x => x.padre == seccion.id && x.tipo === 'Caja').map(caja => caja.id)));
+  productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos(cajaIds);
 })
 
 const productosNombresEnCaja = computed(() => {
   return productosEnCajas.value.reduce((dict, cantidad) => {
-    dict[cantidad.cajon] = dict[cantidad.cajon] ? `${dict[cantidad.cajon]}\n• ${cantidad.producto.nombre} (${cantidad.cantidad})` : `• ${cantidad.producto.nombre} (${cantidad.cantidad})`;
+    dict[cantidad.cajaId] = dict[cantidad.cajaId] ? `${dict[cantidad.cajaId]}\n• ${cantidad.producto.nombre} (${cantidad.cantidad})` : `• ${cantidad.producto.nombre} (${cantidad.cantidad})`;
     return dict;
   }, {} as Record<string, string>);
 });
 
 function Agregar(padre: string, tipoEdicion: TipoInventario) {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: tipoEdicion === 'Sección' ? estante.value.nombre : '', tipo: tipoEdicion, padre: padre, ordenDescendente: false };
+  itemEdicion.value = { id: '', nombre: tipoEdicion === 'Sección' ? estante.value.nombre : '', tipo: tipoEdicion, padre: padre, ordenDescendente: false };
   dialogVisible.value = true;
 }
 
@@ -73,24 +76,24 @@ function Editar(item: Inventario) {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Creado`, null, itemEdicion.value.nombre);
-    TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${itemEdicion.value.tipo}] Creado`, null, itemEdicion.value.nombre);
+    Inventarios.value.push({ ...itemEdicion.value });
     // Crear una caja con el mismo nombre de la sección si se está creando la sección
     if (itemEdicion.value.tipo === 'Sección') {
       const cajaNombre = itemEdicion.value.nombre.replace(/\D/g, '');
-      const cajaNueva: Inventario = { $id: '', nombre: cajaNombre, tipo: 'Caja', padre: itemEdicion.value.$id, ordenDescendente: false };
+      const cajaNueva: Inventario = { id: '', nombre: cajaNombre, tipo: 'Caja', padre: itemEdicion.value.id, ordenDescendente: false };
       await TablesDbService.Crear('inventario', cajaNueva);
-      await TablesDbService.RegistrarHistorial(cajaNueva.$id, `[Caja Creado`, null, cajaNombre);
-      TablesDbService.Inventarios.value.push(cajaNueva);
+      await TablesDbService.RegistrarHistorial(cajaNueva.id, `[Caja Creado`, null, cajaNombre);
+      Inventarios.value.push(cajaNueva);
     }
   } else {
-    const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
+    const indice = Inventarios.value.findIndex(x => x.id === itemEdicion.value.id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Modificado`, TablesDbService.Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
-      TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${itemEdicion.value.tipo}] Modificado`, Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
+      Inventarios.value[indice] = { ...itemEdicion.value };
     }
-    if (itemEdicion.value.$id === estante.value.$id) {
+    if (itemEdicion.value.id === estante.value.id) {
       estante.value.nombre = itemEdicion.value.nombre;
       estante.value.ordenDescendente = itemEdicion.value.ordenDescendente;
     }
@@ -106,14 +109,14 @@ function Quitar(item: Inventario): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await TablesDbService.RegistrarHistorial(item.$id, `[${item.tipo}] Eliminado`, item.nombre, null);
+      await TablesDbService.RegistrarHistorial(item.id, `[${item.tipo}] Eliminado`, item.nombre, null);
       await TablesDbService.EliminarItemInventario(item);
     }
   });
 }
 
 async function VerCaja(caja: Inventario) {
-  productosEnCaja.value = productosEnCajas.value.filter(x => x.cajon === caja.$id);
+  productosEnCaja.value = productosEnCajas.value.filter(x => x.cajaId === caja.id);
   cajaSeleccionada.value = caja;
   mostrarDialogoCaja.value = true;
 }
@@ -125,7 +128,7 @@ async function CajaAnterior() {
     deshabilitarSiguienteCaja.value = false;
 
   // Revisa si hay una caja anterior en la misma sección
-  const cajasEnSeccion = TablesDbService.Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
+  const cajasEnSeccion = Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
   const indiceCaja = cajasEnSeccion.indexOf(cajaSeleccionada.value);
   if (cajasEnSeccion.length > 1 && indiceCaja > 0) {
     const cajaAnterior = cajasEnSeccion[indiceCaja - 1];
@@ -135,14 +138,14 @@ async function CajaAnterior() {
   }
 
   // Si no hay caja anterior en la misma sección, busca en la sección anterior del mismo nivel
-  const seccionActual = TablesDbService.Inventarios.value.find(x => x.$id == cajaSeleccionada.value?.padre);
+  const seccionActual = Inventarios.value.find(x => x.id == cajaSeleccionada.value?.padre);
   if (!seccionActual)
     return;
-  const nivelActual = TablesDbService.Inventarios.value.find(x => x.$id == seccionActual.padre);
+  const nivelActual = Inventarios.value.find(x => x.id == seccionActual.padre);
   if (!nivelActual)
     return;
 
-  const seccionesNivel = TablesDbService.Inventarios.value.filter(x => x.padre == nivelActual.$id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
+  const seccionesNivel = Inventarios.value.filter(x => x.padre == nivelActual.id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
   const indiceSeccion = seccionesNivel.indexOf(seccionActual);
   if (indiceSeccion > 0) {
     const seccionAnterior = seccionesNivel[indiceSeccion - 1];
@@ -151,7 +154,7 @@ async function CajaAnterior() {
       return;
     }
 
-    const cajasSeccionAnterior = TablesDbService.Inventarios.value.filter(x => x.padre == seccionAnterior.$id);
+    const cajasSeccionAnterior = Inventarios.value.filter(x => x.padre == seccionAnterior.id);
     if (cajasSeccionAnterior.length > 0) {
       const cajaAnterior = cajasSeccionAnterior[cajasSeccionAnterior.length - 1];
       if (cajaAnterior)
@@ -172,7 +175,7 @@ async function CajaSiguiente() {
     deshabilitarCajaAnterior.value = false;
 
   // Revisa si hay una caja siguiente en la misma sección
-  const cajasEnSeccion = TablesDbService.Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
+  const cajasEnSeccion = Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
   const indiceCaja = cajasEnSeccion.indexOf(cajaSeleccionada.value);
   if (cajasEnSeccion.length > 1 && indiceCaja < cajasEnSeccion.length - 1) {
     const cajaSiguiente = cajasEnSeccion[indiceCaja + 1];
@@ -182,14 +185,14 @@ async function CajaSiguiente() {
   }
 
     // Si no hay caja anterior en la misma sección, busca en la sección siguiente del mismo nivel
-  const seccionActual = TablesDbService.Inventarios.value.find(x => x.$id == cajaSeleccionada.value?.padre);
+  const seccionActual = Inventarios.value.find(x => x.id == cajaSeleccionada.value?.padre);
   if (!seccionActual)
     return;
-  const nivelActual = TablesDbService.Inventarios.value.find(x => x.$id == seccionActual.padre);
+  const nivelActual = Inventarios.value.find(x => x.id == seccionActual.padre);
   if (!nivelActual)
     return;
 
-  const seccionesNivel = TablesDbService.Inventarios.value.filter(x => x.padre == nivelActual.$id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
+  const seccionesNivel = Inventarios.value.filter(x => x.padre == nivelActual.id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
   const indiceSeccion = seccionesNivel.indexOf(seccionActual);
   if (indiceSeccion < seccionesNivel.length - 1) {
     const seccionSiguiente = seccionesNivel[indiceSeccion + 1];
@@ -198,7 +201,7 @@ async function CajaSiguiente() {
       return;
     }
 
-    const cajasSeccionSiguiente = TablesDbService.Inventarios.value.filter(x => x.padre == seccionSiguiente.$id);
+    const cajasSeccionSiguiente = Inventarios.value.filter(x => x.padre == seccionSiguiente.id);
     if (cajasSeccionSiguiente.length > 0) {
       const cajaSiguiente = cajasSeccionSiguiente[0];
       if (cajaSiguiente)
@@ -228,14 +231,14 @@ async function Mover() {
   if (elementoAMover.value == null)
     return;
 
-  const padreAnterior = TablesDbService.Inventarios.value.find(x => x.$id === elementoAMover.value?.padre);
+  const padreAnterior = Inventarios.value.find(x => x.id === elementoAMover.value?.padre);
   let padreNuevo: Inventario | undefined;
 
   if (elementoAMover.value.tipo === 'Caja' && nuevoPadreSeccion.value != null) {
-    elementoAMover.value.padre = nuevoPadreSeccion.value.$id;
+    elementoAMover.value.padre = nuevoPadreSeccion.value.id;
     padreNuevo = nuevoPadreSeccion.value;
   } else if (elementoAMover.value.tipo === 'Sección' && nuevoPadreNivel.value != null) {
-    elementoAMover.value.padre = nuevoPadreNivel.value.$id;
+    elementoAMover.value.padre = nuevoPadreNivel.value.id;
     padreNuevo = nuevoPadreNivel.value;
   } else {
     return;
@@ -244,14 +247,14 @@ async function Mover() {
   await TablesDbService.Actualizar('inventario', elementoAMover.value);
 
   if (elementoAMover.value.tipo == 'Caja') {
-    await TablesDbService.RegistrarHistorial(elementoAMover.value.$id, `[${elementoAMover.value.tipo}] Movida`, `De sección: ${padreAnterior?.nombre}`, `A sección: ${padreNuevo?.nombre}`);
+    await TablesDbService.RegistrarHistorial(elementoAMover.value.id, `[${elementoAMover.value.tipo}] Movida`, `De sección: ${padreAnterior?.nombre}`, `A sección: ${padreNuevo?.nombre}`);
   } else if (elementoAMover.value.tipo == 'Sección') {
-    await TablesDbService.RegistrarHistorial(elementoAMover.value.$id, `[${elementoAMover.value.tipo}] Movida`, `De nivel: ${padreAnterior?.nombre}`, `A nivel: ${padreNuevo?.nombre}`);
+    await TablesDbService.RegistrarHistorial(elementoAMover.value.id, `[${elementoAMover.value.tipo}] Movida`, `De nivel: ${padreAnterior?.nombre}`, `A nivel: ${padreNuevo?.nombre}`);
   }
 
-  const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === elementoAMover.value?.$id);
+  const indice = Inventarios.value.findIndex(x => x.id === elementoAMover.value?.id);
   if (indice >= 0) {
-    TablesDbService.Inventarios.value[indice] = { ...elementoAMover.value };
+    Inventarios.value[indice] = { ...elementoAMover.value };
   }
   mostrarDialogoMover.value = false;
 }
@@ -269,48 +272,48 @@ async function Mover() {
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
         <span class="p-button-label hidden md:inline">Estante</span>
       </Button>
-      <Button v-if="Usuario" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Nivel')">
+      <Button v-if="Usuario" severity="info" variant="outlined" @click="Agregar(estante.id, 'Nivel')">
         <span class="p-button-icon p-button-icon-left pi pi-plus" />
         <span class="p-button-label hidden md:inline">Nivel</span>
       </Button>
     </div>
   </div>
 
-  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).length === 0" class="italic text-muted-color">
+  <div v-if="Inventarios.filter(x => x.padre == estante.id).length === 0" class="italic text-muted-color">
       No hay niveles en este Estante.
   </div>
-  <div v-else v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
+  <div v-else v-for="nivel in Inventarios.filter(x => x.padre == estante.id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.id">
      <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1 flex justify-center', legend: { style: 'margin-left: auto;' } }">
       <template #legend>
         <div class="flex items-center">
           <div class="font-medium">Nivel {{ nivel.nombre }}</div>
-          <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
-          <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel)" @quitarClick="Quitar(nivel)" :id-elemento="nivel.$id" :nombre-elemento="nivel.nombre" />
+          <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
+          <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel)" @quitarClick="Quitar(nivel)" :id-elemento="nivel.id" :nombre-elemento="nivel.nombre" />
         </div>
       </template>
       <div class="flex flex-wrap md:flex-nowrap gap-2">
-        <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
+        <div v-if="Inventarios.filter(x => x.padre == nivel.id).length === 0" class="italic text-muted-color">
           No hay secciones en este Nivel.
         </div>
-        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) "
-            :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-21'">
+        <Panel v-else v-for="seccion in Inventarios.filter(x => x.padre == nivel.id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) "
+            :key="seccion.id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-21'">
           <template #icons v-if="Usuario">
             <div class="flex">
-              <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
+              <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
               <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(seccion)" v-tooltip.bottom="'Mover Sección'" />
-              <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" :id-elemento="seccion.$id" :nombre-elemento="seccion.nombre" />
+              <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" :id-elemento="seccion.id" :nombre-elemento="seccion.nombre" />
             </div>
           </template>
-          <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id).length === 0" class="italic text-muted-color m-1">
+          <div v-if="Inventarios.filter(x => x.padre == seccion.id).length === 0" class="italic text-muted-color m-1">
             No hay cajas en esta Sección.
           </div>
-          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id"
+          <div v-else v-for="caja in Inventarios.filter(x => x.padre == seccion.id)" :key="caja.id"
               class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex justify-center">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }"
-                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }"
+                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
                 <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.$id" :nombre-elemento="caja.nombre" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.id" :nombre-elemento="caja.nombre" />
               </div>
           </div>
         </Panel>
@@ -341,13 +344,13 @@ async function Mover() {
       </div>
     </template>
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
-    <div v-else v-for="item in productosEnCaja" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
+    <div v-else v-for="item in productosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex flex-wrap gap-4">
-        <img :hidden="!item.producto.imagenId" :src="item.producto.imagenId ? StorageService.Url(item.producto.imagenId ?? '') : undefined" alt="Foto" class="rounded-xl md:w-49 md:h-49" />
+        <img :hidden="!item.producto.imagenId" :src="item.producto.imagenId ? await StorageService.Url(item.producto.imagenId) : undefined" alt="Foto" class="rounded-xl md:w-49 md:h-49" />
         <div>
           <div><b>Nombre: </b>{{ item.producto.nombre }}</div>
-          <div><b>Grupo: </b>{{ gruposDict[item.producto.grupo] }}</div>
-          <div><b>Fabricante: </b>{{ fabricantesDict[item.producto.fabricante] }}</div>
+          <div><b>Grupo: </b>{{ gruposDict[item.producto.grupoId] }}</div>
+          <div><b>Fabricante: </b>{{ fabricantesDict[item.producto.fabricanteId] }}</div>
           <div><b>Código: </b>{{ item.producto.codigo }}</div>
           <div class="mt-3"><b>Cantidad: </b>{{ item.cantidad }}</div>
           <div><b>Peso Unitario: </b>{{ item.producto.pesoUnitario }} Kg.</div>
@@ -365,7 +368,7 @@ async function Mover() {
       <div class="flex gap-2 items-center">
         <label for="nuevoPadreNivel">Nuevo Nivel: </label>
         <Select id="nuevoPadreNivel" v-model="nuevoPadreNivel" option-label="nombre"
-          :options="TablesDbService.Inventarios.value.filter(x => x.padre == estante?.$id && x.$id !== elementoAMover?.padre)">
+          :options="Inventarios.filter(x => x.padre == estante?.id && x.id !== elementoAMover?.padre)">
         </Select>
       </div>
       <div class="flex gap-2 items-center" v-if="elementoAMover?.tipo === 'Caja'">

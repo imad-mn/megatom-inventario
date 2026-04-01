@@ -7,10 +7,9 @@ import { useConfirm } from "primevue/useconfirm";
 import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
-import { Usuario } from '@/servicios/appwrite';
+import { Inventarios, Usuario } from '@/servicios/shared';
 import { Importar, Exportar } from '@/servicios/ImportarExportar';
-import { dialogoHistorial } from '@/servicios/TablesDbService';
-import { ObtenerUbicaciones } from '@/servicios/shared';
+import { ObtenerUbicaciones, dialogoHistorial } from '@/servicios/shared';
 
 const confirm = useConfirm();
 
@@ -29,8 +28,8 @@ const esNuevo = ref(false);
 
 const grupoDict = ref<Record<string, string>>({});
 const fabricanteDict = ref<Record<string, string>>({});
-grupoDict.value = Object.fromEntries(grupos.map(x => [x.$id, x.nombre]));;
-fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
+grupoDict.value = Object.fromEntries(grupos.map(x => [x.id, x.nombre]));;
+fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
 
 let archivoFoto: File | undefined;
 const imagenEdicion = ref<string>();
@@ -56,10 +55,10 @@ watchEffect(() => {
         || p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || (p.codigo !== null && p.codigo.toLowerCase().includes(filtroTexto.value.toLowerCase()))
-        || grupoDict.value[p.grupo]?.toLowerCase().includes(filtroTexto.value.toLowerCase())
-        || fabricanteDict.value[p.fabricante]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
-      && (filtroGrupo.value === null || p.grupo === filtroGrupo.value.$id)
-      && (filtroFabricante.value === null || p.fabricante === filtroFabricante.value.$id);
+        || grupoDict.value[p.grupoId]?.toLowerCase().includes(filtroTexto.value.toLowerCase())
+        || fabricanteDict.value[p.fabricanteId]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
+      && (filtroGrupo.value === null || p.grupoId === filtroGrupo.value.id)
+      && (filtroFabricante.value === null || p.fabricanteId === filtroFabricante.value.id);
   });
   productosFiltrados.value.sort((a,b) => a.nombre.localeCompare(b.nombre));
 });
@@ -70,16 +69,16 @@ const nivelSeleccionado = ref<string | null>(null);
 const seccionSeleccionada = ref<string | null>(null);
 const cajaSeleccionada = ref<string | null>(null);
 const cantidadInicial = ref<number>(1);
-const galpones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === null));
-const estantes = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
-const niveles = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
-const secciones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
-const cajas = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
+const galpones = computed(() => Inventarios.value.filter(x => x.padre === null));
+const estantes = computed(() => Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
+const niveles = computed(() => Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
+const secciones = computed(() => Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
+const cajas = computed(() => Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
 
 function Agregar() {
   esNuevo.value = true;
   imagenEdicion.value = undefined;
-  itemEdicion.value = { $id: '', nombre: '', grupo: '', fabricante: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenId: null };
+  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenId: null };
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
   galponSeleccionado.value = null;
@@ -103,27 +102,27 @@ async function Guardar() {
     const productoNuevo = Stringify(itemEdicion.value);
     if (esNuevo.value) {
       await TablesDbService.Crear('productos', itemEdicion.value!);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, '[Producto] Creado', null, productoNuevo);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, '[Producto] Creado', null, productoNuevo);
       productos.value.push({ ...itemEdicion.value! });
 
       if (cajaSeleccionada.value && cantidadInicial.value > 0) {
         const item: Cantidades = {
-          $id: '',
-          producto: itemEdicion.value.$id,
+          id: '',
+          productoId: itemEdicion.value.id,
           cantidad: cantidadInicial.value,
-          cajon: cajaSeleccionada.value
+          cajaId: cajaSeleccionada.value
         };
         await TablesDbService.Crear('cantidades', item);
-        const caja = TablesDbService.Inventarios.value.find(x => x.$id === cajaSeleccionada.value);
-        await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, `'${itemEdicion.value!.nombre}' agregado a caja: ${caja?.nombre} (${cantidadInicial.value} unidades)`);
+        const caja = Inventarios.value.find(x => x.id === cajaSeleccionada.value);
+        await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, `'${itemEdicion.value!.nombre}' agregado a caja: ${caja?.nombre} (${cantidadInicial.value} unidades)`);
       }
       dialogVisible.value = false;
     } else {
-      const anterior = productos.value.find(x => x.$id === itemEdicion.value!.$id);
+      const anterior = productos.value.find(x => x.id === itemEdicion.value!.id);
       if (anterior) {
         await TablesDbService.Actualizar('productos', itemEdicion.value!);
         const productoAnterior = Stringify(anterior);
-        await TablesDbService.RegistrarHistorial(itemEdicion.value!.$id, '[Producto] Modificado', productoAnterior, productoNuevo);
+        await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, '[Producto] Modificado', productoAnterior, productoNuevo);
         const indice = productos.value.indexOf(anterior);
         productos.value[indice] = { ...itemEdicion.value! };
         dialogVisible.value = false;
@@ -134,10 +133,10 @@ async function Guardar() {
   }
 }
 
-function Editar(item: Producto) {
+async function Editar(item: Producto) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
-  imagenEdicion.value = item.imagenId ? StorageService.Url(item.imagenId) : undefined;
+  imagenEdicion.value = item.imagenId ? await StorageService.Url(item.imagenId) : undefined;
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
 }
@@ -150,14 +149,14 @@ function Quitar(item: Producto): void {
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
     accept: async () => {
-      const anterior = productos.value.find(x => x.$id === item.$id);
+      const anterior = productos.value.find(x => x.id === item.id);
       if (anterior) {
-        await TablesDbService.Eliminar('productos', item.$id)
+        await TablesDbService.Eliminar('productos', item.id)
         const anteriorJson = Stringify(anterior);
-        await TablesDbService.RegistrarHistorial(item.$id, '[Producto] Eliminado', anteriorJson, null);
+        await TablesDbService.RegistrarHistorial(item.id, '[Producto] Eliminado', anteriorJson, null);
         const indice = productos.value.indexOf(anterior);
         productos.value.splice(indice, 1);
-        await StorageService.Eliminar(item.$id);
+        await StorageService.Eliminar(item.id);
       }
     }
   });
@@ -214,12 +213,12 @@ async function VerUbicacion(productoId: string) {
 }
 
 function Stringify(item: Producto): string {
-  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${grupoDict.value[item.grupo]} | Fabricante: ${fabricanteDict.value[item.fabricante]} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
+  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${grupoDict.value[item.grupoId]} | Fabricante: ${fabricanteDict.value[item.fabricanteId]} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
 }
 
 function onHistorialClick(item: Producto) {
   dialogoHistorial.value.mostrar = true;
-  dialogoHistorial.value.idElemento = item.$id;
+  dialogoHistorial.value.idElemento = item.id;
   dialogoHistorial.value.nombreElemento = item.nombre;
 }
 
@@ -245,16 +244,16 @@ async function DescargarExportacion() {
     </IconField>
     <Select v-model="filtroGrupo" :options="grupos" optionLabel="nombre" placeholder="Grupo" showClear class="w-full md:w-auto" />
     <Select v-model="filtroFabricante" :options="fabricantes" optionLabel="nombre" placeholder="Fabricante" showClear class="w-full md:w-auto" />
-    <Button v-if="Usuario != null && ['Imad', 'Giovanni'].includes(Usuario.name)" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" v-tooltip.bottom="'Importar productos desde un archivo CSV'" />
-    <Button v-if="Usuario != null && ['Imad', 'Giovanni'].includes(Usuario.name)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarExportacion" v-tooltip.bottom="'Exportar productos a un archivo CSV'" />
+    <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Importar" icon="pi pi-file-import" severity="success" variant="outlined" @click="AbrirDialogoImportar" v-tooltip.bottom="'Importar productos desde un archivo CSV'" />
+    <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarExportacion" v-tooltip.bottom="'Exportar productos a un archivo CSV'" />
   </div>
 
   <DataView :value="productosFiltrados">
     <template #list="slotProps">
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Card v-for="item in slotProps.items" :key="item.$id" style="overflow: hidden">
+        <Card v-for="item in slotProps.items" :key="item.id" style="overflow: hidden">
           <template #header>
-            <img v-if="item.imagenId" :src="StorageService.Url(item.imagenId)" alt="Foto" />
+            <img v-if="item.imagenId" :src="await StorageService.Url(item.imagenId)" alt="Foto" />
           </template>
           <template #title>{{ item.nombre }}</template>
           <template #subtitle>{{ item.descripcion }}</template>
@@ -264,11 +263,11 @@ async function DescargarExportacion() {
             <div>{{ grupoDict[item.grupo] }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
-            <Button v-if="!ubicacionDict[item.$id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.$id)" />
+            <Button v-if="!ubicacionDict[item.id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.id)" />
             <div v-else>
               <div><b>Ubicación:</b></div>
               <ul class="list-disc list-inside">
-                <li v-for="(ubic, index) in ubicacionDict[item.$id]" :key="index">{{ ubic }}</li>
+                <li v-for="(ubic, index) in ubicacionDict[item.id]" :key="index">{{ ubic }}</li>
               </ul>
             </div>
           </template>
@@ -285,18 +284,18 @@ async function DescargarExportacion() {
   </DataView>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Producto"
-    :desabilitarAceptar="itemEdicion?.nombre?.trim() === '' || itemEdicion?.grupo == undefined || itemEdicion?.fabricante === undefined || mostrarAdvertencia">
+    :desabilitarAceptar="itemEdicion?.nombre?.trim() === '' || itemEdicion?.grupoId == undefined || itemEdicion?.fabricanteId === undefined || mostrarAdvertencia">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on">
         <InputText id="nombre" v-model="itemEdicion!.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" @change="RevisarNombreUnico" />
         <label for="nombre">Nombre</label>
       </FloatLabel>
       <FloatLabel variant="on">
-        <Select id="grupo" v-model="itemEdicion!.grupo" :options="grupos" optionValue="$id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.grupo" />
+        <Select id="grupo" v-model="itemEdicion!.grupoId" :options="grupos" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.grupoId" />
         <label for="grupo">Grupo</label>
       </FloatLabel>
       <FloatLabel variant="on">
-        <Select id="fabricante" v-model="itemEdicion!.fabricante" :options="fabricantes" optionValue="$id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.fabricante" />
+        <Select id="fabricante" v-model="itemEdicion!.fabricanteId" :options="fabricantes" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.fabricanteId" />
         <label for="fabricante">Fabricante</label>
       </FloatLabel>
       <FloatLabel variant="on">
@@ -325,23 +324,23 @@ async function DescargarExportacion() {
       <div v-if="esNuevo" class="flex flex-col gap-3">
         <b>Ubicación</b>
         <FloatLabel variant="on">
-          <Select v-model="galponSeleccionado" :options="galpones" optionLabel="nombre" optionValue="$id" showClear class="w-full" />
+          <Select v-model="galponSeleccionado" :options="galpones" optionLabel="nombre" optionValue="id" showClear class="w-full" />
           <label>Galpón</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="estanteSeleccionado" :options="estantes" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!galponSeleccionado" />
+          <Select v-model="estanteSeleccionado" :options="estantes" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!galponSeleccionado" />
           <label>Estante</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="nivelSeleccionado" :options="niveles" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!estanteSeleccionado" />
+          <Select v-model="nivelSeleccionado" :options="niveles" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!estanteSeleccionado" />
           <label>Nivel</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="seccionSeleccionada" :options="secciones" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!nivelSeleccionado" />
+          <Select v-model="seccionSeleccionada" :options="secciones" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!nivelSeleccionado" />
           <label>Sección</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="cajaSeleccionada" :options="cajas" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!seccionSeleccionada" />
+          <Select v-model="cajaSeleccionada" :options="cajas" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!seccionSeleccionada" />
           <label>Caja</label>
         </FloatLabel>
         <FloatLabel variant="on">

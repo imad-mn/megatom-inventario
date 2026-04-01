@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { dialogoHistorial } from '@/servicios/TablesDbService';
+import { dialogoHistorial } from '@/servicios/shared';
 
 interface EditarQuitarProps {
   tamaño?: 'small' | 'large';

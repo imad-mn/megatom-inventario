@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
-import { Actualizar, Crear, Inventarios, Listas, ObtenerHistorialExportacion, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
-import type { Cantidades, Inventario, Lista, Producto, TipoInventario } from './modelos';
+import { Actualizar, Crear, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
+import type { Cantidades, Historial, Inventario, Lista, Producto, TipoInventario } from './modelos';
+import { Inventarios, Listas } from './shared';
 
 export type Fila = {
   galpon: string;
@@ -91,7 +92,7 @@ async function obtenerOCrearNodoInventario(
   if (existente) return existente;
 
   const nodo: Inventario = {
-    $id: '',
+    id: '',
     tipo,
     nombre,
     padre: padreId,
@@ -99,7 +100,7 @@ async function obtenerOCrearNodoInventario(
   };
   await Crear('inventario', nodo);
   inventarios.push(nodo);
-  await RegistrarHistorial(nodo.$id, `[${tipo}] Creado`, null, nombre);
+  await RegistrarHistorial(nodo.id, `[${tipo}] Creado`, null, nombre);
   return nodo;
 }
 
@@ -113,36 +114,36 @@ function parsearPesoUnitarioFila(valor: string): number {
 
 async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void> {
   const galpon = await obtenerOCrearNodoInventario('Galpon', fila.galpon, null);
-  const estante = await obtenerOCrearNodoInventario('Estante', fila.estante, galpon.$id);
-  const nivel = await obtenerOCrearNodoInventario('Nivel', fila.nivel, estante.$id);
-  const seccion = await obtenerOCrearNodoInventario('Sección', fila.seccion, nivel.$id);
-  const cajon = await obtenerOCrearNodoInventario('Caja', fila.cajon, seccion.$id);
+  const estante = await obtenerOCrearNodoInventario('Estante', fila.estante, galpon.id);
+  const nivel = await obtenerOCrearNodoInventario('Nivel', fila.nivel, estante.id);
+  const seccion = await obtenerOCrearNodoInventario('Sección', fila.seccion, nivel.id);
+  const cajon = await obtenerOCrearNodoInventario('Caja', fila.cajon, seccion.id);
 
   const grupo = await obtenerOCrearLista(ctx.grupos, 'grupos', fila.grupo);
   const fabricante = await obtenerOCrearLista(ctx.fabricantes, 'fabricantes', fila.fabricante);
 
-  const producto = await obtenerOCrearProducto(fila, grupo.$id, fabricante.$id, ctx.productos);
+  const producto = await obtenerOCrearProducto(fila, grupo.id, fabricante.id, ctx.productos);
 
   const cantidad = parsearCantidadFila(fila.cantidad);
   const itemCantidad = ctx.cantidades.find(
-    (c) => c.cajon === cajon.$id && (c.producto as string) === producto.$id
+    (c) => c.cajaId === cajon.id && (c.productoId as string) === producto.id
   );
 
   if (!itemCantidad) {
     const nuevo: Cantidades = {
-      $id: '',
-      producto: producto.$id,
+      id: '',
+      productoId: producto.id,
       cantidad,
-      cajon: cajon.$id,
+      cajaId: cajon.id,
     };
     await Crear('cantidades', nuevo);
     ctx.cantidades.push(nuevo);
-    await RegistrarHistorial(producto.$id, `[Importación] '${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`, null, `${cantidad} unidades`);
+    await RegistrarHistorial(producto.id, `[Importación] '${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`, null, `${cantidad} unidades`);
   } else {
     const cantidadAnterior = itemCantidad.cantidad;
     itemCantidad.cantidad = cantidad;
     await Actualizar('cantidades', itemCantidad);
-    await RegistrarHistorial(producto.$id, `[Importación] Cantidad actualizada en caja ${cajon.nombre}`, String(cantidadAnterior), String(cantidad));
+    await RegistrarHistorial(producto.id, `[Importación] Cantidad actualizada en caja ${cajon.nombre}`, String(cantidadAnterior), String(cantidad));
   }
 }
 
@@ -154,12 +155,12 @@ async function obtenerOCrearLista(
   const existente = lista.find((x) => x.nombre === nombre);
   if (existente) return existente;
 
-  const item: Lista = { $id: '', tipo, nombre };
+  const item: Lista = { id: '', tipo, nombre };
   await Crear('listas', item);
   Listas.value.push(item);
   lista.push(item);
   const etiqueta = tipo === 'grupos' ? 'Grupo' : tipo === 'fabricantes' ? 'Fabricante' : 'Almacenista';
-  await RegistrarHistorial(item.$id, `[${etiqueta}] Creado`, null, nombre);
+  await RegistrarHistorial(item.id, `[${etiqueta}] Creado`, null, nombre);
   return item;
 }
 
@@ -175,32 +176,32 @@ async function obtenerOCrearProducto(
   if (existente) return existente;
 
   const producto: Producto = {
-    $id: '',
+    id: '',
     nombre: fila.nombre,
     codigo: fila.codigo || null,
     descripcion: fila.descripcion || null,
     pesoUnitario: parsearPesoUnitarioFila(fila.pesoUnitario),
-    grupo: grupoId,
-    fabricante: fabricanteId,
+    grupoId: grupoId,
+    fabricanteId: fabricanteId,
     imagenId: null,
   };
   await Crear('productos', producto);
   productos.push(producto);
   const productoDesc = `Nombre: ${producto.nombre} | Código: ${producto.codigo} | Grupo: ${fila.grupo} | Fabricante: ${fila.fabricante} | Descripción: ${producto.descripcion} | Peso Unitario: ${producto.pesoUnitario} Kg`;
-  await RegistrarHistorial(producto.$id, '[Producto] Creado', null, productoDesc);
+  await RegistrarHistorial(producto.id, '[Producto] Creado', null, productoDesc);
   return producto;
 }
 
 function obtenerRutaCajon(cajonId: string, inventarios: Inventario[]): { galpon: string; estante: string; nivel: string; seccion: string; cajon: string } | null {
-  const cajon = inventarios.find(x => x.$id === cajonId);
+  const cajon = inventarios.find(x => x.id === cajonId);
   if (!cajon || cajon.tipo !== 'Caja') return null;
-  const seccion = inventarios.find(x => x.$id === cajon.padre);
+  const seccion = inventarios.find(x => x.id === cajon.padre);
   if (!seccion) return null;
-  const nivel = inventarios.find(x => x.$id === seccion.padre);
+  const nivel = inventarios.find(x => x.id === seccion.padre);
   if (!nivel) return null;
-  const estante = inventarios.find(x => x.$id === nivel.padre);
+  const estante = inventarios.find(x => x.id === nivel.padre);
   if (!estante) return null;
-  const galpon = inventarios.find(x => x.$id === estante.padre);
+  const galpon = inventarios.find(x => x.id === estante.padre);
   if (!galpon) return null;
   return { galpon: galpon.nombre, estante: estante.nombre, nivel: nivel.nombre, seccion: seccion.nombre, cajon: cajon.nombre };
 }
@@ -218,16 +219,16 @@ export async function Exportar(): Promise<string> {
 
   const grupos = listas.filter(l => l.tipo === 'grupos');
   const fabricantes = listas.filter(l => l.tipo === 'fabricantes');
-  const grupoPorId = Object.fromEntries(grupos.map(x => [x.$id, x.nombre]));
-  const fabricantePorId = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
-  const productoPorId = Object.fromEntries(productos.map(p => [p.$id, p]));
+  const grupoPorId = Object.fromEntries(grupos.map(x => [x.id, x.nombre]));
+  const fabricantePorId = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
+  const productoPorId = Object.fromEntries(productos.map(p => [p.id, p]));
 
   const inventarios = Inventarios.value;
   const filas: Fila[] = [];
 
   for (const c of cantidades) {
-    const cajonId = typeof c.cajon === 'string' ? c.cajon : (c.cajon as unknown as string);
-    const productoId = typeof c.producto === 'string' ? c.producto : (c.producto as Producto).$id;
+    const cajonId = typeof c.cajaId === 'string' ? c.cajaId : (c.cajaId as unknown as string);
+    const productoId = typeof c.productoId === 'string' ? c.productoId : (c.productoId as Producto).id;
     const ruta = obtenerRutaCajon(cajonId, inventarios);
     const producto = productoPorId[productoId];
     if (!ruta || !producto) continue;
@@ -243,8 +244,8 @@ export async function Exportar(): Promise<string> {
       seccion: ruta.seccion,
       cajon: ruta.cajon,
       nombre: producto.nombre,
-      grupo: grupoPorId[producto.grupo] ?? '',
-      fabricante: fabricantePorId[producto.fabricante] ?? '',
+      grupo: grupoPorId[producto.grupoId] ?? '',
+      fabricante: fabricantePorId[producto.fabricanteId] ?? '',
       codigo: producto.codigo ?? '',
       cantidad: `${cantidad} Unit`,
       pesoUnitario: String(pesoUnitario).replace('.', ',') + ' Kg',
@@ -257,7 +258,7 @@ export async function Exportar(): Promise<string> {
 }
 
 export async function ExportarHistorial(): Promise<string> {
-  const historial = await ObtenerHistorialExportacion();
-  const filas = historial.map(x => ({ Fecha: x.$createdAt.toLocaleString(), Usuario: x.usuario, Accion: x.accion, Anterior: x.anterior, Actual: x.actual }))
+  const historial = await ObtenerTodos<Historial>('Historial');
+  const filas = historial.map(x => ({ Fecha: x.fechaCreacion.toLocaleString(), Usuario: x.usuario, Accion: x.accion, Anterior: x.anterior, Actual: x.actual }))
   return Papa.unparse(filas, { delimiter: ';', header: true });
 }

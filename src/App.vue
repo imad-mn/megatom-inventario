@@ -3,9 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
-import {  Inventarios, Listas, dialogoHistorial, ObtenerTodos } from './servicios/TablesDbService';
-import { account, Usuario } from './servicios/appwrite';
+import {  ObtenerTodos } from './servicios/TablesDbService';
 import DialogoHistorial from './componentes/DialogoHistorial.vue';
+import { dialogoHistorial, Inventarios, Listas, Usuario } from './servicios/shared';
+import { auth } from './servicios/firebase';
 
 const router = useRouter();
 
@@ -49,7 +50,7 @@ onMounted(async () => {
 })
 
 async function cerrarSesion() {
-  await account.deleteSession({ sessionId: 'current' });
+  await auth.signOut();
   Usuario.value = undefined;
   router.push('/');
 }
@@ -67,7 +68,7 @@ async function cerrarSesion() {
     </template>
     <template #end>
       <div v-if="Usuario">
-        <span><i class="pi pi-user" />&nbsp;{{ Usuario.name }}</span>
+        <span><i class="pi pi-user" />&nbsp;{{ Usuario.user.displayName }}</span>
         <Button
           icon="pi pi-sign-out"
           variant="text"

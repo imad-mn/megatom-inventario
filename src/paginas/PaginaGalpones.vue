@@ -7,41 +7,41 @@ import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
 import { Button } from 'primevue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
-import { Usuario } from '@/servicios/appwrite';
+import { Inventarios, Usuario } from '@/servicios/shared';
 
 const confirm = useConfirm();
 const router = useRouter();
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false });
+const itemEdicion = ref<Inventario>({ id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false });
 const esNuevo = ref(false);
 
-const galpones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === null));
+const galpones = computed(() => Inventarios.value.filter(x => x.padre === null));
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false };
+  itemEdicion.value = { id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false };
   dialogVisible.value = true;
 }
 
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear('inventario', itemEdicion.value);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, '[Galpón] Creado', null, itemEdicion.value.nombre);
-    TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, itemEdicion.value.nombre);
+    Inventarios.value.push({ ...itemEdicion.value });
   } else {
-    const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
+    const indice = Inventarios.value.findIndex(x => x.id === itemEdicion.value.id);
     if (indice >= 0) {
       await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, '[Galpón] Modificado', TablesDbService.Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
-      TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
+      Inventarios.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
 function Ver(item: Inventario) {
-  router.push({ name: 'Galpón', params: { id: `${item.$id}-${item.nombre}-${item.ordenDescendente}` } });
+  router.push({ name: 'Galpón', params: { id: `${item.id}-${item.nombre}-${item.ordenDescendente}` } });
 }
 
 function Editar(item: Inventario) {
@@ -58,7 +58,7 @@ function Quitar(item: Inventario): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await TablesDbService.RegistrarHistorial(item.$id, '[Galpón] Eliminado', item.nombre, null);
+      await TablesDbService.RegistrarHistorial(item.id, '[Galpón] Eliminado', item.nombre, null);
       await TablesDbService.EliminarItemInventario(item);
     }
   });
@@ -76,7 +76,7 @@ function Quitar(item: Inventario): void {
 
   <div v-if="galpones.length === 0" class="italic text-muted-color mt-3">No hay galpones</div>
   <div class="flex flex-wrap gap-2 justify-center">
-    <div v-for="item in galpones" :key="item.$id"
+    <div v-for="item in galpones" :key="item.id"
       class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>
@@ -84,7 +84,7 @@ function Quitar(item: Inventario): void {
           <div>{{ 'Galpón ' + item.nombre }}</div>
         </div>
       </Button>
-      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.$id" :nombre-elemento="item.nombre" />
+      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="item.nombre" />
     </div>
   </div>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { Usuario } from '@/servicios/appwrite';
+import { Inventarios, Usuario } from '@/servicios/shared';
 import type { Cantidades, Lista, Movimientos, MovimientosExtendido, Producto } from '@/servicios/modelos';
 import * as TablesDbService from '@/servicios/TablesDbService';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
@@ -38,11 +38,11 @@ const estanteSeleccionado = ref<string | null>(null);
 const nivelSeleccionado = ref<string | null>(null);
 const seccionSeleccionada = ref<string | null>(null);
 const cajaSeleccionada = ref<string | null>(null);
-const galpones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === null));
-const estantes = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
-const niveles = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
-const secciones = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
-const cajas = computed(() => TablesDbService.Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
+const galpones = computed(() => Inventarios.value.filter(x => x.padre === null));
+const estantes = computed(() => Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
+const niveles = computed(() => Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
+const secciones = computed(() => Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
+const cajas = computed(() => Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
 
 
 onMounted(async () => {
@@ -51,7 +51,7 @@ onMounted(async () => {
   almacenistas.value = TablesDbService.ObtenerLista('almacenistas');
   grupos.value = TablesDbService.ObtenerLista('grupos');
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
-  fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
+  fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
   cargando.value = false;
 });
 
@@ -77,19 +77,19 @@ watch(productoSeleccionado, async () => {
   if (!productoSeleccionado.value || !itemEdicion.value)
     return;
 
-  itemEdicion.value.producto = productoSeleccionado.value.$id;
-  cantidadesDelProducto = await TablesDbService.ObtenerCantidadesPorProducto(productoSeleccionado.value?.$id);
+  itemEdicion.value.productoId = productoSeleccionado.value.id;
+  cantidadesDelProducto = await TablesDbService.ObtenerCantidadesPorProducto(productoSeleccionado.value?.id);
   ubicacionesDelProducto.value = ObtenerUbicaciones(cantidadesDelProducto);
   cajasDelProducto.value = cantidadesDelProducto.map(c => ({
-    id: c.cajon,
-    nombre:`Caja ${TablesDbService.Inventarios.value.find(x => x.$id == c.cajon)?.nombre ?? ''} (${c.cantidad} unidades)`,
+    id: c.cajaId,
+    nombre:`Caja ${Inventarios.value.find(x => x.id == c.cajaId)?.nombre ?? ''} (${c.cantidad} unidades)`,
     cantidad: c.cantidad
   }));
 });
 
 function Agregar() {
   dialogVisible.value = true;
-  itemEdicion.value = { $id: '', producto: null, cantidad: 0, almacenista: null, justificacion: null, esIngreso: false, creadoPor: Usuario?.value?.name ?? '', $createdAt: '', caja: null };
+  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: null, esIngreso: false, creadoPor: Usuario?.value?.user.displayName ?? '', fechaCreacion: '', cajaId: '' };
 
   grupoSeleccionado.value = null;
   productoSeleccionado.value = null;
@@ -107,17 +107,17 @@ async function Guardar() {
   const cajaId = itemEdicion.value.esIngreso ? cajaSeleccionada.value : cajaDelProductoSeleccionada.value?.id;
 
   // Guarda el registro del movimiento
-  await TablesDbService.Crear('movimientos', { ...itemEdicion.value, producto: productoSeleccionado.value?.$id, caja: cajaId });
+  await TablesDbService.Crear('movimientos', { ...itemEdicion.value, producto: productoSeleccionado.value?.id, caja: cajaId });
 
   // Actualiza la cantidad en cantidad existente o agrega a una caja
-  let cantidadAModificar = cantidadesDelProducto.find(x => x.cajon == cajaId);
+  let cantidadAModificar = cantidadesDelProducto.find(x => x.cajaId == cajaId);
   if (itemEdicion.value.esIngreso) {
     if (cantidadAModificar) {
       cantidadAModificar.cantidad += itemEdicion.value.cantidad;
       await TablesDbService.Actualizar('cantidades', cantidadAModificar);
     }
     else {
-      cantidadAModificar = { $id: '', producto: productoSeleccionado.value.$id, cantidad: itemEdicion.value.cantidad, cajon: cajaId || ''};
+      cantidadAModificar = { id: '', productoId: productoSeleccionado.value.id, cantidad: itemEdicion.value.cantidad, cajaId: cajaId || ''};
       await TablesDbService.Crear('cantidades', cantidadAModificar);
     }
   } else {
@@ -147,10 +147,10 @@ async function Guardar() {
   </div>
 
   <DataTable :value="movimientos" show-gridlines striped-rows size="small" :paginator="movimientos.length > 10" :rows="10"
-      :loading="cargando" sortField="$createdAt" :sortOrder="-1">
-    <Column field="$createdAt" header="Fecha" style="width: 16%" sortable>
+      :loading="cargando" sortField="fechaCreacion" :sortOrder="-1">
+    <Column field="fechaCreacion" header="Fecha" style="width: 16%" sortable>
       <template #body="{ data }">
-        {{ new Date(data.$createdAt).toLocaleString() }}
+        {{ new Date(data.fechaCreacion).toLocaleString() }}
       </template>
     </Column>
     <Column field="esIngreso" header="Tipo" style="width: 7%" sortable>
@@ -167,12 +167,12 @@ async function Guardar() {
   </DataTable>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="Gestionar Inventario" :clickAceptar="Guardar" class="w-2xl"
-    :desabilitarAceptar="itemEdicion?.producto == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenista === null
+    :desabilitarAceptar="itemEdicion?.productoId == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenistaId === null
     || (itemEdicion.esIngreso && cajaSeleccionada == null) || (!itemEdicion.esIngreso && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))">
     <div class="flex gap-3">
       <Fieldset legend="Producto" class="w-3/5 p-3" :pt="{ contentWrapper: 'min-w-0' }">
         <FloatLabel variant="on" class="mb-3">
-          <Select id="grupo" v-model="grupoSeleccionado" :options="grupos" optionValue="$id" optionLabel="nombre" class="w-full" />
+          <Select id="grupo" v-model="grupoSeleccionado" :options="grupos" optionValue="id" optionLabel="nombre" class="w-full" />
           <label for="grupo">Grupo</label>
         </FloatLabel>
         <FloatLabel variant="on" class="mb-2">
@@ -182,7 +182,7 @@ async function Guardar() {
         <div v-if="productoSeleccionado">
           <div><b>Código:&nbsp;</b>{{ productoSeleccionado?.codigo }}</div>
           <div><b>Descripción:&nbsp;</b>{{ productoSeleccionado?.descripcion }}</div>
-          <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[productoSeleccionado?.fabricante] }}</div>
+          <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[productoSeleccionado?.fabricanteId] }}</div>
           <div><b>Peso Unitario:&nbsp;</b>{{ productoSeleccionado?.pesoUnitario?.toFixed(2) }} Kg</div>
           <ul class="list-disc list-inside">
             <li v-for="ubic in ubicacionesDelProducto" :key="ubic">{{ ubic }}</li>
@@ -192,28 +192,28 @@ async function Guardar() {
       <div class="w-2/5 flex flex-col gap-3">
         <ToggleButton v-model="itemEdicion!.esIngreso" onLabel="Ingreso" offLabel="Egreso" off-icon="pi pi-arrow-left" on-icon="pi pi-arrow-right" />
         <FloatLabel variant="on">
-          <Select id="almacenista" v-model="itemEdicion!.almacenista" :options="almacenistas" optionValue="$id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.almacenista" />
+          <Select id="almacenista" v-model="itemEdicion!.almacenistaId" :options="almacenistas" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.almacenistaId" />
           <label for="almacenista">Almacenista</label>
         </FloatLabel>
         <div v-if="itemEdicion!.esIngreso" class="flex flex-col gap-3">
           <FloatLabel variant="on">
-            <Select v-model="galponSeleccionado" :options="galpones" optionLabel="nombre" optionValue="$id" showClear class="w-full" />
+            <Select v-model="galponSeleccionado" :options="galpones" optionLabel="nombre" optionValue="id" showClear class="w-full" />
             <label>Galpón</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="estanteSeleccionado" :options="estantes" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!galponSeleccionado" />
+            <Select v-model="estanteSeleccionado" :options="estantes" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!galponSeleccionado" />
             <label>Estante</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="nivelSeleccionado" :options="niveles" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!estanteSeleccionado" />
+            <Select v-model="nivelSeleccionado" :options="niveles" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!estanteSeleccionado" />
             <label>Nivel</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="seccionSeleccionada" :options="secciones" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!nivelSeleccionado" />
+            <Select v-model="seccionSeleccionada" :options="secciones" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!nivelSeleccionado" />
             <label>Sección</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="cajaSeleccionada" :options="cajas" optionLabel="nombre" optionValue="$id" showClear class="w-full" :disabled="!seccionSeleccionada" :invalid="cajaSeleccionada == null" />
+            <Select v-model="cajaSeleccionada" :options="cajas" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!seccionSeleccionada" :invalid="cajaSeleccionada == null" />
             <label>Caja</label>
           </FloatLabel>
         </div>

@@ -1,93 +1,47 @@
-import { Query, type Models } from 'appwrite';
-import { tablesDB, ID, Usuario } from './appwrite.ts';
-import type { Cantidades, CantidadesConProducto, Historial, Inventario, Lista, MovimientosExtendido, Producto } from './modelos.ts';
-import { ref } from 'vue';
+import { db } from './firebase.ts';
+import { collection, addDoc, doc, query, where, getDocs, setDoc, deleteDoc, type DocumentData, QueryConstraint, type FirestoreDataConverter, orderBy, limit, QueryDocumentSnapshot, startAfter, getCountFromServer } from "firebase/firestore";
+import type { Base, Cantidades, CantidadesConProducto, Historial, Inventario, Lista, Movimientos, MovimientosExtendido, Paginacion, Producto } from './modelos.ts';
 import type { DataTableFilterMeta, DataTableFilterMetaData } from 'primevue';
+import { Inventarios, Listas, Usuario } from './shared.ts';
 
-const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-
-export const Inventarios = ref<Inventario[]>([]);
-export const Listas = ref<Lista[]>([]);
-
-interface DialogoHistorial {
-  mostrar: boolean;
-  idElemento: string;
-  nombreElemento: string;
-}
-export const dialogoHistorial = ref<DialogoHistorial>({ mostrar: false, idElemento: '', nombreElemento: '' });
-
-export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
-  const respuesta = await tablesDB.listRows({
-    databaseId,
-    tableId,
-    queries: [Query.limit(1000)]
-  });
-  return respuesta.rows as T[];
+function makeConverter<T extends Base>(): FirestoreDataConverter<T> {
+  return {
+    toFirestore: (data) => data as DocumentData,
+    fromFirestore: (snap) => ({ id: snap.id, ...snap.data() } as T),
+  };
 }
 
-async function ObtenerConQuery<T>(tableId: string, queries: string[]): Promise<T[]> {
-  const respuesta = await tablesDB.listRows({
-    databaseId,
-    tableId,
-    queries: queries
-  });
-  return respuesta.rows as T[];
+export async function Crear(collectionName: string, item: DocumentData): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(makeConverter<Base>());
+  await addDoc(collRef, item);
 }
 
-export async function ObtenerConPaginacion<T extends Models.Row>(tableId: string, pagina: number, limit: number, sortOrder: 1 | 0 | -1 = -1, filtros: DataTableFilterMeta): Promise<Models.RowList<T>> {
-  const offset = pagina * limit;
-  const queries = [Query.offset(offset), Query.limit(limit), sortOrder === 1 ? Query.orderAsc('$createdAt') : sortOrder === -1 ? Query.orderDesc('$createdAt') : ''];
-
-  for (const key in filtros) {
-    const filtro = filtros[key] as DataTableFilterMetaData;
-    if (filtro.value) {
-      switch (filtro.matchMode) {
-        case 'equals':
-          queries.push(Query.equal(key, filtro.value));
-          break;
-        case 'contains':
-          queries.push(Query.search(key, filtro.value));
-          break;
-      }
-    }
-  }
-
-  return await tablesDB.listRows<T>({
-    databaseId,
-    tableId,
-    queries: queries
-  });
+export async function Actualizar(collectionName: string, item: DocumentData): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(makeConverter<Base>());
+  const docRef = doc(collRef, item.id!);
+  await setDoc(docRef, item);
 }
 
-export async function Crear(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
-  item.$id = ID.unique();
-  await tablesDB.createRow({
-    databaseId,
-    tableId,
-    rowId: item.$id,
-    data: item,
-  });
+export async function Eliminar(collectionName: string, id: string): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(makeConverter<Base>());
+  const docRef = doc(collRef, id);
+  await deleteDoc(docRef);
 }
 
-export async function Actualizar(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
-  await tablesDB.updateRow({
-    databaseId,
-    tableId,
-    rowId: item.$id ?? ID.unique(),
-    data: item,
-  });
+export async function ObtenerTodos<T extends Base>(collectionName: string): Promise<T[]> {
+  const collRef = collection(db, collectionName).withConverter(makeConverter<T>());
+  const respuesta = await getDocs(collRef);
+  return respuesta.docs.map(doc => doc.data());
 }
 
-export async function Eliminar(tableId: string, id: string): Promise<void> {
-  await tablesDB.deleteRow({
-    databaseId,
-    tableId,
-    rowId: id,
-  });
+async function ObtenerConQueries<T extends Base>(collectionName: string, queries: QueryConstraint[]): Promise<T[]> {
+  const collRef = collection(db, collectionName).withConverter(makeConverter<T>());
+  const respuesta = await getDocs(query(collRef, ...queries));
+  return respuesta.docs.map(doc => doc.data());
 }
 
-async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: string | string[] | null): Promise<T[]> {
-  return ObtenerConQuery<T>(tableId, [valor == null ? Query.isNull(columna) : Query.equal(columna, valor)]);
+async function ObtenerFiltroEqual<T extends Base>(collectionName: string, columna: string, valor: string | string[] | null): Promise<T[]> {
+  return ObtenerConQueries<T>(collectionName, [where(columna, '==', valor)]);
 }
 
 export function ObtenerLista(tipo: string): Lista[] {
@@ -95,25 +49,50 @@ export function ObtenerLista(tipo: string): Lista[] {
 }
 
 export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
-  return ObtenerFiltroEqual<Producto>('productos', 'grupo', grupoId);
+  return ObtenerFiltroEqual<Producto>('productos', 'grupoId', grupoId);
 }
 
-export function ObtenerCantidadesConProductos(): Promise<CantidadesConProducto[]> {
-  return ObtenerConQuery<CantidadesConProducto>('cantidades', [Query.select(['*', 'producto.*']), Query.limit(1000)]);
+export async function ObtenerCantidadesConProductos(cajaIds: string[]): Promise<CantidadesConProducto[]> {
+  const cantidades = await ObtenerConQueries<Cantidades>('cantidades', [where('cajaId', 'in', cajaIds)]);
+  const productos = await ObtenerConQueries<Producto>('productos', [where('id', 'in', cantidades.map(c => c.productoId))]);
+
+  return cantidades.map(cantidad => ({
+    ...cantidad,
+    producto: productos.find(p => p.id === cantidad.productoId)!
+  }));
 }
 
 export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantidades[]> {
-  return ObtenerFiltroEqual<Cantidades>('cantidades', 'producto', productoId);
+  return ObtenerFiltroEqual<Cantidades>('cantidades', 'productoId', productoId);
 }
 
 export async function EliminarItemInventario(item: Inventario) {
-  const hijos = Inventarios.value.filter(x => x.padre === item.$id);
+  const hijos = Inventarios.value.filter(x => x.padre === item.id);
   for (const subItem of hijos) {
     await EliminarItemInventario(subItem);
   }
-  await Eliminar('inventario', item.$id);
-  const indice = Inventarios.value.findIndex(x => x.$id === item.$id);
+  await Eliminar('inventario', item.id);
+  const indice = Inventarios.value.findIndex(x => x.id === item.id);
   if (indice >= 0) Inventarios.value.splice(indice, 1);
+}
+
+export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<MovimientosExtendido[]> {
+  const queries = [
+    orderBy('fechaCreacion', 'desc'),
+    where('fechaCreacion', '>=', fechaDesde),
+    where('fechaCreacion', '<=', fechaHasta),
+  ];
+  const movimientos = await ObtenerConQueries<Movimientos>('movimientos', queries);
+  const productos = await ObtenerConQueries<Producto>('productos', [where('id', 'in', movimientos.map(m => m.productoId))]);
+  const cajas = await ObtenerConQueries<Inventario>('inventario', [where('id', 'in', movimientos.map(m => m.cajaId))]);
+  const almacenistas = ObtenerLista('almacenistas');
+
+  return movimientos.map(movimiento => ({
+    ...movimiento,
+    producto: movimiento.productoId ? productos.find(p => p.id === movimiento.productoId) || null : null,
+    caja: movimiento.cajaId ? cajas.find(c => c.id === movimiento.cajaId) || null : null,
+    almacenista: movimiento.almacenistaId ? almacenistas.find(a => a.id === movimiento.almacenistaId) || null : null,
+  }));
 }
 
 export async function RegistrarHistorial(idElemento: string, accion: string, anterior: string | null = null, actual: string | null = null): Promise<void> {
@@ -121,7 +100,7 @@ export async function RegistrarHistorial(idElemento: string, accion: string, ant
 
   const historialEntry = {
     idElemento,
-    usuario: Usuario.value.name,
+    usuario: Usuario.value.user.displayName,
     accion,
     anterior,
     actual
@@ -130,21 +109,41 @@ export async function RegistrarHistorial(idElemento: string, accion: string, ant
   await Crear('Historial', historialEntry);
 }
 
+export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<Historial> | null | undefined, pageSize: number, sortOrder: 1 | 0 | -1 = -1, filtros: DataTableFilterMeta): Promise<Paginacion<Historial>> {
+  const queries: QueryConstraint[] = [];
+
+  for (const key in filtros) {
+    const filtro = filtros[key] as DataTableFilterMetaData;
+    if (filtro.value) {
+      switch (filtro.matchMode) {
+        case 'equals':
+          queries.push(where(key, '==', filtro.value));
+          break;
+      }
+    }
+  }
+
+  const collRef = collection(db, 'Historial').withConverter(makeConverter<Historial>());
+  const snapshot = await getCountFromServer(query(collRef, ...queries));
+  const totalCount = snapshot.data().count;
+
+  queries.push(limit(pageSize));
+  queries.push(sortOrder === 1 ? orderBy('fechaCreacion') : orderBy('fechaCreacion', 'desc'));
+  if (lastVisibleDoc) {
+    queries.push(startAfter(lastVisibleDoc));
+  }
+
+  const respuesta = await getDocs(query(collRef, ...queries));
+  const rows = respuesta.docs.map(doc => doc.data() as Historial);
+  const newLastVisibleDoc = respuesta.docs.length > 0 ? respuesta.docs[respuesta.docs.length - 1] : null;
+
+  return {
+    total: totalCount,
+    rows,
+    lastVisibleDoc: newLastVisibleDoc,
+  };
+}
+
 export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
   return await ObtenerFiltroEqual<Historial>('Historial', 'idElemento', idElemento);
-}
-
-export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<MovimientosExtendido[]> {
-  const queries = [
-    Query.select(['*', 'producto.$id', 'producto.nombre', 'caja.$id', 'caja.nombre', 'almacenista.$id', 'almacenista.nombre']),
-    Query.limit(100),
-    Query.orderDesc('$createdAt'),
-    Query.greaterThanEqual('$createdAt', fechaDesde.toISOString()),
-    Query.lessThanEqual('$createdAt', fechaHasta.toISOString()),
-  ];
-  return await ObtenerConQuery<MovimientosExtendido>('movimientos', queries);
-}
-
-export function ObtenerHistorialExportacion(): Promise<Historial[]> {
-  return ObtenerConQuery<Historial>('Historial', [Query.limit(10000)]);
 }

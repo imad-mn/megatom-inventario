@@ -1,27 +1,18 @@
-import { ID, storage } from './appwrite.ts';
-
-const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { storage } from './firebase';
 
 export async function Subir(file: File): Promise<string> {
-  const fileId = ID.unique();
-  await storage.createFile({
-    bucketId: bucketId,
-    fileId: fileId,
-    file: file
-  });
-  return fileId;
+  const storageRef = ref(storage, `${Date.now()}_${file.name}`);
+  await uploadBytes(storageRef, file);
+  return storageRef.name;
 }
 
-export function Url(fileId: string): string {
-  return storage.getFileView({
-    bucketId: bucketId,
-    fileId: fileId
-  });
+export async function Url(fileName: string): Promise<string> {
+  const storageRef = ref(storage, fileName);
+  return await getDownloadURL(storageRef);
 }
 
-export async function Eliminar(fileId: string): Promise<void> {
-  await storage.deleteFile({
-    bucketId: bucketId,
-    fileId: fileId
-  });
+export async function Eliminar(fileName: string): Promise<void> {
+  const storageRef = ref(storage, fileName);
+  return await deleteObject(storageRef);
 }

@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Historial } from '@/servicios/modelos.ts';
+import type { Historial, Paginacion } from '@/servicios/modelos.ts';
 import { onMounted, ref } from 'vue';
 import DataTable, { type DataTableFilterMeta, type DataTablePageEvent, type DataTableSortEvent } from 'primevue/datatable';
 import Column from 'primevue/column';
 import { ExportarHistorial } from '@/servicios/ImportarExportar';
-import { Usuario } from '@/servicios/appwrite';
+import { Usuario } from '@/servicios/shared';
 
-const historial = ref<Historial[]>([]);
+const historial = ref<Paginacion<Historial>>({ total: 0, rows: [], lastVisibleDoc: null });
 const currentPage = ref(0);
 const rowsPerPage = ref(10);
 const loading = ref(false);
-const totalRecords = ref(0);
 const sortOrder = ref<1 | 0 | -1>(-1);
 const first = ref(0);
 const filters = ref<DataTableFilterMeta>({
@@ -25,9 +24,7 @@ const usuarios = TablesDbService.ObtenerLista('usuario').map(x => x.nombre);
 async function cargarHistorial() {
   loading.value = true;
   try {
-    const respuesta = await TablesDbService.ObtenerConPaginacion<Historial>('Historial', currentPage.value, rowsPerPage.value, sortOrder.value, filters.value);
-    totalRecords.value = respuesta.total;
-    historial.value = respuesta.rows;
+    historial.value = await TablesDbService.ObtenerHistorial(historial.value.lastVisibleDoc, rowsPerPage.value, sortOrder.value, filters.value);
   } finally {
     loading.value = false;
   }
@@ -71,14 +68,14 @@ async function DescargarHistorial() {
   <div class="flex justify-between items-center mb-3">
     <div></div>
     <div class="text-xl mb-2 text-center">HISTORIAL</div>
-    <Button v-if="Usuario != null && ['Imad', 'Giovanni'].includes(Usuario.name)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
+    <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
   </div>
-  <DataTable :value="historial" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"
-    :lazy="true" :loading="loading" :totalRecords="totalRecords" @page="onPage" @sort="onSort"
+  <DataTable :value="historial.rows" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"
+    :lazy="true" :loading="loading" :totalRecords="historial.total" @page="onPage" @sort="onSort"
     @filter="onFilter" filter-display="row" v-model:filters="filters">
-    <Column field="$createdAt" header="Fecha" style="width: 18%" sortable :pt="{ columnHeaderContent: 'justify-center' }">
+    <Column field="fechaCreacion" header="Fecha" style="width: 18%" sortable :pt="{ columnHeaderContent: 'justify-center' }">
       <template #body="slotProps">
-        {{ new Date(slotProps.data.$createdAt).toLocaleString() }}
+        {{ new Date(slotProps.data.fechaCreacion).toLocaleString() }}
       </template>
     </Column>
     <Column field="usuario" header="Usuario" style="max-width: 12%" :showFilterMenu="false">
