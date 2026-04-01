@@ -107,7 +107,7 @@ async function Guardar() {
   const cajaId = itemEdicion.value.esIngreso ? cajaSeleccionada.value : cajaDelProductoSeleccionada.value?.id;
 
   // Guarda el registro del movimiento
-  await TablesDbService.Crear('movimientos', { ...itemEdicion.value, producto: productoSeleccionado.value?.id, caja: cajaId });
+  await TablesDbService.CrearConFecha('movimientos', { ...itemEdicion.value, producto: productoSeleccionado.value?.id, caja: cajaId });
 
   // Actualiza la cantidad en cantidad existente o agrega a una caja
   let cantidadAModificar = cantidadesDelProducto.find(x => x.cajaId == cajaId);

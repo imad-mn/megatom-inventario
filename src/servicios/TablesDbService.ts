@@ -65,6 +65,11 @@ export async function Eliminar<T extends ModeloBase>(collectionName: string, ite
   await deleteDoc(docRef);
 }
 
+export async function CrearConFecha<T extends ConFechaCreacion>(collectionName: string, item: T): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(createConverterConFecha<T>());
+  await addDoc(collRef, item);
+}
+
 export async function ObtenerTodos<T extends ModeloBase>(collectionName: string): Promise<T[]> {
   const collRef = collection(db, collectionName).withConverter(createConverter<T>());
   const respuesta = await getDocs(collRef);
@@ -142,10 +147,11 @@ export async function RegistrarHistorial(idElemento: string, accion: string, ant
     usuario: Usuario.value.user.displayName,
     accion,
     anterior,
-    actual
+    actual,
+    fechaCreacion: new Date(),
   };
 
-  await Crear('Historial', historialEntry);
+  await CrearConFecha('Historial', historialEntry);
 }
 
 export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<Historial> | null | undefined, pageSize: number, sortOrder: 1 | 0 | -1 = -1, filtros: Record<string, string | null>): Promise<Paginacion<Historial>> {
