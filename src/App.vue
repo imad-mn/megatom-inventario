@@ -5,7 +5,7 @@ import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
 import {  ObtenerTodos } from './servicios/TablesDbService';
 import DialogoHistorial from './componentes/DialogoHistorial.vue';
-import { dialogoHistorial, Inventarios, Listas, Usuario } from './servicios/shared';
+import { dialogoHistorial, Listas, Usuario } from './servicios/shared';
 import { auth } from './servicios/firebase';
 
 const router = useRouter();
@@ -45,7 +45,6 @@ const menuItemsVisibles = computed(() =>
 );
 
 onMounted(async () => {
-  Inventarios.value = await ObtenerTodos('inventario');
   Listas.value = await ObtenerTodos('listas');
 })
 

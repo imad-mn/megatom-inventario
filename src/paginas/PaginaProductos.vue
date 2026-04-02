@@ -208,7 +208,7 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
 
 async function VerUbicacion(productoId: string) {
   const cantidades = await TablesDbService.ObtenerCantidadesPorProducto(productoId);
-  const ubicaciones = ObtenerUbicaciones(cantidades);
+  const ubicaciones = await ObtenerUbicaciones(cantidades);
   ubicacionDict.value[productoId] = ubicaciones;
 }
 

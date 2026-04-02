@@ -2,7 +2,7 @@ import { db } from './firebase.ts';
 import { collection, addDoc, doc, query, where, getDocs, setDoc, deleteDoc, type DocumentData, QueryConstraint, type FirestoreDataConverter, orderBy, limit, QueryDocumentSnapshot, startAfter, getCountFromServer, type WithFieldValue, type SnapshotOptions, Timestamp } from "firebase/firestore";
 import type { ModeloBase, ConFechaCreacion, Cantidades, CantidadesConProducto, Historial, Inventario, Lista, Movimientos, MovimientosExtendido, Paginacion, Producto } from './modelos.ts';
 
-import { Inventarios, Listas, Usuario } from './shared.ts';
+import { Listas, Usuario } from './shared.ts';
 
 /**
  * Crea un FirestoreDataConverter genérico para cualquier tipo T que extienda ModeloBase.
@@ -106,16 +106,6 @@ export async function ObtenerCantidadesConProductos(cajaIds: string[]): Promise<
 
 export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantidades[]> {
   return ObtenerFiltroEqual<Cantidades>('cantidades', 'productoId', productoId);
-}
-
-export async function EliminarItemInventario(item: Inventario) {
-  const hijos = Inventarios.value.filter(x => x.padre === item.id);
-  for (const subItem of hijos) {
-    await EliminarItemInventario(subItem);
-  }
-  await Eliminar('inventario', item);
-  const indice = Inventarios.value.findIndex(x => x.id === item.id);
-  if (indice >= 0) Inventarios.value.splice(indice, 1);
 }
 
 export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<MovimientosExtendido[]> {

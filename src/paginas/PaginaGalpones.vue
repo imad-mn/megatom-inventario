@@ -1,56 +1,60 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Inventario } from '@/servicios/modelos.ts';
-import { computed, ref } from 'vue';
+import type { Galpon } from '@/servicios/modelos.ts';
+import { onMounted, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
 import { Button } from 'primevue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
-import { Inventarios, Usuario } from '@/servicios/shared';
+import { GalponSeleccionado, Usuario } from '@/servicios/shared';
 
 const confirm = useConfirm();
 const router = useRouter();
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false });
+const itemEdicion = ref<Galpon>({ id: '', nombre: '', ordenDescendente: false, estantes: [] });
 const esNuevo = ref(false);
+const galpones = ref<Galpon[]>([]);
 
-const galpones = computed(() => Inventarios.value.filter(x => x.padre === null));
+onMounted(async () => {
+  galpones.value = await TablesDbService.ObtenerTodos<Galpon>('galpones');
+});
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { id: '', tipo: 'Galpon', nombre: '', padre: null, ordenDescendente: false };
+  itemEdicion.value = { id: '', nombre: '', ordenDescendente: false, estantes: [] };
   dialogVisible.value = true;
 }
 
 async function Guardar() {
   if (esNuevo.value) {
-    await TablesDbService.Crear('inventario', itemEdicion.value);
+    await TablesDbService.Crear('galpones', itemEdicion.value);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, itemEdicion.value.nombre);
-    Inventarios.value.push({ ...itemEdicion.value });
+    galpones.value.push({ ...itemEdicion.value });
   } else {
-    const indice = Inventarios.value.findIndex(x => x.id === itemEdicion.value.id);
+    const indice = galpones.value.findIndex(x => x.id === itemEdicion.value.id);
     if (indice >= 0) {
-      await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
-      Inventarios.value[indice] = { ...itemEdicion.value };
+      await TablesDbService.Actualizar('galpones', itemEdicion.value);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', galpones.value[indice]?.nombre, itemEdicion.value.nombre);
+      galpones.value[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
-function Ver(item: Inventario) {
-  router.push({ name: 'Galpón', params: { id: `${item.id}-${item.nombre}-${item.ordenDescendente}` } });
+function Ver(item: Galpon) {
+  GalponSeleccionado.value = item;
+  router.push({ name: 'Galpón', params: { id: item.id } });
 }
 
-function Editar(item: Inventario) {
+function Editar(item: Galpon) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
   dialogVisible.value = true;
 }
 
-function Quitar(item: Inventario): void {
+function Quitar(item: Galpon): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar el Galpón: "${item.nombre}" y sus descendientes?`,
@@ -59,7 +63,9 @@ function Quitar(item: Inventario): void {
     acceptIcon: 'pi pi-trash',
     accept: async () => {
       await TablesDbService.RegistrarHistorial(item.id, '[Galpón] Eliminado', item.nombre, null);
-      await TablesDbService.EliminarItemInventario(item);
+      const indice = galpones.value.findIndex(x => x.id === item.id);
+      await TablesDbService.Eliminar('galpones', item);
+      if (indice >= 0) galpones.value.splice(indice, 1);
     }
   });
 }

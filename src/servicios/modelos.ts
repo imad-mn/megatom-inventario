@@ -8,6 +8,8 @@ type IdNombre = ModeloBase & {
   nombre: string;
 }
 
+export type Caja = IdNombre
+
 export type Producto = IdNombre & {
   codigo: string | null;
   descripcion: string | null;
@@ -24,18 +26,25 @@ export type Inventario = IdNombre & {
   ordenDescendente: boolean;
 }
 
-export type Galpon = ModeloBase & {
+export type ItemOrdenable = IdNombre & {
+  ordenDescendente: boolean;
+}
+
+export type Seccion = IdNombre & {
+  cajas: IdNombre[];
+}
+
+export type Nivel = ItemOrdenable & {
   nombre: string;
-  estantes: [{
-    nombre: string;
-    niveles: [{
-      nombre: string;
-      secciones: [{
-        nombre: string;
-        cajas: IdNombre[]
-      }]
-    }]
-  }]
+  secciones: Seccion[];
+}
+
+export type Estante = ItemOrdenable & {
+  niveles: Nivel[];
+}
+
+export type Galpon = ItemOrdenable & {
+  estantes: Estante[];
 }
 
 export type Cantidades = ModeloBase & {

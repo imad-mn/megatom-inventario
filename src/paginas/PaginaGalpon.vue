@@ -1,65 +1,74 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Inventario } from '@/servicios/modelos.ts';
-import { ref, watchEffect } from 'vue';
+import type { Estante, ItemOrdenable } from '@/servicios/modelos.ts';
+import { computed, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
-import { Inventarios, Usuario } from '@/servicios/shared';
+import { EstanteSeleccionado, GalponSeleccionado, Usuario } from '@/servicios/shared';
 
 const confirm = useConfirm();
 const router = useRouter();
-const galponQueryString = (router.currentRoute.value.params.id as string).split('-');
-const galpon: Inventario = { id: galponQueryString[0] ?? '', padre: null, tipo: 'Galpon', nombre: galponQueryString[1] ?? '', ordenDescendente: galponQueryString[2] === 'true' };
 
-const estantes = ref<Inventario[]>([]);
-watchEffect(() =>
-  estantes.value = Inventarios.value.filter(x => x.padre == galpon.id)
-                  .sort((a, b) => galpon.ordenDescendente ? b.nombre.localeCompare(a.nombre) : a.nombre.localeCompare(b.nombre))
+const estantes = computed(() =>
+  [...GalponSeleccionado.value!.estantes].sort((a, b) =>
+    GalponSeleccionado.value!.ordenDescendente
+      ? b.nombre.localeCompare(a.nombre)
+      : a.nombre.localeCompare(b.nombre)
+  )
 );
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ id: '', tipo: 'Estante', nombre: '', padre: galpon.id ?? '', ordenDescendente: false });
+const itemEdicion = ref<ItemOrdenable>({ id: '', nombre: '', ordenDescendente: false });
 const esNuevo = ref(false);
+const esEditandoGalpon = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { id: '', tipo: 'Estante', nombre: '', padre: galpon.id ?? '', ordenDescendente: false };
+  esEditandoGalpon.value = false;
+  itemEdicion.value = { id: crypto.randomUUID(), nombre: '', ordenDescendente: false };
   dialogVisible.value = true;
 }
 
 async function Guardar() {
   if (esNuevo.value) {
-    await TablesDbService.Crear('inventario', itemEdicion.value);
+    const nuevoEstante: Estante = { ...itemEdicion.value, niveles: [] };
+    GalponSeleccionado.value!.estantes.push(nuevoEstante);
+    await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Estante] Creado', null, itemEdicion.value.nombre);
-    Inventarios.value.push({ ...itemEdicion.value });
+  } else if (esEditandoGalpon.value) {
+    const nombreAnterior = GalponSeleccionado.value!.nombre;
+    GalponSeleccionado.value!.nombre = itemEdicion.value.nombre;
+    GalponSeleccionado.value!.ordenDescendente = itemEdicion.value.ordenDescendente;
+    await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
+    await TablesDbService.RegistrarHistorial(GalponSeleccionado.value!.id, '[Galpón] Modificado', nombreAnterior, itemEdicion.value.nombre);
   } else {
-    const indice = Inventarios.value.findIndex(x => x.id === itemEdicion.value.id);
-    if (indice >= 0) {
-      await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Estante] Modificado', Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
-      Inventarios.value[indice] = { ...itemEdicion.value };
-    }
-    if (itemEdicion.value.id === galpon.id) {
-      galpon.nombre = itemEdicion.value.nombre;
-      galpon.ordenDescendente = itemEdicion.value.ordenDescendente;
+    const estante = GalponSeleccionado.value!.estantes.find(e => e.id === itemEdicion.value.id);
+    if (estante) {
+      const nombreAnterior = estante.nombre;
+      estante.nombre = itemEdicion.value.nombre;
+      estante.ordenDescendente = itemEdicion.value.ordenDescendente;
+      await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
+      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Estante] Modificado', nombreAnterior, itemEdicion.value.nombre);
     }
   }
   dialogVisible.value = false;
 }
 
-function Ver(item: Inventario) {
-  router.push({ name: 'Estante', params: { estante: `${item.id}-${item.padre}-${item.nombre}-${item.ordenDescendente}-${galpon.nombre}-${galpon.ordenDescendente}` } });
+function Ver(item: Estante) {
+  EstanteSeleccionado.value = item;
+  router.push({ name: 'Estante', params: { estante: item.id } });
 }
 
-function Editar(item: Inventario) {
+function Editar(item: ItemOrdenable, editandoGalpon = false) {
   esNuevo.value = false;
-  itemEdicion.value = { ...item };
+  esEditandoGalpon.value = editandoGalpon;
+  itemEdicion.value = { id: item.id, nombre: item.nombre, ordenDescendente: item.ordenDescendente };
   dialogVisible.value = true;
 }
 
-function Quitar(item: Inventario): void {
+function Quitar(item: Estante): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar el Estante: "${item.nombre}" y sus descendientes?`,
@@ -68,7 +77,8 @@ function Quitar(item: Inventario): void {
     acceptIcon: 'pi pi-trash',
     accept: async () => {
       await TablesDbService.RegistrarHistorial(item.id, '[Estante] Eliminado', item.nombre, null);
-      await TablesDbService.EliminarItemInventario(item);
+      GalponSeleccionado.value!.estantes = GalponSeleccionado.value!.estantes.filter(e => e.id !== item.id);
+      await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
     }
   });
 }
@@ -80,9 +90,9 @@ function Quitar(item: Inventario): void {
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">Galpones</span>
     </Button>
-    <div class="text-xl">GALPÓN {{galpon.nombre}}</div>
+    <div class="text-xl">GALPÓN {{GalponSeleccionado!.nombre}}</div>
     <div>
-      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(galpon)" v-tooltip.bottom="'Editar Galpón'">
+      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
         <span class="p-button-label hidden md:inline">Galpón</span>
       </Button>
