@@ -1,6 +1,6 @@
 import { db } from './firebase.ts';
 import { collection, addDoc, doc, query, where, getDocs, setDoc, deleteDoc, type DocumentData, QueryConstraint, type FirestoreDataConverter, orderBy, limit, QueryDocumentSnapshot, startAfter, getCountFromServer, type WithFieldValue, type SnapshotOptions, Timestamp } from "firebase/firestore";
-import type { ModeloBase, ConFechaCreacion, Cantidades, CantidadesConProducto, Historial, Inventario, Lista, Movimientos, MovimientosExtendido, Paginacion, Producto } from './modelos.ts';
+import type { ModeloBase, ConFechaCreacion, Cantidades, CantidadesConProducto, Galpon, Historial, IdNombre, Lista, Movimientos, MovimientosExtendido, Paginacion, Producto } from './modelos.ts';
 
 import { Listas, Usuario } from './shared.ts';
 
@@ -53,6 +53,12 @@ export async function Crear<T extends ModeloBase>(collectionName: string, item: 
   await addDoc(collRef, item);
 }
 
+export async function CrearYObtenerID<T extends ModeloBase>(collectionName: string, item: T): Promise<string> {
+  const collRef = collection(db, collectionName).withConverter(createConverter<T>());
+  const docRef = await addDoc(collRef, item);
+  return docRef.id;
+}
+
 export async function Actualizar<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
   const collRef = collection(db, collectionName).withConverter(createConverter<T>());
   const docRef = doc(collRef, item.id);
@@ -97,10 +103,11 @@ export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
 export async function ObtenerCantidadesConProductos(cajaIds: string[]): Promise<CantidadesConProducto[]> {
   const cantidades = await ObtenerConQueries<Cantidades>('cantidades', [where('cajaId', 'in', cajaIds)]);
   const productos = await ObtenerConQueries<Producto>('productos', [where('id', 'in', cantidades.map(c => c.productoId))]);
+  const productosMap = new Map(productos.map(p => [p.id, p]));
 
   return cantidades.map(cantidad => ({
     ...cantidad,
-    producto: productos.find(p => p.id === cantidad.productoId)!
+    producto: productosMap.get(cantidad.productoId)!
   }));
 }
 
@@ -117,14 +124,33 @@ export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Pr
   const collRef = collection(db, 'movimientos').withConverter(createConverterConFecha<Movimientos>());
   const movimientos = (await getDocs(query(collRef, ...queries))).docs.map(d => d.data());
   const productos = await ObtenerConQueries<Producto>('productos', [where('id', 'in', movimientos.map(m => m.productoId))]);
-  const cajas = await ObtenerConQueries<Inventario>('inventario', [where('id', 'in', movimientos.map(m => m.cajaId))]);
-  const almacenistas = ObtenerLista('almacenistas');
+  const productosMap = new Map(productos.map(p => [p.id, p]));
+
+  // Extraer cajas de la jerarquía Galpon -> Estante -> Nivel -> Seccion -> Caja
+  const cajaIds = new Set(movimientos.map(m => m.cajaId));
+  const galpones = await ObtenerTodos<Galpon>('galpones');
+  const cajasMap: Map<string, IdNombre> = new Map();
+  for (const galpon of galpones) {
+    for (const estante of galpon.estantes) {
+      for (const nivel of estante.niveles) {
+        for (const seccion of nivel.secciones) {
+          for (const caja of seccion.cajas) {
+            if (cajaIds.has(caja.id)) {
+              cajasMap.set(caja.id, caja);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const almacenistasMap = new Map(ObtenerLista('almacenistas').map(a => [a.id, a]));
 
   return movimientos.map(movimiento => ({
     ...movimiento,
-    producto: movimiento.productoId ? productos.find(p => p.id === movimiento.productoId) || null : null,
-    caja: movimiento.cajaId ? cajas.find(c => c.id === movimiento.cajaId) || null : null,
-    almacenista: movimiento.almacenistaId ? almacenistas.find(a => a.id === movimiento.almacenistaId) || null : null,
+    producto: movimiento.productoId ? productosMap.get(movimiento.productoId) || null : null,
+    caja: movimiento.cajaId ? cajasMap.get(movimiento.cajaId) || null : null,
+    almacenista: movimiento.almacenistaId ? almacenistasMap.get(movimiento.almacenistaId) || null : null,
   }));
 }
 

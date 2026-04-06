@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { Inventarios, Usuario } from '@/servicios/shared';
-import type { Cantidades, Lista, Movimientos, MovimientosExtendido, Producto } from '@/servicios/modelos';
+import { Usuario } from '@/servicios/shared';
+import type { Cantidades, Galpon, Lista, Movimientos, MovimientosExtendido, Producto } from '@/servicios/modelos';
 import * as TablesDbService from '@/servicios/TablesDbService';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { Fieldset, FloatLabel } from 'primevue';
@@ -33,16 +33,17 @@ const ubicacionesDelProducto = ref<string[]>([]);
 const cajasDelProducto = ref<CajaSimple[]>([]);
 const cajaDelProductoSeleccionada = ref<CajaSimple | null>(null);
 
+const galponesData = ref<Galpon[]>([]);
 const galponSeleccionado = ref<string | null>(null);
 const estanteSeleccionado = ref<string | null>(null);
 const nivelSeleccionado = ref<string | null>(null);
 const seccionSeleccionada = ref<string | null>(null);
 const cajaSeleccionada = ref<string | null>(null);
-const galpones = computed(() => Inventarios.value.filter(x => x.padre === null));
-const estantes = computed(() => Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
-const niveles = computed(() => Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
-const secciones = computed(() => Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
-const cajas = computed(() => Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
+const galpones = computed(() => galponesData.value);
+const estantes = computed(() => galponesData.value.find(g => g.id === galponSeleccionado.value)?.estantes ?? []);
+const niveles = computed(() => estantes.value.find(e => e.id === estanteSeleccionado.value)?.niveles ?? []);
+const secciones = computed(() => niveles.value.find(n => n.id === nivelSeleccionado.value)?.secciones ?? []);
+const cajas = computed(() => secciones.value.find(s => s.id === seccionSeleccionada.value)?.cajas ?? []);
 
 
 onMounted(async () => {
@@ -52,6 +53,7 @@ onMounted(async () => {
   grupos.value = TablesDbService.ObtenerLista('grupos');
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
   fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
+  galponesData.value = await TablesDbService.ObtenerTodos<Galpon>('galpones');
   cargando.value = false;
 });
 
@@ -82,7 +84,7 @@ watch(productoSeleccionado, async () => {
   ubicacionesDelProducto.value = await ObtenerUbicaciones(cantidadesDelProducto);
   cajasDelProducto.value = cantidadesDelProducto.map(c => ({
     id: c.cajaId,
-    nombre:`Caja ${Inventarios.value.find(x => x.id == c.cajaId)?.nombre ?? ''} (${c.cantidad} unidades)`,
+    nombre:`Caja ${galponesData.value.flatMap(g => g.estantes).flatMap(e => e.niveles).flatMap(n => n.secciones).flatMap(s => s.cajas).find(x => x.id == c.cajaId)?.nombre ?? ''} (${c.cantidad} unidades)`,
     cantidad: c.cantidad
   }));
 });

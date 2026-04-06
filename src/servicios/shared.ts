@@ -1,5 +1,5 @@
 import type { UserCredential } from 'firebase/auth';
-import type { Cantidades, Estante, Galpon, Inventario, Lista } from './modelos';
+import type { Cantidades, Estante, Galpon, Lista } from './modelos';
 import { ref } from 'vue';
 import { ObtenerTodos } from './TablesDbService';
 
@@ -29,7 +29,6 @@ export async function ObtenerUbicaciones(cantidades: Cantidades[]): Promise<stri
 }
 
 export const Usuario = ref<UserCredential>();
-export const Inventarios = ref<Inventario[]>([]);
 export const Listas = ref<Lista[]>([]);
 export const GalponSeleccionado = ref<Galpon | null>(null);
 export const EstanteSeleccionado = ref<Estante | null>(null);

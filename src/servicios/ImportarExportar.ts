@@ -1,7 +1,7 @@
 import Papa from 'papaparse';
-import { Actualizar, Crear, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
-import type { Cantidades, Historial, Inventario, Lista, Producto, TipoInventario } from './modelos';
-import { Inventarios, Listas } from './shared';
+import { Actualizar, Crear, CrearYObtenerID, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
+import type { Cantidades, Estante, Galpon, Historial, IdNombre, Lista, Nivel, Producto, Seccion } from './modelos';
+import { Listas } from './shared';
 
 export type Fila = {
   galpon: string;
@@ -25,6 +25,8 @@ interface ContextoImportacion {
   grupos: Lista[];
   fabricantes: Lista[];
   cantidades: Cantidades[];
+  galpones: Galpon[];
+  galponesModificados: Set<string>;
 }
 
 function parsearCsv(file: File): Promise<Fila[]> {
@@ -66,6 +68,8 @@ async function ProcesarArchivo(
     grupos: Listas.value.filter((l) => l.tipo === 'grupos'),
     fabricantes: Listas.value.filter((l) => l.tipo === 'fabricantes'),
     cantidades: await ObtenerTodos<Cantidades>('cantidades'),
+    galpones: await ObtenerTodos<Galpon>('galpones'),
+    galponesModificados: new Set(),
   };
 
   for (let i = 0; i < data.length; i++) {
@@ -78,30 +82,13 @@ async function ProcesarArchivo(
     }
     reportarProgreso(i + 1);
   }
-}
 
-async function obtenerOCrearNodoInventario(
-  tipo: TipoInventario,
-  nombre: string,
-  padreId: string | null
-): Promise<Inventario> {
-  const inventarios = Inventarios.value;
-  const existente = inventarios.find(
-    (x) => x.nombre === nombre && x.padre === padreId
-  );
-  if (existente) return existente;
-
-  const nodo: Inventario = {
-    id: '',
-    tipo,
-    nombre,
-    padre: padreId,
-    ordenDescendente: false,
-  };
-  await Crear('inventario', nodo);
-  inventarios.push(nodo);
-  await RegistrarHistorial(nodo.id, `[${tipo}] Creado`, null, nombre);
-  return nodo;
+  // Guardar todos los galpones que fueron modificados
+  for (const galpon of ctx.galpones) {
+    if (ctx.galponesModificados.has(galpon.id)) {
+      await Actualizar('galpones', galpon);
+    }
+  }
 }
 
 function parsearCantidadFila(valor: string): number {
@@ -112,12 +99,63 @@ function parsearPesoUnitarioFila(valor: string): number {
   return Number(valor.split(' ')[0]?.replace(',', '.')) || 0;
 }
 
+async function obtenerOCrearGalpon(ctx: ContextoImportacion, nombre: string): Promise<Galpon> {
+  const existente = ctx.galpones.find(g => g.nombre === nombre);
+  if (existente) return existente;
+
+  const galpon: Galpon = { id: '', nombre, ordenDescendente: false, estantes: [] };
+  galpon.id = await CrearYObtenerID('galpones', galpon);
+  ctx.galpones.push(galpon);
+  await RegistrarHistorial(galpon.id, '[Galpon] Creado', null, nombre);
+  return galpon;
+}
+
+function obtenerOCrearEstante(ctx: ContextoImportacion, galpon: Galpon, nombre: string): Estante {
+  const existente = galpon.estantes.find(e => e.nombre === nombre);
+  if (existente) return existente;
+
+  const estante: Estante = { id: crypto.randomUUID(), nombre, ordenDescendente: false, niveles: [] };
+  galpon.estantes.push(estante);
+  ctx.galponesModificados.add(galpon.id);
+  return estante;
+}
+
+function obtenerOCrearNivel(ctx: ContextoImportacion, galpon: Galpon, estante: Estante, nombre: string): Nivel {
+  const existente = estante.niveles.find(n => n.nombre === nombre);
+  if (existente) return existente;
+
+  const nivel: Nivel = { id: crypto.randomUUID(), nombre, ordenDescendente: false, secciones: [] };
+  estante.niveles.push(nivel);
+  ctx.galponesModificados.add(galpon.id);
+  return nivel;
+}
+
+function obtenerOCrearSeccion(ctx: ContextoImportacion, galpon: Galpon, nivel: Nivel, nombre: string): Seccion {
+  const existente = nivel.secciones.find(s => s.nombre === nombre);
+  if (existente) return existente;
+
+  const seccion: Seccion = { id: crypto.randomUUID(), nombre, cajas: [] };
+  nivel.secciones.push(seccion);
+  ctx.galponesModificados.add(galpon.id);
+  return seccion;
+}
+
+function obtenerOCrearCaja(ctx: ContextoImportacion, galpon: Galpon, seccion: Seccion, nombre: string): IdNombre {
+  const existente = seccion.cajas.find(c => c.nombre === nombre);
+  if (existente) return existente;
+
+  const caja: IdNombre = { id: crypto.randomUUID(), nombre };
+  seccion.cajas.push(caja);
+  ctx.galponesModificados.add(galpon.id);
+  return caja;
+}
+
 async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void> {
-  const galpon = await obtenerOCrearNodoInventario('Galpon', fila.galpon, null);
-  const estante = await obtenerOCrearNodoInventario('Estante', fila.estante, galpon.id);
-  const nivel = await obtenerOCrearNodoInventario('Nivel', fila.nivel, estante.id);
-  const seccion = await obtenerOCrearNodoInventario('Sección', fila.seccion, nivel.id);
-  const cajon = await obtenerOCrearNodoInventario('Caja', fila.cajon, seccion.id);
+  const galpon = await obtenerOCrearGalpon(ctx, fila.galpon);
+  const estante = obtenerOCrearEstante(ctx, galpon, fila.estante);
+  const nivel = obtenerOCrearNivel(ctx, galpon, estante, fila.nivel);
+  const seccion = obtenerOCrearSeccion(ctx, galpon, nivel, fila.seccion);
+  const cajon = obtenerOCrearCaja(ctx, galpon, seccion, fila.cajon);
 
   const grupo = await obtenerOCrearLista(ctx.grupos, 'grupos', fila.grupo);
   const fabricante = await obtenerOCrearLista(ctx.fabricantes, 'fabricantes', fila.fabricante);
@@ -126,7 +164,7 @@ async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void>
 
   const cantidad = parsearCantidadFila(fila.cantidad);
   const itemCantidad = ctx.cantidades.find(
-    (c) => c.cajaId === cajon.id && (c.productoId as string) === producto.id
+    (c) => c.cajaId === cajon.id && c.productoId === producto.id
   );
 
   if (!itemCantidad) {
@@ -192,18 +230,20 @@ async function obtenerOCrearProducto(
   return producto;
 }
 
-function obtenerRutaCajon(cajonId: string, inventarios: Inventario[]): { galpon: string; estante: string; nivel: string; seccion: string; cajon: string } | null {
-  const cajon = inventarios.find(x => x.id === cajonId);
-  if (!cajon || cajon.tipo !== 'Caja') return null;
-  const seccion = inventarios.find(x => x.id === cajon.padre);
-  if (!seccion) return null;
-  const nivel = inventarios.find(x => x.id === seccion.padre);
-  if (!nivel) return null;
-  const estante = inventarios.find(x => x.id === nivel.padre);
-  if (!estante) return null;
-  const galpon = inventarios.find(x => x.id === estante.padre);
-  if (!galpon) return null;
-  return { galpon: galpon.nombre, estante: estante.nombre, nivel: nivel.nombre, seccion: seccion.nombre, cajon: cajon.nombre };
+function obtenerRutaCajon(cajonId: string, galpones: Galpon[]): { galpon: string; estante: string; nivel: string; seccion: string; cajon: string } | null {
+  for (const galpon of galpones) {
+    for (const estante of galpon.estantes) {
+      for (const nivel of estante.niveles) {
+        for (const seccion of nivel.secciones) {
+          const caja = seccion.cajas.find(c => c.id === cajonId);
+          if (caja) {
+            return { galpon: galpon.nombre, estante: estante.nombre, nivel: nivel.nombre, seccion: seccion.nombre, cajon: caja.nombre };
+          }
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -211,25 +251,24 @@ function obtenerRutaCajon(cajonId: string, inventarios: Inventario[]): { galpon:
  * Cada fila es un producto en un cajón; si un producto está en varios cajones, se exporta una fila por cada uno.
  */
 export async function Exportar(): Promise<string> {
-  const [productos, cantidades, listas] = await Promise.all([
+  const [productos, cantidades, galpones] = await Promise.all([
     ObtenerTodos<Producto>('productos'),
     ObtenerTodos<Cantidades>('cantidades'),
-    Promise.resolve(Listas.value),
+    ObtenerTodos<Galpon>('galpones'),
   ]);
 
-  const grupos = listas.filter(l => l.tipo === 'grupos');
-  const fabricantes = listas.filter(l => l.tipo === 'fabricantes');
+  const grupos = Listas.value.filter(l => l.tipo === 'grupos');
+  const fabricantes = Listas.value.filter(l => l.tipo === 'fabricantes');
   const grupoPorId = Object.fromEntries(grupos.map(x => [x.id, x.nombre]));
   const fabricantePorId = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
   const productoPorId = Object.fromEntries(productos.map(p => [p.id, p]));
 
-  const inventarios = Inventarios.value;
   const filas: Fila[] = [];
 
   for (const c of cantidades) {
     const cajonId = typeof c.cajaId === 'string' ? c.cajaId : (c.cajaId as unknown as string);
     const productoId = typeof c.productoId === 'string' ? c.productoId : (c.productoId as Producto).id;
-    const ruta = obtenerRutaCajon(cajonId, inventarios);
+    const ruta = obtenerRutaCajon(cajonId, galpones);
     const producto = productoPorId[productoId];
     if (!ruta || !producto) continue;
 
@@ -259,6 +298,6 @@ export async function Exportar(): Promise<string> {
 
 export async function ExportarHistorial(): Promise<string> {
   const historial = await ObtenerTodos<Historial>('Historial');
-  const filas = historial.map(x => ({ Fecha: x.fechaCreacion.toLocaleString(), Usuario: x.usuario, Accion: x.accion, Anterior: x.anterior, Actual: x.actual }))
+  const filas = historial.map(x => ({ Fecha: x.fechaCreacion.toLocaleString(), Usuario: x.usuario, Accion: x.accion, Anterior: x.anterior, Actual: x.actual }));
   return Papa.unparse(filas, { delimiter: ';', header: true });
 }

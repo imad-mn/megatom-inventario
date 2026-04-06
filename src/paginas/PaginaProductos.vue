@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Cantidades, Lista, Producto } from '@/servicios/modelos.ts';
+import type { Cantidades, Galpon, Lista, Producto } from '@/servicios/modelos.ts';
 import { computed, onMounted, ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
-import { Inventarios, Usuario } from '@/servicios/shared';
+import { Usuario } from '@/servicios/shared';
 import { Importar, Exportar } from '@/servicios/ImportarExportar';
 import { ObtenerUbicaciones, dialogoHistorial } from '@/servicios/shared';
 
@@ -44,9 +44,11 @@ const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
 const ubicacionDict = ref<Record<string, string[]>>({});
+const galponesData = ref<Galpon[]>([]);
 
 onMounted(async () => {
   productos.value = await TablesDbService.ObtenerTodos<Producto>('productos');
+  galponesData.value = await TablesDbService.ObtenerTodos<Galpon>('galpones');
 })
 
 watchEffect(() => {
@@ -69,11 +71,11 @@ const nivelSeleccionado = ref<string | null>(null);
 const seccionSeleccionada = ref<string | null>(null);
 const cajaSeleccionada = ref<string | null>(null);
 const cantidadInicial = ref<number>(1);
-const galpones = computed(() => Inventarios.value.filter(x => x.padre === null));
-const estantes = computed(() => Inventarios.value.filter(x => x.padre === galponSeleccionado.value));
-const niveles = computed(() => Inventarios.value.filter(x => x.padre === estanteSeleccionado.value));
-const secciones = computed(() => Inventarios.value.filter(x => x.padre === nivelSeleccionado.value));
-const cajas = computed(() => Inventarios.value.filter(x => x.padre === seccionSeleccionada.value));
+const galpones = computed(() => galponesData.value);
+const estantes = computed(() => galponesData.value.find(g => g.id === galponSeleccionado.value)?.estantes ?? []);
+const niveles = computed(() => estantes.value.find(e => e.id === estanteSeleccionado.value)?.niveles ?? []);
+const secciones = computed(() => niveles.value.find(n => n.id === nivelSeleccionado.value)?.secciones ?? []);
+const cajas = computed(() => secciones.value.find(s => s.id === seccionSeleccionada.value)?.cajas ?? []);
 
 function Agregar() {
   esNuevo.value = true;
@@ -113,7 +115,7 @@ async function Guardar() {
           cajaId: cajaSeleccionada.value
         };
         await TablesDbService.Crear('cantidades', item);
-        const caja = Inventarios.value.find(x => x.id === cajaSeleccionada.value);
+        const caja = cajas.value.find(x => x.id === cajaSeleccionada.value);
         await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, `'${itemEdicion.value!.nombre}' agregado a caja: ${caja?.nombre} (${cantidadInicial.value} unidades)`);
       }
       dialogVisible.value = false;

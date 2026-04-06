@@ -4,7 +4,7 @@ export type ModeloBase = {
   id: string;
 }
 
-type IdNombre = ModeloBase & {
+export type IdNombre = ModeloBase & {
   nombre: string;
 }
 
@@ -17,13 +17,6 @@ export type Producto = IdNombre & {
   grupoId: string;
   fabricanteId: string;
   imagenId: string | null;
-}
-
-export type TipoInventario = 'Galpon' | 'Estante' | 'Nivel' | 'Sección' | 'Caja';
-export type Inventario = IdNombre & {
-  tipo: TipoInventario;
-  padre: string | null;
-  ordenDescendente: boolean;
 }
 
 export type ItemOrdenable = IdNombre & {
