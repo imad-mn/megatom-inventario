@@ -15,11 +15,6 @@
   --p-dialog-header-padding: 0.5rem 1.25rem;
 
   --p-datatable-header-cell-background: var(--p-gray-100);
-
-  --p-menubar-item-color: var(--azul-megatom);
-  --p-menubar-item-icon-color: var(--azul-megatom);
-
-  --p-primary-color: var(--azul-megatom);
 }
 
 #app {

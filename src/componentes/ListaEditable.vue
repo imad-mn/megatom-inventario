@@ -5,7 +5,7 @@ import type { Lista, TipoLista } from '@/servicios/modelos.ts';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
 import * as TablesDbService from '@/servicios/TablesDbService';
 import DialogoEdicion from './DialogoEdicion.vue';
-import { Listas } from '@/servicios/shared';
+import { Listas, Usuario } from '@/servicios/shared';
 
 interface ListaEditableProps {
   tipo: TipoLista;
@@ -74,11 +74,11 @@ function Quitar(item: Lista): void {
 <template>
   <Panel :header="props.tipo.charAt(0).toUpperCase() + props.tipo.substring(1)" class="w-full md:w-sm">
     <template #icons>
-      <Button label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
+      <Button v-if="Usuario" label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>
     <div v-for="item in itemsFiltrados" :key="item.id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
       <div>{{ item.nombre }}</div>
-      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" :id-elemento="item.id" :nombre-elemento="item.nombre" />
+      <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" :id-elemento="item.id" :nombre-elemento="item.nombre" />
     </div>
   </Panel>
 

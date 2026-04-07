@@ -31,6 +31,8 @@ const fabricantesDict = ref<Record<string, string>>({});
 const deshabilitarSiguienteCaja = ref(false);
 const deshabilitarCajaAnterior = ref(false);
 
+const imagenesDict = ref<Record<string, string>>({});
+
 const mostrarDialogoMover = ref(false);
 const elementoAMover = ref<{ id: string; nombre: string; tipo: 'Caja' | 'Seccion'; padreActualId: string } | null>(null);
 const nuevoPadreNivel = ref<Nivel | null>(null);
@@ -48,6 +50,11 @@ onMounted(async () => {
   fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
   const cajaIds = EstanteSeleccionado.value!.niveles.flatMap(n => n.secciones.flatMap(s => s.cajas.map(c => c.id)));
   productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos(cajaIds);
+  for (const item of productosEnCajas.value) {
+    const id = item.producto.imagenId;
+    if (id && !imagenesDict.value[id])
+      imagenesDict.value[id] = await StorageService.Url(id);
+  }
 });
 
 const productosNombresEnCaja = computed(() => {
@@ -350,7 +357,7 @@ async function Mover() {
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
     <div v-else v-for="item in productosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex flex-wrap gap-4">
-        <img :hidden="!item.producto.imagenId" :src="item.producto.imagenId ? await StorageService.Url(item.producto.imagenId) : undefined" alt="Foto" class="rounded-xl md:w-49 md:h-49" />
+        <img :hidden="!item.producto.imagenId" :src="item.producto.imagenId ? imagenesDict[item.producto.imagenId] : undefined" alt="Foto" class="rounded-xl md:w-49 md:h-49" />
         <div>
           <div><b>Nombre: </b>{{ item.producto.nombre }}</div>
           <div><b>Grupo: </b>{{ gruposDict[item.producto.grupoId] }}</div>

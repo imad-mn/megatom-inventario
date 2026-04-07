@@ -297,7 +297,7 @@ export async function Exportar(): Promise<string> {
 }
 
 export async function ExportarHistorial(): Promise<string> {
-  const historial = await ObtenerTodos<Historial>('Historial');
+  const historial = await ObtenerTodos<Historial>('historial');
   const filas = historial.map(x => ({ Fecha: x.fechaCreacion.toLocaleString(), Usuario: x.usuario, Accion: x.accion, Anterior: x.anterior, Actual: x.actual }));
   return Papa.unparse(filas, { delimiter: ';', header: true });
 }

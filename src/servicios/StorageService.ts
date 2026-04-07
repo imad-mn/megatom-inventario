@@ -7,12 +7,12 @@ export async function Subir(file: File): Promise<string> {
   return storageRef.name;
 }
 
-export async function Url(fileName: string): Promise<string> {
+export function Url(fileName: string): Promise<string> {
   const storageRef = ref(storage, fileName);
-  return await getDownloadURL(storageRef);
+  return getDownloadURL(storageRef);
 }
 
-export async function Eliminar(fileName: string): Promise<void> {
+export function Eliminar(fileName: string): Promise<void> {
   const storageRef = ref(storage, fileName);
-  return await deleteObject(storageRef);
+  return deleteObject(storageRef);
 }

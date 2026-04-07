@@ -45,10 +45,20 @@ const permitirCerrarDialogoImportar = ref(true);
 
 const ubicacionDict = ref<Record<string, string[]>>({});
 const galponesData = ref<Galpon[]>([]);
+const imagenesDict = ref<Record<string, string>>({});
+
+async function CargarImagenes(lista: Producto[]) {
+  for (const p of lista) {
+    if (p.imagenId && !imagenesDict.value[p.imagenId]) {
+      imagenesDict.value[p.imagenId] = await StorageService.Url(p.imagenId);
+    }
+  }
+}
 
 onMounted(async () => {
   productos.value = await TablesDbService.ObtenerTodos<Producto>('productos');
   galponesData.value = await TablesDbService.ObtenerTodos<Galpon>('galpones');
+  await CargarImagenes(productos.value);
 })
 
 watchEffect(() => {
@@ -99,6 +109,9 @@ async function Guardar() {
     if (archivoFoto) {
       itemEdicion.value.imagenId = await StorageService.Subir(archivoFoto);
       archivoFoto = undefined;
+      // Resolver la URL de la nueva imagen para mostrarla en el listado
+      if (itemEdicion.value.imagenId)
+        imagenesDict.value[itemEdicion.value.imagenId] = await StorageService.Url(itemEdicion.value.imagenId);
     }
 
     const productoNuevo = Stringify(itemEdicion.value);
@@ -255,7 +268,7 @@ async function DescargarExportacion() {
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <Card v-for="item in slotProps.items" :key="item.id" style="overflow: hidden">
           <template #header>
-            <img v-if="item.imagenId" :src="await StorageService.Url(item.imagenId)" alt="Foto" />
+            <img v-if="item.imagenId && imagenesDict[item.imagenId]" :src="imagenesDict[item.imagenId]" alt="Foto" />
           </template>
           <template #title>{{ item.nombre }}</template>
           <template #subtitle>{{ item.descripcion }}</template>

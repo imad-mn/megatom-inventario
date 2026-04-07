@@ -167,7 +167,7 @@ export async function RegistrarHistorial(idElemento: string, accion: string, ant
     fechaCreacion: new Date(),
   };
 
-  await CrearConFecha('Historial', historialEntry);
+  await CrearConFecha('historial', historialEntry);
 }
 
 export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<Historial> | null | undefined, pageSize: number, sortOrder: 1 | 0 | -1 = -1, filtros: Record<string, string | null>): Promise<Paginacion<Historial>> {
@@ -177,7 +177,7 @@ export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<His
     queries.push(where(key, '==', value));
   }
 
-  const collRef = collection(db, 'Historial').withConverter(createConverterConFecha<Historial>());
+  const collRef = collection(db, 'historial').withConverter(createConverterConFecha<Historial>());
   const snapshot = await getCountFromServer(query(collRef, ...queries));
   const totalCount = snapshot.data().count;
 
@@ -199,7 +199,7 @@ export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<His
 }
 
 export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
-  const collRef = collection(db, 'Historial').withConverter(createConverterConFecha<Historial>());
+  const collRef = collection(db, 'historial').withConverter(createConverterConFecha<Historial>());
   const respuesta = await getDocs(query(collRef, where('idElemento', '==', idElemento)));
   return respuesta.docs.map(d => d.data());
 }
