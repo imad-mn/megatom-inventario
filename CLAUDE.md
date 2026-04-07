@@ -99,4 +99,4 @@ No external state library. Uses Vue 3 reactivity (`ref`, `computed`, `watchEffec
 
 ### Firebase Configuration
 
-Firebase config is hardcoded in [src/servicios/firebase.ts](src/servicios/firebase.ts) (project: `megatom-project`). No `.env` file is required for Firebase connectivity.
+Firebase config se carga desde variables de entorno en `.env.local` (ignorado por git). Ver `.env.example` para las claves necesarias. Todas usan el prefijo `VITE_FIREBASE_`.
