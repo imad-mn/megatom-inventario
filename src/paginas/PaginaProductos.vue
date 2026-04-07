@@ -223,7 +223,7 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
 
 async function VerUbicacion(productoId: string) {
   const cantidades = await TablesDbService.ObtenerCantidadesPorProducto(productoId);
-  const ubicaciones = await ObtenerUbicaciones(cantidades);
+  const ubicaciones = ObtenerUbicaciones(cantidades, galponesData.value);
   ubicacionDict.value[productoId] = ubicaciones;
 }
 
@@ -268,15 +268,15 @@ async function DescargarExportacion() {
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <Card v-for="item in slotProps.items" :key="item.id" style="overflow: hidden">
           <template #header>
-            <img v-if="item.imagenId && imagenesDict[item.imagenId]" :src="imagenesDict[item.imagenId]" alt="Foto" />
+            <img v-if="item.imagenUrl && imagenesDict[item.imagenUrl]" :src="imagenesDict[item.imagenUrl]" alt="Foto" />
           </template>
           <template #title>{{ item.nombre }}</template>
           <template #subtitle>{{ item.descripcion }}</template>
           <template #content>
             <div><b>Código:&nbsp;</b>{{ item.codigo }}</div>
             <b>Grupo:&nbsp;</b>
-            <div>{{ grupoDict[item.grupo] }}</div>
-            <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricante] }}</div>
+            <div>{{ grupoDict[item.grupoId] }}</div>
+            <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricanteId] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
             <Button v-if="!ubicacionDict[item.id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.id)" />
             <div v-else>

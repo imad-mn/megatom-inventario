@@ -1,10 +1,8 @@
 import type { UserCredential } from 'firebase/auth';
 import type { Cantidades, Estante, Galpon, Lista } from './modelos';
 import { ref } from 'vue';
-import { Coleccion, ObtenerTodos } from './TablesDbService';
 
-export async function ObtenerUbicaciones(cantidades: Cantidades[]): Promise<string[]> {
-  const galpones = await ObtenerTodos<Galpon>(Coleccion.Galpones);
+export function ObtenerUbicaciones(cantidades: Cantidades[], galpones: Galpon[]): string[] {
   const ubicaciones: string[] = [];
 
   for (const cantidad of cantidades) {

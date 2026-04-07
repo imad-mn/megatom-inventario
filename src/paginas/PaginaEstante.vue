@@ -389,4 +389,9 @@ async function Mover() {
       </div>
     </div>
   </DialogoEdicion>
+
+  <!-- Overlay de carga -->
+  <div v-if="cargando" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <ProgressSpinner />
+  </div>
 </template>

@@ -81,7 +81,7 @@ watch(productoSeleccionado, async () => {
 
   itemEdicion.value.productoId = productoSeleccionado.value.id;
   cantidadesDelProducto = await TablesDbService.ObtenerCantidadesPorProducto(productoSeleccionado.value?.id);
-  ubicacionesDelProducto.value = await ObtenerUbicaciones(cantidadesDelProducto);
+  ubicacionesDelProducto.value = ObtenerUbicaciones(cantidadesDelProducto, galponesData.value);
   cajasDelProducto.value = cantidadesDelProducto.map(c => ({
     id: c.cajaId,
     nombre:`Caja ${galponesData.value.flatMap(g => g.estantes).flatMap(e => e.niveles).flatMap(n => n.secciones).flatMap(s => s.cajas).find(x => x.id == c.cajaId)?.nombre ?? ''} (${c.cantidad} unidades)`,
