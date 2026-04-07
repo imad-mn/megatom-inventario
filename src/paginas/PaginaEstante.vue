@@ -48,8 +48,7 @@ onMounted(async () => {
   gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.id, x.nombre]));
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
   fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
-  const cajaIds = EstanteSeleccionado.value!.niveles.flatMap(n => n.secciones.flatMap(s => s.cajas.map(c => c.id)));
-  productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos(cajaIds);
+  productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos();
   for (const item of productosEnCajas.value) {
     const id = item.producto.imagenId;
     if (id && !imagenesDict.value[id])
@@ -116,7 +115,7 @@ async function Guardar() {
       const nuevaCaja: Caja = { id: itemEdicion.value.id, nombre: itemEdicion.value.nombre };
       seccionParaNuevoItem.value.cajas.push(nuevaCaja);
     }
-    await TablesDbService.Actualizar('galpones', galpon);
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoEdicion.value}] Creado`, null, itemEdicion.value.nombre);
   } else {
     if (tipoEdicion.value === 'Estante') {
@@ -138,7 +137,7 @@ async function Guardar() {
         }
       }
     }
-    await TablesDbService.Actualizar('galpones', galpon);
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoEdicion.value}] Modificado`, nombreAnteriorEdicion.value, itemEdicion.value.nombre);
   }
   dialogVisible.value = false;
@@ -161,7 +160,7 @@ function Quitar(item: { id: string; nombre: string }, tipo: TipoEdicion, nivel?:
       } else if (tipo === 'Caja' && seccion) {
         seccion.cajas = seccion.cajas.filter(c => c.id !== item.id);
       }
-      await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
     }
   });
 }
@@ -266,7 +265,7 @@ async function Mover() {
     return;
   }
 
-  await TablesDbService.Actualizar('galpones', galpon);
+  await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
   mostrarDialogoMover.value = false;
 }
 </script>

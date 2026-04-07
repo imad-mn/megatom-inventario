@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
-import {  ObtenerTodos } from './servicios/TablesDbService';
+import { Coleccion, ObtenerTodos } from './servicios/TablesDbService';
 import DialogoHistorial from './componentes/DialogoHistorial.vue';
 import { dialogoHistorial, Listas, Usuario } from './servicios/shared';
 import { auth } from './servicios/firebase';
@@ -45,7 +45,7 @@ const menuItemsVisibles = computed(() =>
 );
 
 onMounted(async () => {
-  Listas.value = await ObtenerTodos('listas');
+  Listas.value = await ObtenerTodos(Coleccion.Listas);
 })
 
 async function cerrarSesion() {

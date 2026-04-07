@@ -36,13 +36,13 @@ function Editar(item: Lista) {
 
 async function Guardar() {
   if (esNuevo.value) {
-    await TablesDbService.Crear('listas', itemEdicion.value);
+    await TablesDbService.Crear(TablesDbService.Coleccion.Listas, itemEdicion.value);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Creado`, null, itemEdicion.value.nombre);
     Listas.value.push({ ...itemEdicion.value });
   } else {
     const anterior = Listas.value.find(x => x.id === itemEdicion.value.id);
     if (anterior) {
-      await TablesDbService.Actualizar('listas', itemEdicion.value);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Listas, itemEdicion.value);
       await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Modificado`, anterior.nombre, itemEdicion.value.nombre);
       const indice = Listas.value.findIndex(x => x.id === itemEdicion.value.id);
       Listas.value[indice] = { ...itemEdicion.value };
@@ -63,7 +63,7 @@ function Quitar(item: Lista): void {
       if (indice >= 0) {
         const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
         await TablesDbService.RegistrarHistorial(item.id, `[${tipoElemento}] Eliminado`, item.nombre, null);
-        await TablesDbService.Eliminar('listas', item);
+        await TablesDbService.Eliminar(TablesDbService.Coleccion.Listas, item);
         Listas.value.splice(indice, 1);
       }
     }

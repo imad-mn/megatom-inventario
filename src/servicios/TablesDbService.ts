@@ -4,6 +4,16 @@ import type { ModeloBase, ConFechaCreacion, Cantidades, CantidadesConProducto, G
 
 import { Listas, Usuario } from './shared.ts';
 
+/** Nombres de las colecciones de Firestore */
+export enum Coleccion {
+  Productos = 'productos',
+  Cantidades = 'cantidades',
+  Galpones = 'galpones',
+  Movimientos = 'movimientos',
+  Historial = 'historial',
+  Listas = 'listas',
+}
+
 /**
  * Crea un FirestoreDataConverter genérico para cualquier tipo T que extienda ModeloBase.
  * Elimina el campo `id` al escribir (Firestore lo maneja como ID del documento)
@@ -97,12 +107,12 @@ export function ObtenerLista(tipo: string): Lista[] {
 }
 
 export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
-  return ObtenerFiltroEqual<Producto>('productos', 'grupoId', grupoId);
+  return ObtenerFiltroEqual<Producto>(Coleccion.Productos, 'grupoId', grupoId);
 }
 
-export async function ObtenerCantidadesConProductos(cajaIds: string[]): Promise<CantidadesConProducto[]> {
-  const cantidades = await ObtenerConQueries<Cantidades>('cantidades', [where('cajaId', 'in', cajaIds)]);
-  const productos = await ObtenerConQueries<Producto>('productos', [where('id', 'in', cantidades.map(c => c.productoId))]);
+export async function ObtenerCantidadesConProductos(): Promise<CantidadesConProducto[]> {
+  const cantidades = await ObtenerTodos<Cantidades>(Coleccion.Cantidades);
+  const productos = await ObtenerTodos<Producto>(Coleccion.Productos);
   const productosMap = new Map(productos.map(p => [p.id, p]));
 
   return cantidades.map(cantidad => ({
@@ -112,7 +122,7 @@ export async function ObtenerCantidadesConProductos(cajaIds: string[]): Promise<
 }
 
 export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantidades[]> {
-  return ObtenerFiltroEqual<Cantidades>('cantidades', 'productoId', productoId);
+  return ObtenerFiltroEqual<Cantidades>(Coleccion.Cantidades, 'productoId', productoId);
 }
 
 export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<MovimientosExtendido[]> {
@@ -121,14 +131,14 @@ export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Pr
     where('fechaCreacion', '>=', fechaDesde),
     where('fechaCreacion', '<=', fechaHasta),
   ];
-  const collRef = collection(db, 'movimientos').withConverter(createConverterConFecha<Movimientos>());
+  const collRef = collection(db, Coleccion.Movimientos).withConverter(createConverterConFecha<Movimientos>());
   const movimientos = (await getDocs(query(collRef, ...queries))).docs.map(d => d.data());
-  const productos = await ObtenerConQueries<Producto>('productos', [where('id', 'in', movimientos.map(m => m.productoId))]);
+  const productos = await ObtenerConQueries<Producto>(Coleccion.Productos, [where('id', 'in', movimientos.map(m => m.productoId))]);
   const productosMap = new Map(productos.map(p => [p.id, p]));
 
   // Extraer cajas de la jerarquía Galpon -> Estante -> Nivel -> Seccion -> Caja
   const cajaIds = new Set(movimientos.map(m => m.cajaId));
-  const galpones = await ObtenerTodos<Galpon>('galpones');
+  const galpones = await ObtenerTodos<Galpon>(Coleccion.Galpones);
   const cajasMap: Map<string, IdNombre> = new Map();
   for (const galpon of galpones) {
     for (const estante of galpon.estantes) {
@@ -167,17 +177,18 @@ export async function RegistrarHistorial(idElemento: string, accion: string, ant
     fechaCreacion: new Date(),
   };
 
-  await CrearConFecha('historial', historialEntry);
+  await CrearConFecha(Coleccion.Historial, historialEntry);
 }
 
 export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<Historial> | null | undefined, pageSize: number, sortOrder: 1 | 0 | -1 = -1, filtros: Record<string, string | null>): Promise<Paginacion<Historial>> {
   const queries: QueryConstraint[] = [];
 
   for (const [key, value] of Object.entries(filtros)) {
+    if (value === undefined || value === null || value === '') continue; // Ignorar filtros con valor vacio
     queries.push(where(key, '==', value));
   }
 
-  const collRef = collection(db, 'historial').withConverter(createConverterConFecha<Historial>());
+  const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
   const snapshot = await getCountFromServer(query(collRef, ...queries));
   const totalCount = snapshot.data().count;
 
@@ -199,7 +210,7 @@ export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<His
 }
 
 export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
-  const collRef = collection(db, 'historial').withConverter(createConverterConFecha<Historial>());
+  const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
   const respuesta = await getDocs(query(collRef, where('idElemento', '==', idElemento)));
   return respuesta.docs.map(d => d.data());
 }

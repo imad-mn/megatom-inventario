@@ -56,8 +56,8 @@ async function CargarImagenes(lista: Producto[]) {
 }
 
 onMounted(async () => {
-  productos.value = await TablesDbService.ObtenerTodos<Producto>('productos');
-  galponesData.value = await TablesDbService.ObtenerTodos<Galpon>('galpones');
+  productos.value = await TablesDbService.ObtenerTodos<Producto>(TablesDbService.Coleccion.Productos);
+  galponesData.value = await TablesDbService.ObtenerTodos<Galpon>(TablesDbService.Coleccion.Galpones);
   await CargarImagenes(productos.value);
 })
 
@@ -116,7 +116,7 @@ async function Guardar() {
 
     const productoNuevo = Stringify(itemEdicion.value);
     if (esNuevo.value) {
-      await TablesDbService.Crear('productos', itemEdicion.value!);
+      await TablesDbService.Crear(TablesDbService.Coleccion.Productos, itemEdicion.value!);
       await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, '[Producto] Creado', null, productoNuevo);
       productos.value.push({ ...itemEdicion.value! });
 
@@ -127,7 +127,7 @@ async function Guardar() {
           cantidad: cantidadInicial.value,
           cajaId: cajaSeleccionada.value
         };
-        await TablesDbService.Crear('cantidades', item);
+        await TablesDbService.Crear(TablesDbService.Coleccion.Cantidades, item);
         const caja = cajas.value.find(x => x.id === cajaSeleccionada.value);
         await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, `'${itemEdicion.value!.nombre}' agregado a caja: ${caja?.nombre} (${cantidadInicial.value} unidades)`);
       }
@@ -135,7 +135,7 @@ async function Guardar() {
     } else {
       const anterior = productos.value.find(x => x.id === itemEdicion.value!.id);
       if (anterior) {
-        await TablesDbService.Actualizar('productos', itemEdicion.value!);
+        await TablesDbService.Actualizar(TablesDbService.Coleccion.Productos, itemEdicion.value!);
         const productoAnterior = Stringify(anterior);
         await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, '[Producto] Modificado', productoAnterior, productoNuevo);
         const indice = productos.value.indexOf(anterior);
@@ -166,7 +166,7 @@ function Quitar(item: Producto): void {
     accept: async () => {
       const anterior = productos.value.find(x => x.id === item.id);
       if (anterior) {
-        await TablesDbService.Eliminar('productos', item)
+        await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
         const anteriorJson = Stringify(anterior);
         await TablesDbService.RegistrarHistorial(item.id, '[Producto] Eliminado', anteriorJson, null);
         const indice = productos.value.indexOf(anterior);

@@ -18,7 +18,7 @@ const esNuevo = ref(false);
 const galpones = ref<Galpon[]>([]);
 
 onMounted(async () => {
-  galpones.value = await TablesDbService.ObtenerTodos<Galpon>('galpones');
+  galpones.value = await TablesDbService.ObtenerTodos<Galpon>(TablesDbService.Coleccion.Galpones);
 });
 
 function Agregar() {
@@ -29,13 +29,13 @@ function Agregar() {
 
 async function Guardar() {
   if (esNuevo.value) {
-    await TablesDbService.Crear('galpones', itemEdicion.value);
+    await TablesDbService.Crear(TablesDbService.Coleccion.Galpones, itemEdicion.value);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, itemEdicion.value.nombre);
     galpones.value.push({ ...itemEdicion.value });
   } else {
     const indice = galpones.value.findIndex(x => x.id === itemEdicion.value.id);
     if (indice >= 0) {
-      await TablesDbService.Actualizar('galpones', itemEdicion.value);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, itemEdicion.value);
       await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', galpones.value[indice]?.nombre, itemEdicion.value.nombre);
       galpones.value[indice] = { ...itemEdicion.value };
     }
@@ -64,7 +64,7 @@ function Quitar(item: Galpon): void {
     accept: async () => {
       await TablesDbService.RegistrarHistorial(item.id, '[Galpón] Eliminado', item.nombre, null);
       const indice = galpones.value.findIndex(x => x.id === item.id);
-      await TablesDbService.Eliminar('galpones', item);
+      await TablesDbService.Eliminar(TablesDbService.Coleccion.Galpones, item);
       if (indice >= 0) galpones.value.splice(indice, 1);
     }
   });

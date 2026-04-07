@@ -35,13 +35,13 @@ async function Guardar() {
   if (esNuevo.value) {
     const nuevoEstante: Estante = { ...itemEdicion.value, niveles: [] };
     GalponSeleccionado.value!.estantes.push(nuevoEstante);
-    await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
     await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Estante] Creado', null, itemEdicion.value.nombre);
   } else if (esEditandoGalpon.value) {
     const nombreAnterior = GalponSeleccionado.value!.nombre;
     GalponSeleccionado.value!.nombre = itemEdicion.value.nombre;
     GalponSeleccionado.value!.ordenDescendente = itemEdicion.value.ordenDescendente;
-    await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
     await TablesDbService.RegistrarHistorial(GalponSeleccionado.value!.id, '[Galpón] Modificado', nombreAnterior, itemEdicion.value.nombre);
   } else {
     const estante = GalponSeleccionado.value!.estantes.find(e => e.id === itemEdicion.value.id);
@@ -49,7 +49,7 @@ async function Guardar() {
       const nombreAnterior = estante.nombre;
       estante.nombre = itemEdicion.value.nombre;
       estante.ordenDescendente = itemEdicion.value.ordenDescendente;
-      await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
       await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Estante] Modificado', nombreAnterior, itemEdicion.value.nombre);
     }
   }
@@ -78,7 +78,7 @@ function Quitar(item: Estante): void {
     accept: async () => {
       await TablesDbService.RegistrarHistorial(item.id, '[Estante] Eliminado', item.nombre, null);
       GalponSeleccionado.value!.estantes = GalponSeleccionado.value!.estantes.filter(e => e.id !== item.id);
-      await TablesDbService.Actualizar('galpones', GalponSeleccionado.value!);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
     }
   });
 }

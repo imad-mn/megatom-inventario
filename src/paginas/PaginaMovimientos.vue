@@ -53,7 +53,7 @@ onMounted(async () => {
   grupos.value = TablesDbService.ObtenerLista('grupos');
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
   fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
-  galponesData.value = await TablesDbService.ObtenerTodos<Galpon>('galpones');
+  galponesData.value = await TablesDbService.ObtenerTodos<Galpon>(TablesDbService.Coleccion.Galpones);
   cargando.value = false;
 });
 
@@ -109,23 +109,23 @@ async function Guardar() {
   const cajaId = itemEdicion.value.esIngreso ? cajaSeleccionada.value : cajaDelProductoSeleccionada.value?.id;
 
   // Guarda el registro del movimiento
-  await TablesDbService.CrearConFecha('movimientos', { ...itemEdicion.value, producto: productoSeleccionado.value?.id, caja: cajaId });
+  await TablesDbService.CrearConFecha(TablesDbService.Coleccion.Movimientos, { ...itemEdicion.value, producto: productoSeleccionado.value?.id, caja: cajaId });
 
   // Actualiza la cantidad en cantidad existente o agrega a una caja
   let cantidadAModificar = cantidadesDelProducto.find(x => x.cajaId == cajaId);
   if (itemEdicion.value.esIngreso) {
     if (cantidadAModificar) {
       cantidadAModificar.cantidad += itemEdicion.value.cantidad;
-      await TablesDbService.Actualizar('cantidades', cantidadAModificar);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Cantidades, cantidadAModificar);
     }
     else {
       cantidadAModificar = { id: '', productoId: productoSeleccionado.value.id, cantidad: itemEdicion.value.cantidad, cajaId: cajaId || ''};
-      await TablesDbService.Crear('cantidades', cantidadAModificar);
+      await TablesDbService.Crear(TablesDbService.Coleccion.Cantidades, cantidadAModificar);
     }
   } else {
     if (cantidadAModificar) {
       cantidadAModificar.cantidad -= itemEdicion.value.cantidad;
-      await TablesDbService.Actualizar('cantidades', cantidadAModificar);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Cantidades, cantidadAModificar);
     }
   }
 
