@@ -49,8 +49,8 @@ const imagenesDict = ref<Record<string, string>>({});
 
 async function CargarImagenes(lista: Producto[]) {
   for (const p of lista) {
-    if (p.imagenId && !imagenesDict.value[p.imagenId]) {
-      imagenesDict.value[p.imagenId] = await StorageService.Url(p.imagenId);
+    if (p.imagenUrl && !imagenesDict.value[p.imagenUrl]) {
+      imagenesDict.value[p.imagenUrl] = await StorageService.Url(p.imagenUrl);
     }
   }
 }
@@ -90,7 +90,7 @@ const cajas = computed(() => secciones.value.find(s => s.id === seccionSeleccion
 function Agregar() {
   esNuevo.value = true;
   imagenEdicion.value = undefined;
-  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenId: null };
+  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenUrl: null };
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
   galponSeleccionado.value = null;
@@ -107,11 +107,11 @@ async function Guardar() {
       return;
 
     if (archivoFoto) {
-      itemEdicion.value.imagenId = await StorageService.Subir(archivoFoto);
+      itemEdicion.value.imagenUrl = await StorageService.Subir(archivoFoto);
       archivoFoto = undefined;
       // Resolver la URL de la nueva imagen para mostrarla en el listado
-      if (itemEdicion.value.imagenId)
-        imagenesDict.value[itemEdicion.value.imagenId] = await StorageService.Url(itemEdicion.value.imagenId);
+      if (itemEdicion.value.imagenUrl)
+        imagenesDict.value[itemEdicion.value.imagenUrl] = await StorageService.Url(itemEdicion.value.imagenUrl);
     }
 
     const productoNuevo = Stringify(itemEdicion.value);
@@ -151,7 +151,7 @@ async function Guardar() {
 async function Editar(item: Producto) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
-  imagenEdicion.value = item.imagenId ? await StorageService.Url(item.imagenId) : undefined;
+  imagenEdicion.value = item.imagenUrl ? await StorageService.Url(item.imagenUrl) : undefined;
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
 }

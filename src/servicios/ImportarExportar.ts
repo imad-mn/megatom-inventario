@@ -221,7 +221,7 @@ async function obtenerOCrearProducto(
     pesoUnitario: parsearPesoUnitarioFila(fila.pesoUnitario),
     grupoId: grupoId,
     fabricanteId: fabricanteId,
-    imagenId: null,
+    imagenUrl: null,
   };
   await Crear(Coleccion.Productos, producto);
   productos.push(producto);

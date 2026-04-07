@@ -16,7 +16,7 @@ export type Producto = IdNombre & {
   pesoUnitario: number;
   grupoId: string;
   fabricanteId: string;
-  imagenId: string | null;
+  imagenUrl: string | null;
 }
 
 export type ItemOrdenable = IdNombre & {

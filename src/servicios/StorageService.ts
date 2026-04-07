@@ -2,13 +2,14 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import { storage } from './firebase';
 
 export async function Subir(file: File): Promise<string> {
-  const storageRef = ref(storage, `${Date.now()}_${file.name}`);
+  const fileUrl = `${Date.now()}_${file.name}`;
+  const storageRef = ref(storage, fileUrl);
   await uploadBytes(storageRef, file);
-  return storageRef.name;
+  return fileUrl;
 }
 
-export function Url(fileName: string): Promise<string> {
-  const storageRef = ref(storage, fileName);
+export function Url(fileUrl: string): Promise<string> {
+  const storageRef = ref(storage, fileUrl);
   return getDownloadURL(storageRef);
 }
 
