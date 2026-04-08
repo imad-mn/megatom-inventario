@@ -1,6 +1,6 @@
 import { db } from './firebase.ts';
 import { collection, addDoc, doc, query, where, getDocs, setDoc, deleteDoc, type DocumentData, QueryConstraint, type FirestoreDataConverter, orderBy, limit, QueryDocumentSnapshot, startAfter, getCountFromServer, type WithFieldValue, type SnapshotOptions, Timestamp } from "firebase/firestore";
-import type { ModeloBase, ConFechaCreacion, Cantidades, CantidadesConProducto, Galpon, Historial, IdNombre, Lista, Movimientos, MovimientosExtendido, Paginacion, Producto } from './modelos.ts';
+import type { ModeloBase, ConFechaCreacion, Cantidades, CantidadesConProducto, Historial, Lista, Movimientos, Paginacion, Producto } from './modelos.ts';
 
 import { Listas, Usuario } from './shared.ts';
 
@@ -106,10 +106,6 @@ export function ObtenerLista(tipo: string): Lista[] {
   return Listas.value.filter(x => x.tipo == tipo);
 }
 
-export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
-  return ObtenerFiltroEqual<Producto>(Coleccion.Productos, 'grupoId', grupoId);
-}
-
 export async function ObtenerCantidadesConProductos(): Promise<CantidadesConProducto[]> {
   const cantidades = await ObtenerTodos<Cantidades>(Coleccion.Cantidades);
   const productos = await ObtenerTodos<Producto>(Coleccion.Productos);
@@ -125,43 +121,14 @@ export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantid
   return ObtenerFiltroEqual<Cantidades>(Coleccion.Cantidades, 'productoId', productoId);
 }
 
-export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<MovimientosExtendido[]> {
+export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<Movimientos[]> {
   const queries = [
     orderBy('fechaCreacion', 'desc'),
     where('fechaCreacion', '>=', fechaDesde),
     where('fechaCreacion', '<=', fechaHasta),
   ];
   const collRef = collection(db, Coleccion.Movimientos).withConverter(createConverterConFecha<Movimientos>());
-  const movimientos = (await getDocs(query(collRef, ...queries))).docs.map(d => d.data());
-  const productos = await ObtenerConQueries<Producto>(Coleccion.Productos, [where('id', 'in', movimientos.map(m => m.productoId))]);
-  const productosMap = new Map(productos.map(p => [p.id, p]));
-
-  // Extraer cajas de la jerarquía Galpon -> Estante -> Nivel -> Seccion -> Caja
-  const cajaIds = new Set(movimientos.map(m => m.cajaId));
-  const galpones = await ObtenerTodos<Galpon>(Coleccion.Galpones);
-  const cajasMap: Map<string, IdNombre> = new Map();
-  for (const galpon of galpones) {
-    for (const estante of galpon.estantes) {
-      for (const nivel of estante.niveles) {
-        for (const seccion of nivel.secciones) {
-          for (const caja of seccion.cajas) {
-            if (cajaIds.has(caja.id)) {
-              cajasMap.set(caja.id, caja);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  const almacenistasMap = new Map(ObtenerLista('almacenistas').map(a => [a.id, a]));
-
-  return movimientos.map(movimiento => ({
-    ...movimiento,
-    producto: movimiento.productoId ? productosMap.get(movimiento.productoId) || null : null,
-    caja: movimiento.cajaId ? cajasMap.get(movimiento.cajaId) || null : null,
-    almacenista: movimiento.almacenistaId ? almacenistasMap.get(movimiento.almacenistaId) || null : null,
-  }));
+  return (await getDocs(query(collRef, ...queries))).docs.map(d => d.data());
 }
 
 export async function RegistrarHistorial(idElemento: string, accion: string, anterior: string | null = null, actual: string | null = null): Promise<void> {
@@ -180,35 +147,29 @@ export async function RegistrarHistorial(idElemento: string, accion: string, ant
   await CrearConFecha(Coleccion.Historial, historialEntry);
 }
 
-export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<Historial> | null | undefined, pageSize: number, sortOrder: 1 | 0 | -1 = -1, filtros: Record<string, string | null>): Promise<Paginacion<Historial>> {
-  const queries: QueryConstraint[] = [];
+// Función para obtener el conteo total de documentos en una colección (útil para paginación)
+export async function ObtenerConteoTotal(collectionId: string): Promise<number> {
+  const collRef = collection(db, collectionId);
+  const snapshot = await getCountFromServer(collRef);
+  return snapshot.data().count;
+}
 
-  for (const [key, value] of Object.entries(filtros)) {
-    if (value === undefined || value === null || value === '') continue; // Ignorar filtros con valor vacio
-    queries.push(where(key, '==', value));
-  }
-
-  const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
-  const snapshot = await getCountFromServer(query(collRef, ...queries));
-  const totalCount = snapshot.data().count;
-
-  queries.push(limit(pageSize));
-  queries.push(sortOrder === 1 ? orderBy('fechaCreacion') : orderBy('fechaCreacion', 'desc'));
+// Función para obtener el historial con paginación
+export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<Historial> | null | undefined, pageSize: number): Promise<Paginacion<Historial>> {
+  const queries: QueryConstraint[] = [limit(pageSize), orderBy('fechaCreacion', 'desc')];
   if (lastVisibleDoc) {
     queries.push(startAfter(lastVisibleDoc));
   }
 
+  const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
   const respuesta = await getDocs(query(collRef, ...queries));
-  const rows = respuesta.docs.map(doc => doc.data() as Historial);
+  const rows = respuesta.docs.map(doc => doc.data());
   const newLastVisibleDoc = respuesta.docs.length > 0 ? respuesta.docs[respuesta.docs.length - 1] : null;
 
-  return {
-    total: totalCount,
-    rows,
-    lastVisibleDoc: newLastVisibleDoc,
-  };
+  return { rows, lastVisibleDoc: newLastVisibleDoc };
 }
 
+// Función para obtener todo el historial de un elemento específico (sin paginación)
 export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
   const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
   const respuesta = await getDocs(query(collRef, where('idElemento', '==', idElemento)));

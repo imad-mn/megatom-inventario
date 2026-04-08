@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { Usuario } from '@/servicios/shared';
-import type { Cantidades, Galpon, Lista, Movimientos, MovimientosExtendido, Producto } from '@/servicios/modelos';
+import type { Cantidades, Galpon, IdNombre, Lista, Movimientos, MovimientosExtendido, Producto } from '@/servicios/modelos';
 import * as TablesDbService from '@/servicios/TablesDbService';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { Fieldset, FloatLabel } from 'primevue';
@@ -23,11 +23,15 @@ const fechaHasta = ref<Date>(new Date(new Date().setHours(23,59)));
 const cargando = ref<boolean>(false);
 
 const almacenistas = ref<Lista[]>([]);
+let almacenistasMap: Map<string, Lista>;
 const grupos = ref<Lista[]>([]);
 const grupoSeleccionado = ref<string | null>(null);
+let productos: Producto[] = [];
+let productosMap: Map<string, Producto>;
 const productosDelGrupo = ref<Producto[]>([]);
 const productoSeleccionado = ref<Producto | null>(null);
 const fabricanteDict = ref<Record<string, string>>({});
+
 let cantidadesDelProducto: Cantidades[] = [];
 const ubicacionesDelProducto = ref<string[]>([]);
 const cajasDelProducto = ref<CajaSimple[]>([]);
@@ -44,35 +48,65 @@ const estantes = computed(() => galponesData.value.find(g => g.id === galponSele
 const niveles = computed(() => estantes.value.find(e => e.id === estanteSeleccionado.value)?.niveles ?? []);
 const secciones = computed(() => niveles.value.find(n => n.id === nivelSeleccionado.value)?.secciones ?? []);
 const cajas = computed(() => secciones.value.find(s => s.id === seccionSeleccionada.value)?.cajas ?? []);
-
+let cajasMap: Map<string, IdNombre>;
 
 onMounted(async () => {
   cargando.value = true;
-  movimientos.value = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
+
   almacenistas.value = TablesDbService.ObtenerLista('almacenistas');
+  almacenistasMap = new Map(almacenistas.value.map(a => [a.id, a]));
+
   grupos.value = TablesDbService.ObtenerLista('grupos');
+
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
   fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
+
+  productos = await TablesDbService.ObtenerTodos<Producto>(TablesDbService.Coleccion.Productos);
+  productosMap = new Map(productos.map(p => [p.id, p]));
+
   galponesData.value = await TablesDbService.ObtenerTodos<Galpon>(TablesDbService.Coleccion.Galpones);
+  cajasMap = new Map();
+  for (const galpon of galpones.value) {
+    for (const estante of galpon.estantes) {
+      for (const nivel of estante.niveles) {
+        for (const seccion of nivel.secciones) {
+          for (const caja of seccion.cajas) {
+            cajasMap.set(caja.id, caja);
+          }
+        }
+      }
+    }
+  }
+
+  movimientos.value = await ObtenerMovimientos();
   cargando.value = false;
 });
 
-watch(fechaDesde, async () => {
+async function ObtenerMovimientos(): Promise<MovimientosExtendido[]> {
   cargando.value = true;
-  movimientos.value = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
+  const movimientos = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
   cargando.value = false;
+  return movimientos.map(movimiento => ({
+    ...movimiento,
+    producto: movimiento.productoId ? productosMap.get(movimiento.productoId) || null : null,
+    caja: movimiento.cajaId ? cajasMap.get(movimiento.cajaId) || null : null,
+    almacenista: movimiento.almacenistaId ? almacenistasMap.get(movimiento.almacenistaId) || null : null,
+  }));
+}
+
+watch(fechaDesde, async () => {
+  fechaDesde.value.setHours(0,0);
+  movimientos.value = await ObtenerMovimientos();
 });
 
 watch(fechaHasta, async () => {
   fechaHasta.value.setHours(23,59);
-  cargando.value = true;
-  movimientos.value = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
-  cargando.value = false;
+  movimientos.value = await ObtenerMovimientos();
 });
 
 watch(grupoSeleccionado, async () => {
   if (grupoSeleccionado.value)
-    productosDelGrupo.value = await TablesDbService.ObtenerProductosPorGrupo(grupoSeleccionado.value);
+    productosDelGrupo.value = productos.filter(p => p.grupoId === grupoSeleccionado.value);
 });
 
 watch(productoSeleccionado, async () => {
@@ -109,7 +143,7 @@ async function Guardar() {
   const cajaId = itemEdicion.value.esIngreso ? cajaSeleccionada.value : cajaDelProductoSeleccionada.value?.id;
 
   // Guarda el registro del movimiento
-  await TablesDbService.CrearConFecha(TablesDbService.Coleccion.Movimientos, { ...itemEdicion.value, producto: productoSeleccionado.value?.id, caja: cajaId });
+  await TablesDbService.CrearConFecha(TablesDbService.Coleccion.Movimientos, { ...itemEdicion.value, productoId: productoSeleccionado.value?.id, cajaId: cajaId });
 
   // Actualiza la cantidad en cantidad existente o agrega a una caja
   let cantidadAModificar = cantidadesDelProducto.find(x => x.cajaId == cajaId);
@@ -130,7 +164,7 @@ async function Guardar() {
   }
 
   dialogVisible.value = false;
-  movimientos.value = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
+  movimientos.value = await ObtenerMovimientos();
 }
 </script>
 

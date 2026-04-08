@@ -2,56 +2,36 @@
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Historial, Paginacion } from '@/servicios/modelos.ts';
 import { onMounted, ref } from 'vue';
-import DataTable, { type DataTableFilterMeta, type DataTablePageEvent, type DataTableSortEvent } from 'primevue/datatable';
+import DataTable, { type DataTablePageEvent } from 'primevue/datatable';
 import Column from 'primevue/column';
 import { ExportarHistorial } from '@/servicios/ImportarExportar';
 import { Usuario } from '@/servicios/shared';
 
-const historial = ref<Paginacion<Historial>>({ total: 0, rows: [], lastVisibleDoc: null });
+const historial = ref<Paginacion<Historial>>({ rows: [], lastVisibleDoc: null });
 const currentPage = ref(0);
 const rowsPerPage = ref(10);
 const loading = ref(false);
-const sortOrder = ref<1 | 0 | -1>(-1);
 const first = ref(0);
-const filters = ref<DataTableFilterMeta>({
-  usuario: { value: null, matchMode: 'equals' },
-  accion: { value: null, matchMode: 'equals' },
-  anterior: { value: null, matchMode: 'equals' },
-  actual: { value: null, matchMode: 'equals' },
-});
-const usuarios = TablesDbService.ObtenerLista('usuario').map(x => x.nombre);
+const totalRecords = ref(0);
 
 async function cargarHistorial() {
   loading.value = true;
-  try {
-    const filtros = Object.fromEntries(
-      Object.entries(filters.value).map(([k, v]) => [k, (v as { value: string | null }).value])
-    ) as Record<string, string | null>;
-    historial.value = await TablesDbService.ObtenerHistorial(historial.value.lastVisibleDoc, rowsPerPage.value, sortOrder.value, filtros);
-  } finally {
-    loading.value = false;
-  }
+  historial.value = await TablesDbService.ObtenerHistorial(historial.value.lastVisibleDoc, rowsPerPage.value);
+  loading.value = false;
 }
 
 onMounted(async () => {
+  totalRecords.value = await TablesDbService.ObtenerConteoTotal(TablesDbService.Coleccion.Historial);
   await cargarHistorial();
 });
 
 function onPage(event: DataTablePageEvent) {
   first.value = event.first;
-  currentPage.value = event.first / rowsPerPage.value;
+  if (event.first === 0) {
+    historial.value.lastVisibleDoc = null; // Reiniciar paginación al ir a la primera página
+  }
   rowsPerPage.value = event.rows;
-  cargarHistorial();
-}
-
-function onSort(event: DataTableSortEvent) {
-  sortOrder.value = event.sortOrder ?? 0;
-  cargarHistorial();
-}
-
-function onFilter() {
-  first.value = 0;
-  currentPage.value = 0;
+  currentPage.value = event.first / event.rows;
   cargarHistorial();
 }
 
@@ -71,35 +51,20 @@ async function DescargarHistorial() {
   <div class="flex justify-between items-center mb-3">
     <div></div>
     <div class="text-xl mb-2 text-center">HISTORIAL</div>
-    <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
+    <div>
+      <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
+    </div>
   </div>
-  <DataTable :value="historial.rows" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage" :rows-per-page-options="[10, 20, 50]"
-    :lazy="true" :loading="loading" :totalRecords="historial.total" @page="onPage" @sort="onSort"
-    @filter="onFilter" filter-display="row" v-model:filters="filters">
-    <Column field="fechaCreacion" header="Fecha" style="width: 18%" sortable :pt="{ columnHeaderContent: 'justify-center' }">
+  <DataTable :value="historial.rows" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage"
+    :rows-per-page-options="[10, 20, 50]" :lazy="true" :loading="loading" :totalRecords="totalRecords" @page="onPage">
+    <Column field="fechaCreacion" header="Fecha" style="width: 18%" :pt="{ columnHeaderContent: 'justify-center' }">
       <template #body="slotProps">
         {{ new Date(slotProps.data.fechaCreacion).toLocaleString() }}
       </template>
     </Column>
-    <Column field="usuario" header="Usuario" style="max-width: 12%" :showFilterMenu="false">
-      <template #filter="{ filterModel, filterCallback }">
-        <Select id="usuario" v-model="filterModel.value" :options="usuarios" showClear fluid  @change="filterCallback()" />
-      </template>
-    </Column>
-    <Column field="accion" header="Acción" style="width: 20%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }">
-      <template #filter="{ filterModel, filterCallback }">
-        <InputText v-model="filterModel.value" type="search" placeholder="Buscar..." @input="filterCallback()" fluid />
-      </template>
-    </Column>
-    <Column field="anterior" header="Anterior" style="max-width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }">
-      <template #filter="{ filterModel, filterCallback }">
-        <InputText v-model="filterModel.value" type="search" placeholder="Buscar..." @input="filterCallback()" fluid />
-      </template>
-    </Column>
-    <Column field="actual" header="Actual" style="width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }">
-      <template #filter="{ filterModel, filterCallback }">
-        <InputText v-model="filterModel.value" type="search" placeholder="Buscar..." @input="filterCallback()" fluid />
-      </template>
-    </Column>
+    <Column field="usuario" header="Usuario" style="max-width: 12%" :showFilterMenu="false" />
+    <Column field="accion" header="Acción" style="width: 20%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
+    <Column field="anterior" header="Anterior" style="max-width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
+    <Column field="actual" header="Actual" style="width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
   </DataTable>
 </template>

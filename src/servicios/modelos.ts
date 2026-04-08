@@ -84,7 +84,6 @@ export type Historial = ConFechaCreacion & {
 }
 
 export type Paginacion<T> = {
-  total: number;
   rows: T[];
   lastVisibleDoc: QueryDocumentSnapshot<T> | null | undefined;
 }
