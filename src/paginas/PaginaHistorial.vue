@@ -57,7 +57,7 @@ async function DescargarHistorial() {
   </div>
   <DataTable :value="historial.rows" show-gridlines striped-rows size="small" paginator :first="first" :rows="rowsPerPage"
     :rows-per-page-options="[10, 20, 50]" :lazy="true" :loading="loading" :totalRecords="totalRecords" @page="onPage">
-    <Column field="fechaCreacion" header="Fecha" style="width: 18%" :pt="{ columnHeaderContent: 'justify-center' }">
+    <Column field="fechaCreacion" header="Fecha" style="width: 16%" :pt="{ columnHeaderContent: 'justify-center' }">
       <template #body="slotProps">
         {{ new Date(slotProps.data.fechaCreacion).toLocaleString() }}
       </template>
@@ -65,6 +65,6 @@ async function DescargarHistorial() {
     <Column field="usuario" header="Usuario" style="max-width: 12%" :showFilterMenu="false" />
     <Column field="accion" header="Acción" style="width: 20%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
     <Column field="anterior" header="Anterior" style="max-width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
-    <Column field="actual" header="Actual" style="width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
+    <Column field="actual" header="Actual" style="max-width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
   </DataTable>
 </template>

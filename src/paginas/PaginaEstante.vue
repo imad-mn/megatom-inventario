@@ -359,7 +359,7 @@ async function Mover() {
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
     <div v-else v-for="item in productosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex flex-wrap gap-4">
-        <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? imagenesDict[item.producto.imagenUrl] : undefined" alt="Foto" class="rounded-xl md:w-49 md:h-49" />
+        <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? imagenesDict[item.producto.imagenUrl] : undefined" alt="Foto" class="rounded-xl md:w-45 md:h-45" />
         <div>
           <div><b>Nombre: </b>{{ item.producto.nombre }}</div>
           <div><b>Grupo: </b>{{ gruposDict[item.producto.grupoId] }}</div>
