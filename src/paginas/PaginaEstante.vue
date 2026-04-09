@@ -1,161 +1,199 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { CantidadesConProducto, Inventario, Lista, TipoInventario } from '@/servicios/modelos.ts';
+import type { Caja, CantidadesConProducto, ItemOrdenable, Lista, Nivel, Seccion } from '@/servicios/modelos.ts';
 import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
 import * as StorageService from '@/servicios/StorageService.ts';
-import { Usuario } from '@/servicios/appwrite';
+import { EstanteSeleccionado, GalponSeleccionado, Usuario } from '@/servicios/shared';
 
 const router = useRouter();
 const confirm = useConfirm();
 
-const estanteQueryString = (router.currentRoute.value.params.estante as string).split('-');
-const estante = ref<Inventario>({ $id: estanteQueryString[0] ?? '', tipo: 'Estante', padre: estanteQueryString[1] ?? '', nombre: estanteQueryString[2] ?? '', ordenDescendente: estanteQueryString[3] === 'true' });
-const galponNombre = estanteQueryString[4] ?? '';
-const galponOrdenDescendente = estanteQueryString[5];
-
+type TipoEdicion = 'Estante' | 'Nivel' | 'Seccion' | 'Caja';
+const tipoEdicion = ref<TipoEdicion>('Nivel');
 const dialogVisible = ref(false);
-const itemEdicion = ref<Inventario>({ $id: '', tipo: 'Sección', nombre: '', padre: estante.value.nombre, ordenDescendente: false });
+const itemEdicion = ref<ItemOrdenable>({ id: '', nombre: '', ordenDescendente: false });
+const nombreAnteriorEdicion = ref('');
 const esNuevo = ref(false);
+const nivelParaNuevoItem = ref<Nivel | null>(null);
+const seccionParaNuevoItem = ref<Seccion | null>(null);
 
 const grupos = ref<Lista[]>([]);
-const cajaSeleccionada = ref<Inventario | null>(null);
+const cajaSeleccionada = ref<Caja | null>(null);
 const productosEnCaja = ref<CantidadesConProducto[]>([]);
 const productosEnCajas = ref<CantidadesConProducto[]>([]);
 const mostrarDialogoCaja = ref(false);
 const gruposDict = ref<Record<string, string>>({});
 const fabricantesDict = ref<Record<string, string>>({});
-
 const deshabilitarSiguienteCaja = ref(false);
 const deshabilitarCajaAnterior = ref(false);
 
+const cargando = ref(false);
+const imagenesDict = ref<Record<string, string>>({});
+
 const mostrarDialogoMover = ref(false);
-const elementoAMover = ref<Inventario | null>(null);
-const nuevoPadreNivel = ref<Inventario | null>(null);
-const nuevoPadreSeccion = ref<Inventario | null>(null);
+const elementoAMover = ref<{ id: string; nombre: string; tipo: 'Caja' | 'Seccion'; padreActualId: string } | null>(null);
+const nuevoPadreNivel = ref<Nivel | null>(null);
+const nuevoPadreSeccion = ref<Seccion | null>(null);
 
 const seccionesNivel = computed(() => {
-  if (nuevoPadreNivel.value == null || elementoAMover.value == null)
-    return [];
-  return TablesDbService.Inventarios.value.filter(x => x.padre == nuevoPadreNivel.value?.$id && x.$id !== elementoAMover.value?.padre);
-})
+  if (!nuevoPadreNivel.value || !elementoAMover.value) return [];
+  return nuevoPadreNivel.value.secciones.filter(s => s.id !== elementoAMover.value!.padreActualId);
+});
 
 onMounted(async () => {
+  cargando.value = true;
   grupos.value = TablesDbService.ObtenerLista('grupos');
-  gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.$id, x.nombre]));
+  gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.id, x.nombre]));
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
-  fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.$id, x.nombre]));
+  fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
   productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos();
-})
+  for (const item of productosEnCajas.value) {
+    const id = item.producto.imagenUrl;
+    if (id && !imagenesDict.value[id])
+      imagenesDict.value[id] = await StorageService.Url(id);
+  }
+  cargando.value = false;
+});
 
 const productosNombresEnCaja = computed(() => {
   return productosEnCajas.value.reduce((dict, cantidad) => {
-    dict[cantidad.cajon] = dict[cantidad.cajon] ? `${dict[cantidad.cajon]}\n• ${cantidad.producto.nombre} (${cantidad.cantidad})` : `• ${cantidad.producto.nombre} (${cantidad.cantidad})`;
+    dict[cantidad.cajaId] = dict[cantidad.cajaId]
+      ? `${dict[cantidad.cajaId]}\n• ${cantidad.producto.nombre} (${cantidad.cantidad})`
+      : `• ${cantidad.producto.nombre} (${cantidad.cantidad})`;
     return dict;
   }, {} as Record<string, string>);
 });
 
-function Agregar(padre: string, tipoEdicion: TipoInventario) {
+// Busca el nivel y sección que contienen una caja por ID
+function encontrarPadresDeCaja(cajaId: string): { nivel: Nivel; seccion: Seccion } | null {
+  for (const nivel of EstanteSeleccionado.value!.niveles) {
+    for (const seccion of nivel.secciones) {
+      if (seccion.cajas.some(c => c.id === cajaId)) return { nivel, seccion };
+    }
+  }
+  return null;
+}
+
+// Busca el nivel que contiene una sección por ID
+function encontrarNivelDeSeccion(seccionId: string): Nivel | null {
+  return EstanteSeleccionado.value!.niveles.find(n => n.secciones.some(s => s.id === seccionId)) ?? null;
+}
+
+function Agregar(tipo: TipoEdicion, nivel?: Nivel, seccion?: Seccion) {
   esNuevo.value = true;
-  itemEdicion.value = { $id: '', nombre: tipoEdicion === 'Sección' ? estante.value.nombre : '', tipo: tipoEdicion, padre: padre, ordenDescendente: false };
+  tipoEdicion.value = tipo;
+  nivelParaNuevoItem.value = nivel ?? null;
+  seccionParaNuevoItem.value = seccion ?? null;
+  itemEdicion.value = { id: crypto.randomUUID(), nombre: tipo === 'Seccion' ? EstanteSeleccionado.value!.nombre : '', ordenDescendente: false };
   dialogVisible.value = true;
 }
 
-function Editar(item: Inventario) {
+function Editar(item: { id: string; nombre: string; ordenDescendente?: boolean }, tipo: TipoEdicion) {
   esNuevo.value = false;
-  itemEdicion.value = { ...item };
+  tipoEdicion.value = tipo;
+  nombreAnteriorEdicion.value = item.nombre;
+  itemEdicion.value = { id: item.id, nombre: item.nombre, ordenDescendente: item.ordenDescendente ?? false };
   dialogVisible.value = true;
 }
 
 async function Guardar() {
+  const galpon = GalponSeleccionado.value!;
+  const estante = EstanteSeleccionado.value!;
+
   if (esNuevo.value) {
-    await TablesDbService.Crear('inventario', itemEdicion.value);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Creado`, null, itemEdicion.value.nombre);
-    TablesDbService.Inventarios.value.push({ ...itemEdicion.value });
-    // Crear una caja con el mismo nombre de la sección si se está creando la sección
-    if (itemEdicion.value.tipo === 'Sección') {
+    if (tipoEdicion.value === 'Nivel') {
+      const nuevoNivel: Nivel = { id: itemEdicion.value.id, nombre: itemEdicion.value.nombre, ordenDescendente: itemEdicion.value.ordenDescendente, secciones: [] };
+      estante.niveles.push(nuevoNivel);
+    } else if (tipoEdicion.value === 'Seccion' && nivelParaNuevoItem.value) {
+      const nuevaSeccion: Seccion = { id: itemEdicion.value.id, nombre: itemEdicion.value.nombre, cajas: [] };
+      // Crear automáticamente una caja con el número de la sección
       const cajaNombre = itemEdicion.value.nombre.replace(/\D/g, '');
-      const cajaNueva: Inventario = { $id: '', nombre: cajaNombre, tipo: 'Caja', padre: itemEdicion.value.$id, ordenDescendente: false };
-      await TablesDbService.Crear('inventario', cajaNueva);
-      await TablesDbService.RegistrarHistorial(cajaNueva.$id, `[Caja Creado`, null, cajaNombre);
-      TablesDbService.Inventarios.value.push(cajaNueva);
+      nuevaSeccion.cajas.push({ id: crypto.randomUUID(), nombre: cajaNombre });
+      nivelParaNuevoItem.value.secciones.push(nuevaSeccion);
+    } else if (tipoEdicion.value === 'Caja' && seccionParaNuevoItem.value) {
+      const nuevaCaja: Caja = { id: itemEdicion.value.id, nombre: itemEdicion.value.nombre };
+      seccionParaNuevoItem.value.cajas.push(nuevaCaja);
     }
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoEdicion.value}] Creado`, null, itemEdicion.value.nombre);
   } else {
-    const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === itemEdicion.value.$id);
-    if (indice >= 0) {
-      await TablesDbService.Actualizar('inventario', itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.$id, `[${itemEdicion.value.tipo}] Modificado`, TablesDbService.Inventarios.value[indice]?.nombre, itemEdicion.value.nombre);
-      TablesDbService.Inventarios.value[indice] = { ...itemEdicion.value };
+    if (tipoEdicion.value === 'Estante') {
+      estante.nombre = itemEdicion.value.nombre;
+      estante.ordenDescendente = itemEdicion.value.ordenDescendente;
+    } else if (tipoEdicion.value === 'Nivel') {
+      const nivel = estante.niveles.find(n => n.id === itemEdicion.value.id);
+      if (nivel) { nivel.nombre = itemEdicion.value.nombre; nivel.ordenDescendente = itemEdicion.value.ordenDescendente; }
+    } else if (tipoEdicion.value === 'Seccion') {
+      for (const nivel of estante.niveles) {
+        const seccion = nivel.secciones.find(s => s.id === itemEdicion.value.id);
+        if (seccion) { seccion.nombre = itemEdicion.value.nombre; break; }
+      }
+    } else if (tipoEdicion.value === 'Caja') {
+      for (const nivel of estante.niveles) {
+        for (const seccion of nivel.secciones) {
+          const caja = seccion.cajas.find(c => c.id === itemEdicion.value.id);
+          if (caja) { caja.nombre = itemEdicion.value.nombre; break; }
+        }
+      }
     }
-    if (itemEdicion.value.$id === estante.value.$id) {
-      estante.value.nombre = itemEdicion.value.nombre;
-      estante.value.ordenDescendente = itemEdicion.value.ordenDescendente;
-    }
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
+    await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoEdicion.value}] Modificado`, nombreAnteriorEdicion.value, itemEdicion.value.nombre);
   }
   dialogVisible.value = false;
 }
 
-function Quitar(item: Inventario): void {
+function Quitar(item: { id: string; nombre: string }, tipo: TipoEdicion, nivel?: Nivel, seccion?: Seccion): void {
   confirm.require({
     header: 'Eliminar',
-    message: `¿Estás seguro de eliminar ${item.tipo}: "${item.nombre}" y sus descendientes?`,
+    message: `¿Estás seguro de eliminar ${tipo}: "${item.nombre}" y sus descendientes?`,
     acceptClass: 'p-button-danger p-button-outlined',
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await TablesDbService.RegistrarHistorial(item.$id, `[${item.tipo}] Eliminado`, item.nombre, null);
-      await TablesDbService.EliminarItemInventario(item);
+      await TablesDbService.RegistrarHistorial(item.id, `[${tipo}] Eliminado`, item.nombre, null);
+      const estante = EstanteSeleccionado.value!;
+      if (tipo === 'Nivel') {
+        estante.niveles = estante.niveles.filter(n => n.id !== item.id);
+      } else if (tipo === 'Seccion' && nivel) {
+        nivel.secciones = nivel.secciones.filter(s => s.id !== item.id);
+      } else if (tipo === 'Caja' && seccion) {
+        seccion.cajas = seccion.cajas.filter(c => c.id !== item.id);
+      }
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
     }
   });
 }
 
-async function VerCaja(caja: Inventario) {
-  productosEnCaja.value = productosEnCajas.value.filter(x => x.cajon === caja.$id);
+async function VerCaja(caja: Caja) {
+  productosEnCaja.value = productosEnCajas.value.filter(x => x.cajaId === caja.id);
   cajaSeleccionada.value = caja;
   mostrarDialogoCaja.value = true;
 }
 
 async function CajaAnterior() {
-  if (cajaSeleccionada.value == null)
-    return;
-  if (deshabilitarSiguienteCaja.value)
-    deshabilitarSiguienteCaja.value = false;
+  if (!cajaSeleccionada.value) return;
+  if (deshabilitarSiguienteCaja.value) deshabilitarSiguienteCaja.value = false;
 
-  // Revisa si hay una caja anterior en la misma sección
-  const cajasEnSeccion = TablesDbService.Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
-  const indiceCaja = cajasEnSeccion.indexOf(cajaSeleccionada.value);
-  if (cajasEnSeccion.length > 1 && indiceCaja > 0) {
-    const cajaAnterior = cajasEnSeccion[indiceCaja - 1];
-    if (cajaAnterior)
-      await VerCaja(cajaAnterior);
+  const padres = encontrarPadresDeCaja(cajaSeleccionada.value.id);
+  if (!padres) return;
+  const { nivel, seccion } = padres;
+
+  const indiceCaja = seccion.cajas.findIndex(c => c.id === cajaSeleccionada.value!.id);
+  if (indiceCaja > 0) {
+    await VerCaja(seccion.cajas[indiceCaja - 1]!);
     return;
   }
 
-  // Si no hay caja anterior en la misma sección, busca en la sección anterior del mismo nivel
-  const seccionActual = TablesDbService.Inventarios.value.find(x => x.$id == cajaSeleccionada.value?.padre);
-  if (!seccionActual)
-    return;
-  const nivelActual = TablesDbService.Inventarios.value.find(x => x.$id == seccionActual.padre);
-  if (!nivelActual)
-    return;
-
-  const seccionesNivel = TablesDbService.Inventarios.value.filter(x => x.padre == nivelActual.$id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
-  const indiceSeccion = seccionesNivel.indexOf(seccionActual);
+  const seccionesOrdenadas = [...nivel.secciones].sort((a, b) => Ordenar(a, b, nivel.ordenDescendente));
+  const indiceSeccion = seccionesOrdenadas.findIndex(s => s.id === seccion.id);
   if (indiceSeccion > 0) {
-    const seccionAnterior = seccionesNivel[indiceSeccion - 1];
-    if (!seccionAnterior) {
-      deshabilitarCajaAnterior.value = true;
-      return;
-    }
-
-    const cajasSeccionAnterior = TablesDbService.Inventarios.value.filter(x => x.padre == seccionAnterior.$id);
-    if (cajasSeccionAnterior.length > 0) {
-      const cajaAnterior = cajasSeccionAnterior[cajasSeccionAnterior.length - 1];
-      if (cajaAnterior)
-        await VerCaja(cajaAnterior);
+    const seccionAnterior = seccionesOrdenadas[indiceSeccion - 1]!;
+    if (seccionAnterior.cajas.length > 0) {
+      await VerCaja(seccionAnterior.cajas[seccionAnterior.cajas.length - 1]!);
     } else {
       deshabilitarCajaAnterior.value = true;
     }
@@ -165,44 +203,25 @@ async function CajaAnterior() {
 }
 
 async function CajaSiguiente() {
-  if (cajaSeleccionada.value == null)
-    return;
+  if (!cajaSeleccionada.value) return;
+  if (deshabilitarCajaAnterior.value) deshabilitarCajaAnterior.value = false;
 
-  if (deshabilitarCajaAnterior.value)
-    deshabilitarCajaAnterior.value = false;
+  const padres = encontrarPadresDeCaja(cajaSeleccionada.value.id);
+  if (!padres) return;
+  const { nivel, seccion } = padres;
 
-  // Revisa si hay una caja siguiente en la misma sección
-  const cajasEnSeccion = TablesDbService.Inventarios.value.filter(x => x.padre == cajaSeleccionada.value?.padre);
-  const indiceCaja = cajasEnSeccion.indexOf(cajaSeleccionada.value);
-  if (cajasEnSeccion.length > 1 && indiceCaja < cajasEnSeccion.length - 1) {
-    const cajaSiguiente = cajasEnSeccion[indiceCaja + 1];
-    if (cajaSiguiente)
-      await VerCaja(cajaSiguiente);
+  const indiceCaja = seccion.cajas.findIndex(c => c.id === cajaSeleccionada.value!.id);
+  if (indiceCaja < seccion.cajas.length - 1) {
+    await VerCaja(seccion.cajas[indiceCaja + 1]!);
     return;
   }
 
-    // Si no hay caja anterior en la misma sección, busca en la sección siguiente del mismo nivel
-  const seccionActual = TablesDbService.Inventarios.value.find(x => x.$id == cajaSeleccionada.value?.padre);
-  if (!seccionActual)
-    return;
-  const nivelActual = TablesDbService.Inventarios.value.find(x => x.$id == seccionActual.padre);
-  if (!nivelActual)
-    return;
-
-  const seccionesNivel = TablesDbService.Inventarios.value.filter(x => x.padre == nivelActual.$id).sort((a, b) => Ordenar(a, b, nivelActual.ordenDescendente));
-  const indiceSeccion = seccionesNivel.indexOf(seccionActual);
-  if (indiceSeccion < seccionesNivel.length - 1) {
-    const seccionSiguiente = seccionesNivel[indiceSeccion + 1];
-    if (!seccionSiguiente) {
-      deshabilitarSiguienteCaja.value = true;
-      return;
-    }
-
-    const cajasSeccionSiguiente = TablesDbService.Inventarios.value.filter(x => x.padre == seccionSiguiente.$id);
-    if (cajasSeccionSiguiente.length > 0) {
-      const cajaSiguiente = cajasSeccionSiguiente[0];
-      if (cajaSiguiente)
-        await VerCaja(cajaSiguiente);
+  const seccionesOrdenadas = [...nivel.secciones].sort((a, b) => Ordenar(a, b, nivel.ordenDescendente));
+  const indiceSeccion = seccionesOrdenadas.findIndex(s => s.id === seccion.id);
+  if (indiceSeccion < seccionesOrdenadas.length - 1) {
+    const seccionSiguiente = seccionesOrdenadas[indiceSeccion + 1]!;
+    if (seccionSiguiente.cajas.length > 0) {
+      await VerCaja(seccionSiguiente.cajas[0]!);
     } else {
       deshabilitarSiguienteCaja.value = true;
     }
@@ -211,106 +230,103 @@ async function CajaSiguiente() {
   }
 }
 
-function Ordenar(a: Inventario, b: Inventario, ordenDescendente: boolean): number {
+function Ordenar(a: { nombre: string }, b: { nombre: string }, ordenDescendente: boolean): number {
   const numeroA = parseInt(a.nombre.replace(/\D/g, ''));
   const numeroB = parseInt(b.nombre.replace(/\D/g, ''));
   return ordenDescendente ? numeroB - numeroA : numeroA - numeroB;
 }
 
-function MostrarDialogoMover(elemento: Inventario) {
-  mostrarDialogoMover.value = true;
-  elementoAMover.value = elemento;
+function MostrarDialogoMover(item: { id: string; nombre: string }, tipo: 'Caja' | 'Seccion') {
+  const padreActualId = tipo === 'Caja'
+    ? (encontrarPadresDeCaja(item.id)?.seccion.id ?? '')
+    : (encontrarNivelDeSeccion(item.id)?.id ?? '');
+  elementoAMover.value = { ...item, tipo, padreActualId };
   nuevoPadreNivel.value = null;
   nuevoPadreSeccion.value = null;
+  mostrarDialogoMover.value = true;
 }
 
 async function Mover() {
-  if (elementoAMover.value == null)
-    return;
+  if (!elementoAMover.value) return;
+  const galpon = GalponSeleccionado.value!;
 
-  const padreAnterior = TablesDbService.Inventarios.value.find(x => x.$id === elementoAMover.value?.padre);
-  let padreNuevo: Inventario | undefined;
-
-  if (elementoAMover.value.tipo === 'Caja' && nuevoPadreSeccion.value != null) {
-    elementoAMover.value.padre = nuevoPadreSeccion.value.$id;
-    padreNuevo = nuevoPadreSeccion.value;
-  } else if (elementoAMover.value.tipo === 'Sección' && nuevoPadreNivel.value != null) {
-    elementoAMover.value.padre = nuevoPadreNivel.value.$id;
-    padreNuevo = nuevoPadreNivel.value;
+  if (elementoAMover.value.tipo === 'Caja' && nuevoPadreSeccion.value) {
+    const padres = encontrarPadresDeCaja(elementoAMover.value.id);
+    if (!padres) return;
+    const caja = padres.seccion.cajas.find(c => c.id === elementoAMover.value!.id)!;
+    padres.seccion.cajas = padres.seccion.cajas.filter(c => c.id !== caja.id);
+    nuevoPadreSeccion.value.cajas.push(caja);
+    await TablesDbService.RegistrarHistorial(caja.id, '[Caja] Movida', `De sección: ${padres.seccion.nombre}`, `A sección: ${nuevoPadreSeccion.value.nombre}`);
+  } else if (elementoAMover.value.tipo === 'Seccion' && nuevoPadreNivel.value) {
+    const nivelActual = encontrarNivelDeSeccion(elementoAMover.value.id);
+    if (!nivelActual) return;
+    const seccion = nivelActual.secciones.find(s => s.id === elementoAMover.value!.id)!;
+    nivelActual.secciones = nivelActual.secciones.filter(s => s.id !== seccion.id);
+    nuevoPadreNivel.value.secciones.push(seccion);
+    await TablesDbService.RegistrarHistorial(seccion.id, '[Sección] Movida', `De nivel: ${nivelActual.nombre}`, `A nivel: ${nuevoPadreNivel.value.nombre}`);
   } else {
     return;
   }
 
-  await TablesDbService.Actualizar('inventario', elementoAMover.value);
-
-  if (elementoAMover.value.tipo == 'Caja') {
-    await TablesDbService.RegistrarHistorial(elementoAMover.value.$id, `[${elementoAMover.value.tipo}] Movida`, `De sección: ${padreAnterior?.nombre}`, `A sección: ${padreNuevo?.nombre}`);
-  } else if (elementoAMover.value.tipo == 'Sección') {
-    await TablesDbService.RegistrarHistorial(elementoAMover.value.$id, `[${elementoAMover.value.tipo}] Movida`, `De nivel: ${padreAnterior?.nombre}`, `A nivel: ${padreNuevo?.nombre}`);
-  }
-
-  const indice = TablesDbService.Inventarios.value.findIndex(x => x.$id === elementoAMover.value?.$id);
-  if (indice >= 0) {
-    TablesDbService.Inventarios.value[indice] = { ...elementoAMover.value };
-  }
+  await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
   mostrarDialogoMover.value = false;
 }
 </script>
 
 <template>
   <div id="encabezado" class="flex justify-between items-center">
-    <Button severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${estante.padre}-${galponNombre}-${galponOrdenDescendente}`)">
+    <Button severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${GalponSeleccionado!.id}`)">
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
-      <span class="p-button-label hidden md:inline">Galpón {{galponNombre}}</span>
+      <span class="p-button-label hidden md:inline">Galpón {{GalponSeleccionado!.nombre}}</span>
     </Button>
-    <div class="text-xl">ESTANTE {{estante.nombre}}</div>
+    <div class="text-xl">ESTANTE {{EstanteSeleccionado!.nombre}}</div>
     <div>
-      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(estante)">
+      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(EstanteSeleccionado!, 'Estante')">
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
         <span class="p-button-label hidden md:inline">Estante</span>
       </Button>
-      <Button v-if="Usuario" severity="info" variant="outlined" @click="Agregar(estante.$id, 'Nivel')">
+      <Button v-if="Usuario" severity="info" variant="outlined" @click="Agregar('Nivel')">
         <span class="p-button-icon p-button-icon-left pi pi-plus" />
         <span class="p-button-label hidden md:inline">Nivel</span>
       </Button>
     </div>
   </div>
 
-  <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).length === 0" class="italic text-muted-color">
+  <div v-if="EstanteSeleccionado!.niveles.length === 0" class="italic text-muted-color">
       No hay niveles en este Estante.
   </div>
-  <div v-else v-for="nivel in TablesDbService.Inventarios.value.filter(x => x.padre == estante.$id).sort((a, b) => Ordenar(a, b, estante.ordenDescendente))" :key="nivel.$id">
+  <div v-else v-for="nivel in [...EstanteSeleccionado!.niveles].sort((a, b) => Ordenar(a, b, EstanteSeleccionado!.ordenDescendente))" :key="nivel.id">
      <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1 flex justify-center', legend: { style: 'margin-left: auto;' } }">
       <template #legend>
         <div class="flex items-center">
           <div class="font-medium">Nivel {{ nivel.nombre }}</div>
-          <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(nivel.$id, 'Sección')"  v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
-          <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel)" @quitarClick="Quitar(nivel)" :id-elemento="nivel.$id" :nombre-elemento="nivel.nombre" />
+          <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar('Seccion', nivel)" v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
+          <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel, 'Nivel')" @quitarClick="Quitar(nivel, 'Nivel')" :id-elemento="nivel.id" :nombre-elemento="nivel.nombre" />
         </div>
       </template>
       <div class="flex flex-wrap md:flex-nowrap gap-2">
-        <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).length === 0" class="italic text-muted-color">
+        <div v-if="nivel.secciones.length === 0" class="italic text-muted-color">
           No hay secciones en este Nivel.
         </div>
-        <Panel v-else v-for="seccion in TablesDbService.Inventarios.value.filter(x => x.padre == nivel.$id).sort((a, b) => Ordenar(a, b, nivel.ordenDescendente)) "
-            :key="seccion.$id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-21'">
+        <Panel v-else v-for="seccion in [...nivel.secciones].sort((a, b) => Ordenar(a, b, nivel.ordenDescendente))"
+            :key="seccion.id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-21'">
           <template #icons v-if="Usuario">
             <div class="flex">
-              <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar(seccion.$id, 'Caja')"  v-tooltip.bottom="'Agregar Caja'" />
-              <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(seccion)" v-tooltip.bottom="'Mover Sección'" />
-              <EditarQuitar tamaño="small" @editar-click="Editar(seccion)" @quitar-click="Quitar(seccion)" :id-elemento="seccion.$id" :nombre-elemento="seccion.nombre" />
+              <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar('Caja', undefined, seccion)" v-tooltip.bottom="'Agregar Caja'" />
+              <Button icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(seccion, 'Seccion')" v-tooltip.bottom="'Mover Sección'" />
+              <EditarQuitar tamaño="small" @editar-click="Editar(seccion, 'Seccion')" @quitar-click="Quitar(seccion, 'Seccion', nivel)" :id-elemento="seccion.id" :nombre-elemento="seccion.nombre" />
             </div>
           </template>
-          <div v-if="TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id).length === 0" class="italic text-muted-color m-1">
+          <div v-if="seccion.cajas.length === 0" class="italic text-muted-color m-1">
             No hay cajas en esta Sección.
           </div>
-          <div v-else v-for="caja in TablesDbService.Inventarios.value.filter(x => x.padre == seccion.$id)" :key="caja.$id"
+          <div v-else v-for="caja in seccion.cajas" :key="caja.id"
               class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <div class="flex justify-center">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.$id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }"
-                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.$id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
-                <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja)" v-tooltip.bottom="'Mover Caja'" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja)" @quitarClick="Quitar(caja)" :id-elemento="caja.$id" :nombre-elemento="caja.nombre" />
+                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }"
+                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
+                <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja, 'Caja')" v-tooltip.bottom="'Mover Caja'" />
+                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" :id-elemento="caja.id" :nombre-elemento="caja.nombre" />
               </div>
           </div>
         </Panel>
@@ -318,14 +334,14 @@ async function Mover() {
     </Fieldset>
   </div>
 
-  <DialogoEdicion id="editar" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="itemEdicion.tipo"
+  <DialogoEdicion id="editar" v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="tipoEdicion"
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full mt-1">
-        <label for="nombre">{{ itemEdicion.tipo }}</label>
+        <label for="nombre">{{ tipoEdicion }}</label>
         <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none" @keyup.enter="Guardar" />
       </FloatLabel>
-      <div v-if="itemEdicion.tipo === 'Estante' || itemEdicion.tipo === 'Nivel'" class="flex gap-2 items-center">
+      <div v-if="tipoEdicion === 'Estante' || tipoEdicion === 'Nivel'" class="flex gap-2 items-center">
         <label for="ordenDescendente">Orden Descendente</label>
         <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />
       </div>
@@ -335,25 +351,24 @@ async function Mover() {
   <Dialog v-model:visible="mostrarDialogoCaja" :modal="true" class="md:w-2xl">
     <template #header>
       <div class="flex justify-center items-center w-full">
-        <Button icon="pi pi-arrow-left" severity="secondary" variant="text"  v-tooltip.bottom="'Anterior'" @click="CajaAnterior" :disabled="deshabilitarCajaAnterior" />
+        <Button icon="pi pi-arrow-left" severity="secondary" variant="text" v-tooltip.bottom="'Anterior'" @click="CajaAnterior" :disabled="deshabilitarCajaAnterior" />
         <div class="mx-2 text-xl font-medium">Caja {{ cajaSeleccionada?.nombre }}</div>
         <Button icon="pi pi-arrow-right" severity="secondary" variant="text" v-tooltip.bottom="'Siguiente'" @click="CajaSiguiente" :disabled="deshabilitarSiguienteCaja" />
       </div>
     </template>
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
-    <div v-else v-for="item in productosEnCaja" :key="item.$id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
+    <div v-else v-for="item in productosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex flex-wrap gap-4">
-        <img :hidden="!item.producto.imagenId" :src="item.producto.imagenId ? StorageService.Url(item.producto.imagenId ?? '') : undefined" alt="Foto" class="rounded-xl md:w-49 md:h-49" />
+        <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? imagenesDict[item.producto.imagenUrl] : undefined" alt="Foto" class="rounded-xl md:w-45 md:h-45" />
         <div>
           <div><b>Nombre: </b>{{ item.producto.nombre }}</div>
-          <div><b>Grupo: </b>{{ gruposDict[item.producto.grupo] }}</div>
-          <div><b>Fabricante: </b>{{ fabricantesDict[item.producto.fabricante] }}</div>
+          <div><b>Grupo: </b>{{ gruposDict[item.producto.grupoId] }}</div>
+          <div><b>Fabricante: </b>{{ fabricantesDict[item.producto.fabricanteId] }}</div>
           <div><b>Código: </b>{{ item.producto.codigo }}</div>
           <div class="mt-3"><b>Cantidad: </b>{{ item.cantidad }}</div>
           <div><b>Peso Unitario: </b>{{ item.producto.pesoUnitario }} Kg.</div>
           <div><b>Peso Total: </b>{{ (item.producto.pesoUnitario * item.cantidad).toFixed(2) }} Kg.</div>
         </div>
-
       </div>
       <div class="mt-3"><b>Descripción: </b>{{ item.producto.descripcion }}</div>
     </div>
@@ -365,7 +380,7 @@ async function Mover() {
       <div class="flex gap-2 items-center">
         <label for="nuevoPadreNivel">Nuevo Nivel: </label>
         <Select id="nuevoPadreNivel" v-model="nuevoPadreNivel" option-label="nombre"
-          :options="TablesDbService.Inventarios.value.filter(x => x.padre == estante?.$id && x.$id !== elementoAMover?.padre)">
+          :options="EstanteSeleccionado!.niveles.filter(n => n.id !== elementoAMover?.padreActualId)">
         </Select>
       </div>
       <div class="flex gap-2 items-center" v-if="elementoAMover?.tipo === 'Caja'">
@@ -374,4 +389,9 @@ async function Mover() {
       </div>
     </div>
   </DialogoEdicion>
+
+  <!-- Overlay de carga -->
+  <div v-if="cargando" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <ProgressSpinner />
+  </div>
 </template>

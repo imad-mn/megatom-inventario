@@ -18,9 +18,9 @@ watch(
 <template>
   <Dialog v-model:visible="mostrar" :header="`Historial de ${props.nombre}`" :modal="true" class="w-6xl">
     <DataTable :value="historial" striped-rows>
-      <Column field="$createdAt" header="Fecha" style="width: 20%" sortable>
+      <Column field="fechaCreacion" header="Fecha" style="width: 20%" sortable>
         <template #body="slotProps">
-          {{ new Date(slotProps.data.$createdAt).toLocaleString() }}
+          {{ new Date(slotProps.data.fechaCreacion).toLocaleString() }}
         </template>
       </Column>
       <Column field="usuario" header="Usuario" style="min-width: 10%" />

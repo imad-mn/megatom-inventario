@@ -1,75 +1,89 @@
-import type { Models } from "appwrite";
+import type { QueryDocumentSnapshot } from "firebase/firestore";
 
-export type IdNombre = {
-  $id: string;
+export type ModeloBase = {
+  id: string;
+}
+
+export type IdNombre = ModeloBase & {
   nombre: string;
 }
 
-export type Producto = {
-  $id: string;
-  nombre: string;
+export type Caja = IdNombre
+
+export type Producto = IdNombre & {
   codigo: string | null;
   descripcion: string | null;
   pesoUnitario: number;
-  grupo: string;
-  fabricante: string;
-  imagenId: string | null;
+  grupoId: string;
+  fabricanteId: string;
+  imagenUrl: string | null;
 }
-export type TipoInventario = 'Galpon' | 'Estante' | 'Nivel' | 'Sección' | 'Caja';
-export type Inventario = {
-  $id: string;
-  tipo: TipoInventario;
-  nombre: string;
-  padre: string | null;
+
+export type ItemOrdenable = IdNombre & {
   ordenDescendente: boolean;
 }
 
-export type Cantidades = {
-  $id: string;
-  producto: string;
-  cantidad: number;
-  cajon: string;
+export type Seccion = IdNombre & {
+  cajas: IdNombre[];
 }
 
-export type CantidadesConProducto = Omit<Cantidades, 'producto'> & {
+export type Nivel = ItemOrdenable & {
+  nombre: string;
+  secciones: Seccion[];
+}
+
+export type Estante = ItemOrdenable & {
+  niveles: Nivel[];
+}
+
+export type Galpon = ItemOrdenable & {
+  estantes: Estante[];
+}
+
+export type Cantidades = ModeloBase & {
+  productoId: string;
+  cajaId: string;
+  cantidad: number;
+}
+
+export type CantidadesConProducto = Cantidades & {
   producto: Producto;
 }
 
-export type CajasConCantidad = {
-  $id: string;
-  nombre: string;
-  cantidad: number;
+export type ConFechaCreacion = ModeloBase & {
+  fechaCreacion: Date;
 }
 
-export type Movimientos = {
-  $id: string;
-  producto: string | null;
+export type Movimientos = ConFechaCreacion & {
+  productoId: string;
   cantidad: number;
-  almacenista: string | null;
+  almacenistaId: string;
   justificacion: string | null;
   esIngreso: boolean;
   creadoPor: string;
-  caja: string | null;
-  $createdAt: string;
+  cajaId: string;
 }
 
-export type MovimientosExtendido = Omit<Movimientos, 'producto' | 'caja' | 'almacenista'> & {
+export type MovimientosExtendido = Movimientos & {
   producto: IdNombre | null;
   caja: IdNombre | null;
   almacenista: IdNombre | null;
 }
 
 export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas' | 'usuario';
-export type Lista = {
-  $id: string;
+export type Lista = IdNombre & {
   tipo: TipoLista;
-  nombre: string;
 }
 
-export type Historial = Models.Row & {
+export type Historial = ConFechaCreacion & {
   idElemento: string;
   usuario: string;
   accion: string;
   anterior: string | null;
   actual: string | null;
+}
+
+export type Paginacion<T> = {
+  rows: T[];
+  lastVisibleDoc: QueryDocumentSnapshot<T> | null | undefined;
 }
