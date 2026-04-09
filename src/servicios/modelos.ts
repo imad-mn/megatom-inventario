@@ -1,5 +1,3 @@
-import type { QueryDocumentSnapshot } from "firebase/firestore";
-
 export type ModeloBase = {
   id: string;
 }
@@ -81,9 +79,4 @@ export type Historial = ConFechaCreacion & {
   accion: string;
   anterior: string | null;
   actual: string | null;
-}
-
-export type Paginacion<T> = {
-  rows: T[];
-  lastVisibleDoc: QueryDocumentSnapshot<T> | null | undefined;
 }
