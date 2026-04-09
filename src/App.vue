@@ -3,9 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
-import {  Inventarios, Listas, dialogoHistorial, ObtenerTodos } from './servicios/TablesDbService';
-import { account, Usuario } from './servicios/appwrite';
+import { Coleccion, ObtenerTodos } from './servicios/TablesDbService';
 import DialogoHistorial from './componentes/DialogoHistorial.vue';
+import { dialogoHistorial, Listas, Usuario } from './servicios/shared';
+import { auth } from './servicios/firebase';
 
 const router = useRouter();
 
@@ -44,12 +45,11 @@ const menuItemsVisibles = computed(() =>
 );
 
 onMounted(async () => {
-  Inventarios.value = await ObtenerTodos('inventario');
-  Listas.value = await ObtenerTodos('listas');
+  Listas.value = await ObtenerTodos(Coleccion.Listas);
 })
 
 async function cerrarSesion() {
-  await account.deleteSession({ sessionId: 'current' });
+  await auth.signOut();
   Usuario.value = undefined;
   router.push('/');
 }
@@ -61,17 +61,18 @@ async function cerrarSesion() {
       <RouterLink to="/">
         <div class="flex items-center">
           <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8" />
-          <div class="text-md megatom-color hidden md:block mr-5 ml-2">INVENTARIO</div>
+          <div class="text-md hidden md:block mr-5 ml-2">INVENTARIO</div>
         </div>
       </RouterLink>
     </template>
     <template #end>
       <div v-if="Usuario">
-        <span><i class="pi pi-user" />&nbsp;{{ Usuario.name }}</span>
+        <span><i class="pi pi-user" />&nbsp;{{ Usuario.user.displayName }}</span>
         <Button
           icon="pi pi-sign-out"
           variant="text"
           @click="cerrarSesion"
+          severity="secondary"
           v-tooltip.bottom="'Cerrar sesión'"
         />
       </div>
@@ -80,6 +81,7 @@ async function cerrarSesion() {
         label="Admin"
         icon="pi pi-key"
         variant="text"
+        severity="secondary"
         @click="router.push('/login')"
       />
     </template>

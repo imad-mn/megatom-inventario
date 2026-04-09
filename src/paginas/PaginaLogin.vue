@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { account, Usuario } from '@/servicios/appwrite'
+import { auth } from '@/servicios/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Usuario } from '@/servicios/shared';
 
 const router = useRouter()
 
@@ -14,9 +16,8 @@ const severidad = ref<'info' | 'warn' | 'error' | 'success'>('info')
 const iniciarSesion = async () => {
   isLoading.value = true
   try {
-    await account.deleteSession({ sessionId: 'current' }).catch(() => null); // Delete the current session if exists
-    await account.createEmailPasswordSession({ email: email.value, password: password.value })
-    Usuario.value = await account.get();
+    await auth.signOut();
+    Usuario.value = await signInWithEmailAndPassword(auth, email.value, password.value);
     mensaje.value = 'Sesión iniciada con éxito.'
     severidad.value = 'success'
     router.push('/')

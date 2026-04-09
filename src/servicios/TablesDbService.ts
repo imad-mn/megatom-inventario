@@ -1,150 +1,177 @@
-import { Query, type Models } from 'appwrite';
-import { tablesDB, ID, Usuario } from './appwrite.ts';
-import type { Cantidades, CantidadesConProducto, Historial, Inventario, Lista, MovimientosExtendido, Producto } from './modelos.ts';
-import { ref } from 'vue';
-import type { DataTableFilterMeta, DataTableFilterMetaData } from 'primevue';
+import { db } from './firebase.ts';
+import { collection, addDoc, doc, query, where, getDocs, setDoc, deleteDoc, type DocumentData, QueryConstraint, type FirestoreDataConverter, orderBy, limit, QueryDocumentSnapshot, startAfter, getCountFromServer, type WithFieldValue, type SnapshotOptions, Timestamp } from "firebase/firestore";
+import type { ModeloBase, ConFechaCreacion, Cantidades, CantidadesConProducto, Historial, Lista, Movimientos, Paginacion, Producto } from './modelos.ts';
 
-const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
+import { Listas, Usuario } from './shared.ts';
 
-export const Inventarios = ref<Inventario[]>([]);
-export const Listas = ref<Lista[]>([]);
-
-interface DialogoHistorial {
-  mostrar: boolean;
-  idElemento: string;
-  nombreElemento: string;
-}
-export const dialogoHistorial = ref<DialogoHistorial>({ mostrar: false, idElemento: '', nombreElemento: '' });
-
-export async function ObtenerTodos<T>(tableId: string): Promise<T[]> {
-  const respuesta = await tablesDB.listRows({
-    databaseId,
-    tableId,
-    queries: [Query.limit(1000)]
-  });
-  return respuesta.rows as T[];
+/** Nombres de las colecciones de Firestore */
+export enum Coleccion {
+  Productos = 'productos',
+  Cantidades = 'cantidades',
+  Galpones = 'galpones',
+  Movimientos = 'movimientos',
+  Historial = 'historial',
+  Listas = 'listas',
 }
 
-async function ObtenerConQuery<T>(tableId: string, queries: string[]): Promise<T[]> {
-  const respuesta = await tablesDB.listRows({
-    databaseId,
-    tableId,
-    queries: queries
-  });
-  return respuesta.rows as T[];
+/**
+ * Crea un FirestoreDataConverter genérico para cualquier tipo T que extienda ModeloBase.
+ * Elimina el campo `id` al escribir (Firestore lo maneja como ID del documento)
+ * y lo restaura al leer desde el snapshot.
+ */
+function createConverter<T extends ModeloBase>(): FirestoreDataConverter<T> {
+  return {
+    toFirestore(model: WithFieldValue<T>): DocumentData {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, ...data } = model as WithFieldValue<T> & { id?: unknown };
+      return data as DocumentData;
+    },
+    fromFirestore(snap: QueryDocumentSnapshot, options?: SnapshotOptions): T {
+      return { id: snap.id, ...snap.data(options) } as T;
+    },
+  };
 }
 
-export async function ObtenerConPaginacion<T extends Models.Row>(tableId: string, pagina: number, limit: number, sortOrder: 1 | 0 | -1 = -1, filtros: DataTableFilterMeta): Promise<Models.RowList<T>> {
-  const offset = pagina * limit;
-  const queries = [Query.offset(offset), Query.limit(limit), sortOrder === 1 ? Query.orderAsc('$createdAt') : sortOrder === -1 ? Query.orderDesc('$createdAt') : ''];
-
-  for (const key in filtros) {
-    const filtro = filtros[key] as DataTableFilterMetaData;
-    if (filtro.value) {
-      switch (filtro.matchMode) {
-        case 'equals':
-          queries.push(Query.equal(key, filtro.value));
-          break;
-        case 'contains':
-          queries.push(Query.search(key, filtro.value));
-          break;
-      }
-    }
-  }
-
-  return await tablesDB.listRows<T>({
-    databaseId,
-    tableId,
-    queries: queries
-  });
+/**
+ * Converter genérico para modelos con campo `fechaCreacion`.
+ * Al escribir convierte `Date` → `Timestamp` de Firestore.
+ * Al leer convierte `Timestamp` → `Date`.
+ */
+function createConverterConFecha<T extends ConFechaCreacion>(): FirestoreDataConverter<T> {
+  return {
+    toFirestore(model: WithFieldValue<T>): DocumentData {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, fechaCreacion, ...rest } = model as WithFieldValue<T> & { id?: unknown; fechaCreacion?: Date };
+      return {
+        ...rest,
+        fechaCreacion: fechaCreacion instanceof Date ? Timestamp.fromDate(fechaCreacion) : fechaCreacion,
+      } as DocumentData;
+    },
+    fromFirestore(snap: QueryDocumentSnapshot, options?: SnapshotOptions): T {
+      const { fechaCreacion, ...rest } = snap.data(options);
+      return {
+        id: snap.id,
+        ...rest,
+        fechaCreacion: fechaCreacion instanceof Timestamp ? fechaCreacion.toDate() : fechaCreacion,
+      } as T;
+    },
+  };
 }
 
-export async function Crear(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
-  item.$id = ID.unique();
-  await tablesDB.createRow({
-    databaseId,
-    tableId,
-    rowId: item.$id,
-    data: item,
-  });
+export async function Crear<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(createConverter<T>());
+  await addDoc(collRef, item);
 }
 
-export async function Actualizar(tableId: string, item: Partial<Models.Row> & Record<string, unknown>): Promise<void> {
-  await tablesDB.updateRow({
-    databaseId,
-    tableId,
-    rowId: item.$id ?? ID.unique(),
-    data: item,
-  });
+export async function CrearYObtenerID<T extends ModeloBase>(collectionName: string, item: T): Promise<string> {
+  const collRef = collection(db, collectionName).withConverter(createConverter<T>());
+  const docRef = await addDoc(collRef, item);
+  return docRef.id;
 }
 
-export async function Eliminar(tableId: string, id: string): Promise<void> {
-  await tablesDB.deleteRow({
-    databaseId,
-    tableId,
-    rowId: id,
-  });
+export async function Actualizar<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(createConverter<T>());
+  const docRef = doc(collRef, item.id);
+  await setDoc(docRef, item);
 }
 
-async function ObtenerFiltroEqual<T>(tableId: string, columna: string, valor: string | string[] | null): Promise<T[]> {
-  return ObtenerConQuery<T>(tableId, [valor == null ? Query.isNull(columna) : Query.equal(columna, valor)]);
+export async function Eliminar<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(createConverter<T>());
+  const docRef = doc(collRef, item.id);
+  await deleteDoc(docRef);
+}
+
+export async function CrearConFecha<T extends ConFechaCreacion>(collectionName: string, item: T): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(createConverterConFecha<T>());
+  await addDoc(collRef, item);
+}
+
+export async function ObtenerTodos<T extends ModeloBase>(collectionName: string): Promise<T[]> {
+  const collRef = collection(db, collectionName).withConverter(createConverter<T>());
+  const respuesta = await getDocs(collRef);
+  return respuesta.docs.map(doc => doc.data());
+}
+
+async function ObtenerConQueries<T extends ModeloBase>(collectionName: string, queries: QueryConstraint[]): Promise<T[]> {
+  const collRef = collection(db, collectionName).withConverter(createConverter<T>());
+  const respuesta = await getDocs(query(collRef, ...queries));
+  return respuesta.docs.map(doc => doc.data());
+}
+
+async function ObtenerFiltroEqual<T extends ModeloBase>(collectionName: string, columna: string, valor: string | null): Promise<T[]> {
+  return ObtenerConQueries<T>(collectionName, [where(columna, '==', valor)]);
 }
 
 export function ObtenerLista(tipo: string): Lista[] {
   return Listas.value.filter(x => x.tipo == tipo);
 }
 
-export function ObtenerProductosPorGrupo(grupoId: string): Promise<Producto[]> {
-  return ObtenerFiltroEqual<Producto>('productos', 'grupo', grupoId);
-}
+export async function ObtenerCantidadesConProductos(): Promise<CantidadesConProducto[]> {
+  const cantidades = await ObtenerTodos<Cantidades>(Coleccion.Cantidades);
+  const productos = await ObtenerTodos<Producto>(Coleccion.Productos);
+  const productosMap = new Map(productos.map(p => [p.id, p]));
 
-export function ObtenerCantidadesConProductos(): Promise<CantidadesConProducto[]> {
-  return ObtenerConQuery<CantidadesConProducto>('cantidades', [Query.select(['*', 'producto.*']), Query.limit(1000)]);
+  return cantidades.map(cantidad => ({
+    ...cantidad,
+    producto: productosMap.get(cantidad.productoId)!
+  }));
 }
 
 export function ObtenerCantidadesPorProducto(productoId: string): Promise<Cantidades[]> {
-  return ObtenerFiltroEqual<Cantidades>('cantidades', 'producto', productoId);
+  return ObtenerFiltroEqual<Cantidades>(Coleccion.Cantidades, 'productoId', productoId);
 }
 
-export async function EliminarItemInventario(item: Inventario) {
-  const hijos = Inventarios.value.filter(x => x.padre === item.$id);
-  for (const subItem of hijos) {
-    await EliminarItemInventario(subItem);
-  }
-  await Eliminar('inventario', item.$id);
-  const indice = Inventarios.value.findIndex(x => x.$id === item.$id);
-  if (indice >= 0) Inventarios.value.splice(indice, 1);
+export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<Movimientos[]> {
+  const queries = [
+    orderBy('fechaCreacion', 'desc'),
+    where('fechaCreacion', '>=', fechaDesde),
+    where('fechaCreacion', '<=', fechaHasta),
+  ];
+  const collRef = collection(db, Coleccion.Movimientos).withConverter(createConverterConFecha<Movimientos>());
+  return (await getDocs(query(collRef, ...queries))).docs.map(d => d.data());
 }
 
 export async function RegistrarHistorial(idElemento: string, accion: string, anterior: string | null = null, actual: string | null = null): Promise<void> {
   if (!Usuario.value) return;
 
   const historialEntry = {
+    id: '', // Firestore generará el ID automáticamente
     idElemento,
-    usuario: Usuario.value.name,
+    usuario: Usuario.value.user.displayName,
     accion,
     anterior,
-    actual
+    actual,
+    fechaCreacion: new Date(),
   };
 
-  await Crear('Historial', historialEntry);
+  await CrearConFecha(Coleccion.Historial, historialEntry);
 }
 
+// Función para obtener el conteo total de documentos en una colección (útil para paginación)
+export async function ObtenerConteoTotal(collectionId: string): Promise<number> {
+  const collRef = collection(db, collectionId);
+  const snapshot = await getCountFromServer(collRef);
+  return snapshot.data().count;
+}
+
+// Función para obtener el historial con paginación
+export async function ObtenerHistorial(lastVisibleDoc: QueryDocumentSnapshot<Historial> | null | undefined, pageSize: number): Promise<Paginacion<Historial>> {
+  const queries: QueryConstraint[] = [limit(pageSize), orderBy('fechaCreacion', 'desc')];
+  if (lastVisibleDoc) {
+    queries.push(startAfter(lastVisibleDoc));
+  }
+
+  const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
+  const respuesta = await getDocs(query(collRef, ...queries));
+  const rows = respuesta.docs.map(doc => doc.data());
+  const newLastVisibleDoc = respuesta.docs.length > 0 ? respuesta.docs[respuesta.docs.length - 1] : null;
+
+  return { rows, lastVisibleDoc: newLastVisibleDoc };
+}
+
+// Función para obtener todo el historial de un elemento específico (sin paginación)
 export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
-  return await ObtenerFiltroEqual<Historial>('Historial', 'idElemento', idElemento);
-}
-
-export async function ObtenerMovimientos(fechaDesde: Date, fechaHasta: Date): Promise<MovimientosExtendido[]> {
-  const queries = [
-    Query.select(['*', 'producto.$id', 'producto.nombre', 'caja.$id', 'caja.nombre', 'almacenista.$id', 'almacenista.nombre']),
-    Query.limit(100),
-    Query.orderDesc('$createdAt'),
-    Query.greaterThanEqual('$createdAt', fechaDesde.toISOString()),
-    Query.lessThanEqual('$createdAt', fechaHasta.toISOString()),
-  ];
-  return await ObtenerConQuery<MovimientosExtendido>('movimientos', queries);
-}
-
-export function ObtenerHistorialExportacion(): Promise<Historial[]> {
-  return ObtenerConQuery<Historial>('Historial', [Query.limit(10000)]);
+  const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
+  const respuesta = await getDocs(query(collRef, where('idElemento', '==', idElemento)));
+  return respuesta.docs.map(d => d.data());
 }

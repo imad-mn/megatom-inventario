@@ -27,7 +27,7 @@ No test framework is configured in this project.
 - **Vite** build tool
 - **PrimeVue 4** component library with `@primeuix/themes` theming
 - **Tailwind CSS 4** + `tailwindcss-primeui` integration
-- **Appwrite** (backend-as-a-service): database, storage, authentication
+- **Firebase** (backend-as-a-service): Firestore database, Storage, Authentication
 - **Vue Router 4** (client-side SPA routing)
 - **PapaParse** for CSV import/export
 
@@ -63,36 +63,32 @@ Routes are defined in [src/router.ts](src/router.ts) and map to page components:
 
 All backend interaction goes through [src/servicios/](src/servicios/):
 
-- **`appwrite.ts`** — Appwrite client, `account`, and `Usuario` (global reactive ref for current user)
-- **`TablesDbService.ts`** — All Appwrite database CRUD. Also holds global cached state:
-  - `Inventarios` — reactive ref of cached inventory rows
-  - `Listas` — reactive ref of lookup lists (fabricantes, grupos, almacenistas, etc.)
-  - `dialogoHistorial` — reactive ref controlling the history dialog
-- **`StorageService.ts`** — Product image upload/download via Appwrite Storage
+- **`firebase.ts`** — Firebase app initialization; exports `auth`, `db` (Firestore), and `storage`
+- **`TablesDbService.ts`** — All Firestore CRUD via generic typed functions (`Crear`, `Actualizar`, `Eliminar`, `ObtenerTodos`, etc.). Uses `FirestoreDataConverter` to map `id` to/from Firestore document ID. Two converter variants: plain (`createConverter`) and date-aware (`createConverterConFecha`) for models with `fechaCreacion`.
+- **`StorageService.ts`** — Product image upload/download via Firebase Storage
 - **`ImportarExportar.ts`** — CSV import/export logic using PapaParse
 - **`modelos.ts`** — All TypeScript type definitions
-- **`shared.ts`** — Shared utilities (e.g., building location hierarchy strings)
+- **`shared.ts`** — Global reactive state (`Usuario`, `Listas`, `GalponSeleccionado`, `EstanteSeleccionado`, `dialogoHistorial`) and shared utilities
 
 ### Data Model
 
 Defined in [src/servicios/modelos.ts](src/servicios/modelos.ts):
 - `Producto` — product catalog items
-- `Inventario` — hierarchical location: Galpon → Estante → Nivel → Sección → Caja
-- `Cantidades` — stock quantity records per location
+- `Galpon` → `Estante` → `Nivel` → `Seccion` → `Caja` — nested hierarchical location structure stored as a single Firestore document per `Galpon`
+- `Cantidades` — stock quantity records per caja
 - `Movimientos` — movement transactions with justification
-- `Lista` — lookup/reference lists (fabricantes, grupos, etc.)
+- `Lista` — lookup/reference lists (fabricantes, grupos, almacenistas, usuario)
 - `Historial` — audit trail entries
 
 ### State Management
 
-No external state library. Uses Vue 3 reactivity (`ref`, `computed`, `watchEffect`) directly. Global state lives in service files as exported reactive refs (e.g., `Usuario`, `Inventarios`, `Listas` from `TablesDbService.ts`).
+No external state library. Uses Vue 3 reactivity (`ref`, `computed`, `watchEffect`) directly. Global state lives as exported reactive refs in `shared.ts` (`Usuario`, `Listas`, `GalponSeleccionado`, `EstanteSeleccionado`, `dialogoHistorial`).
 
 ### Authentication
 
-- Appwrite Account-based auth with session management
-- `Usuario` reactive ref (from `appwrite.ts`) holds the current Appwrite user object or `null`
+- Firebase Authentication; `Usuario` reactive ref (from `shared.ts`) holds a `UserCredential` or `undefined`
 - Admin-only pages (`/historial`, `/listas`) check `Usuario.value` before showing controls
-- Export buttons for Historial are restricted to specific user IDs (`imad`, `giovanni`)
+- Export buttons for Historial are restricted to specific user display names (`imad`, `giovanni`)
 
 ### Styling
 
@@ -101,11 +97,6 @@ No external state library. Uses Vue 3 reactivity (`ref`, `computed`, `watchEffec
 - Tooltips are hidden on mobile via CSS
 - Path alias: `@/` → `src/`
 
-### Environment Variables
+### Firebase Configuration
 
-Configured via `.env` (Appwrite credentials):
-- `VITE_APPWRITE_PROJECT_ID`
-- `VITE_APPWRITE_ENDPOINT`
-- `VITE_APPWRITE_DATABASE_ID`
-- `VITE_APPWRITE_BUCKET_ID`
-- `VITE_APPWRITE_DEV_KEY`
+Firebase config se carga desde variables de entorno en `.env.local` (ignorado por git). Ver `.env.example` para las claves necesarias. Todas usan el prefijo `VITE_FIREBASE_`.
