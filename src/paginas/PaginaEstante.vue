@@ -46,16 +46,15 @@ const seccionesNivel = computed(() => {
 
 onMounted(async () => {
   cargando.value = true;
+
   grupos.value = TablesDbService.ObtenerLista('grupos');
   gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.id, x.nombre]));
+
   const fabricantes = TablesDbService.ObtenerLista('fabricantes');
   fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
+
   productosEnCajas.value = await TablesDbService.ObtenerCantidadesConProductos();
-  for (const item of productosEnCajas.value) {
-    const id = item.producto.imagenUrl;
-    if (id && !imagenesDict.value[id])
-      imagenesDict.value[id] = await StorageService.Url(id);
-  }
+
   cargando.value = false;
 });
 
@@ -172,6 +171,13 @@ async function VerCaja(caja: Caja) {
   productosEnCaja.value = productosEnCajas.value.filter(x => x.cajaId === caja.id);
   cajaSeleccionada.value = caja;
   mostrarDialogoCaja.value = true;
+  productosEnCaja.value.map(x => {
+    if (x.producto.imagenUrl && !imagenesDict.value[x.producto.imagenUrl]) {
+      StorageService.Url(x.producto.imagenUrl).then(url => {
+        imagenesDict.value[x.producto.imagenUrl!] = url;
+      });
+    }
+  });
 }
 
 async function CajaAnterior() {

@@ -46,6 +46,7 @@ const permitirCerrarDialogoImportar = ref(true);
 const ubicacionDict = ref<Record<string, string[]>>({});
 const galponesData = ref<Galpon[]>([]);
 const imagenesDict = ref<Record<string, string>>({});
+const cargando = ref(false);
 
 async function CargarImagenes(lista: Producto[]) {
   for (const p of lista) {
@@ -56,8 +57,10 @@ async function CargarImagenes(lista: Producto[]) {
 }
 
 onMounted(async () => {
+  cargando.value = true;
   productos.value = await TablesDbService.ObtenerTodos<Producto>(TablesDbService.Coleccion.Productos);
   galponesData.value = await TablesDbService.ObtenerTodos<Galpon>(TablesDbService.Coleccion.Galpones);
+  cargando.value = false;
   await CargarImagenes(productos.value);
 })
 
@@ -384,4 +387,9 @@ async function DescargarExportacion() {
       <Message severity="success" v-show="mostrarMensajeImportacion">Los productos se han importado correctamente.</Message>
     </div>
   </Dialog>
+
+  <!-- Overlay de carga -->
+  <div v-if="cargando" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <ProgressSpinner />
+  </div>
 </template>
