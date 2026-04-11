@@ -8,6 +8,7 @@ import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
 import * as StorageService from '@/servicios/StorageService.ts';
 import { EstanteSeleccionado, GalponSeleccionado, Usuario } from '@/servicios/shared';
+import BotonesCompacto from '@/componentes/BotonesCompacto.vue';
 
 const router = useRouter();
 const confirm = useConfirm();
@@ -280,7 +281,7 @@ async function Mover() {
 </script>
 
 <template>
-  <div id="encabezado" class="flex justify-between items-center">
+  <div id="encabezado" class="flex justify-between items-center mb-3">
     <Button severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${GalponSeleccionado!.id}`)">
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">Galpón {{GalponSeleccionado!.nombre}}</span>
@@ -302,7 +303,7 @@ async function Mover() {
       No hay niveles en este Estante.
   </div>
   <div v-else v-for="nivel in [...EstanteSeleccionado!.niveles].sort((a, b) => Ordenar(a, b, EstanteSeleccionado!.ordenDescendente))" :key="nivel.id">
-     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1 flex justify-center', legend: { style: 'margin-left: auto;' } }">
+     <Fieldset :pt="{ root: 'border-2 border-gray-400 p-1' }">
       <template #legend>
         <div class="flex items-center">
           <div class="font-medium">Nivel {{ nivel.nombre }}</div>
@@ -310,30 +311,23 @@ async function Mover() {
           <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(nivel, 'Nivel')" @quitarClick="Quitar(nivel, 'Nivel')" :id-elemento="nivel.id" :nombre-elemento="nivel.nombre" />
         </div>
       </template>
-      <div class="flex flex-wrap md:flex-nowrap gap-2">
+      <div class="flex flex-wrap md:flex-nowrap gap-2 justify-center">
         <div v-if="nivel.secciones.length === 0" class="italic text-muted-color">
           No hay secciones en este Nivel.
         </div>
         <Panel v-else v-for="seccion in [...nivel.secciones].sort((a, b) => Ordenar(a, b, nivel.ordenDescendente))"
-            :key="seccion.id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'" :pt:root:class="'min-w-21'">
+            :key="seccion.id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'">
           <template #icons v-if="Usuario">
-            <div class="flex">
-              <Button icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar('Caja', undefined, seccion)" v-tooltip.bottom="'Agregar Caja'" />
-              <Button icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(seccion, 'Seccion')" v-tooltip.bottom="'Mover Sección'" />
-              <EditarQuitar tamaño="small" @editar-click="Editar(seccion, 'Seccion')" @quitar-click="Quitar(seccion, 'Seccion', nivel)" :id-elemento="seccion.id" :nombre-elemento="seccion.nombre" />
-            </div>
+            <BotonesCompacto v-if="Usuario" @agregarClick="Agregar('Caja', undefined, seccion)" @moverClick="MostrarDialogoMover(seccion, 'Seccion')" @editarClick="Editar(seccion, 'Seccion')" @quitarClick="Quitar(seccion, 'Seccion', nivel)" :id-elemento="seccion.id" :nombre-elemento="seccion.nombre" button-severity="secondary" queAgregar="Caja" />
           </template>
           <div v-if="seccion.cajas.length === 0" class="italic text-muted-color m-1">
             No hay cajas en esta Sección.
           </div>
           <div v-else v-for="caja in seccion.cajas" :key="caja.id"
-              class="py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
-              <div class="flex justify-center">
-                <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? ' *' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap' }"
-                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
-                <Button v-if="Usuario" icon="pi pi-arrows-alt" severity="secondary" size="small" variant="text" @click="MostrarDialogoMover(caja, 'Caja')" v-tooltip.bottom="'Mover Caja'" />
-                <EditarQuitar v-if="Usuario" tamaño="small" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" :id-elemento="caja.id" :nombre-elemento="caja.nombre" />
-              </div>
+              class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+              <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? '*' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap', root: 'px-1' }"
+                v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
+              <BotonesCompacto v-if="Usuario" @moverClick="MostrarDialogoMover(caja, 'Caja')" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" :id-elemento="caja.id" :nombre-elemento="caja.nombre" button-severity="warn" />
           </div>
         </Panel>
       </div>

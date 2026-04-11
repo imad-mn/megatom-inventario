@@ -36,6 +36,7 @@ import Password from 'primevue/password';
 import DatePicker from 'primevue/datepicker';
 import ToggleButton from 'primevue/togglebutton';
 import ProgressSpinner from 'primevue/progressspinner';
+import Menu from 'primevue/menu';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -97,5 +98,6 @@ app.component('Password', Password);
 app.component('DatePicker', DatePicker);
 app.component('ToggleButton', ToggleButton);
 app.component('ProgressSpinner', ProgressSpinner);
+app.component('Menu', Menu);
 
 app.mount('#app')
