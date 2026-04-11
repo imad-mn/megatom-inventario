@@ -2,25 +2,24 @@
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Historial } from '@/servicios/modelos.ts';
 import { onMounted, ref, watch } from 'vue';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
 import { ExportarHistorial } from '@/servicios/ImportarExportar';
 import { Usuario } from '@/servicios/shared';
 
 const historial = ref<Historial[]>([]);
-const fechaDesde = ref<Date>(new Date(new Date().setDate(new Date().getDate() - 7)));
-const fechaHasta = ref<Date>(new Date(new Date().setHours(23,59)));
+const rangoFechas = ref<(Date | null)[]>([new Date(new Date().setDate(new Date().getDate() - 7)), new Date(new Date().setHours(23, 59))]);
 const usuario = ref<string | null>(null);
 const loading = ref(false);
 
 async function cargarHistorial() {
-  try {
-    loading.value = true;
-    historial.value = await TablesDbService.ObtenerHistorial(fechaDesde.value, fechaHasta.value, usuario.value);
-  } catch (error) {
-    console.error('Error al cargar el historial:', error);
-  } finally {
-    loading.value = false;
+  if (rangoFechas.value[0] && rangoFechas.value[1]) {
+    try {
+      loading.value = true;
+      historial.value = await TablesDbService.ObtenerHistorial(rangoFechas.value[0], rangoFechas.value[1], usuario.value);
+    } catch (error) {
+      console.error('Error al cargar el historial:', error);
+    } finally {
+      loading.value = false;
+    }
   }
 }
 
@@ -28,13 +27,9 @@ onMounted(async () => {
   await cargarHistorial();
 });
 
-watch(fechaDesde, async () => {
-  fechaDesde.value.setHours(0,0);
-  await cargarHistorial();
-});
-
-watch(fechaHasta, async () => {
-  fechaHasta.value.setHours(23,59);
+watch(rangoFechas, async () => {
+  rangoFechas.value[0]?.setHours(0,0);
+  rangoFechas.value[1]?.setHours(23,59);
   await cargarHistorial();
 });
 
@@ -56,33 +51,48 @@ async function DescargarHistorial() {
 
 <template>
   <div class="flex flex-wrap gap-3 items-center mb-4">
-    <div class="text-xl mr-5">HISTORIAL</div>
+    <div class="text-xl mr-3">HISTORIAL</div>
+    <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
     <div>
       <label for="usuario" class="mr-2">Usuario</label>
-      <Select id="usuario" v-model="usuario" :options="['Imad', 'Giovanni']" show-clear />
-    </div>
-    <div>
-      <label for="fechaDesde" class="mr-2">Desde</label>
-      <DatePicker v-model="fechaDesde" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
-    </div>
-    <div>
-      <label for="fechaHasta" class="mr-2">Hasta</label>
-      <DatePicker v-model="fechaHasta" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
+      <Select id="usuario" v-model="usuario" :options="['Imad', 'Giovanni']" show-clear class="min-w-35 w-auto" />
     </div>
     <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
   </div>
 
-  <DataTable :value="historial" show-gridlines striped-rows size="small" :paginator="historial.length > 10" :rows="10"
-    :rows-per-page-options="[10, 20, 50]" :loading="loading"
-    :empty-message="'No se encontraron registros para el rango de fechas y/o usuario seleccionado.'">
-    <Column field="fechaCreacion" header="Fecha" style="width: 16%" :pt="{ columnHeaderContent: 'justify-center' }">
-      <template #body="slotProps">
-        {{ new Date(slotProps.data.fechaCreacion).toLocaleString() }}
-      </template>
-    </Column>
-    <Column field="usuario" header="Usuario" style="max-width: 12%" :showFilterMenu="false" />
-    <Column field="accion" header="Acción" style="width: 20%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
-    <Column field="anterior" header="Anterior" style="max-width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
-    <Column field="actual" header="Actual" style="max-width: 25%" :showFilterMenu="false" :pt="{ columnHeaderContent: 'justify-center' }" />
-  </DataTable>
+  <DataView :value="historial" :data-key="'id'" paginator :rows="10" :rows-per-page-options="[10, 20, 50]" :loading="loading">
+    <template #list="{ items }">
+      <div class="flex flex-col gap-2">
+        <div
+          v-for="(item, index) in items"
+          :key="(item as Historial).id"
+          :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
+        >
+          <!-- Fecha, usuario y acción -->
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="text-sm text-surface-500 dark:text-surface-400">
+              {{ new Date((item as Historial).fechaCreacion).toLocaleString() }}
+            </span>
+            <Tag :value="(item as Historial).usuario" severity="primary" />
+            <Tag :value="(item as Historial).accion" severity="info" />
+          </div>
+          <!-- Anterior → Actual -->
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <div class="flex-1 min-w-0">
+              <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Anterior</span>
+              <span class="text-surface-700 dark:text-surface-200 break-words">{{ (item as Historial).anterior ?? '—' }}</span>
+            </div>
+            <i class="pi pi-arrow-right text-surface-400 shrink-0" />
+            <div class="flex-1 min-w-0">
+              <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Actual</span>
+              <span class="text-surface-700 dark:text-surface-200 break-words">{{ (item as Historial).actual ?? '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+    <template #empty>
+      <p class="text-center text-surface-400 py-6">No se encontraron registros para el rango de fechas y/o usuario seleccionado.</p>
+    </template>
+  </DataView>
 </template>

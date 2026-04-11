@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
 import { ref, watch } from 'vue';
 import type { Historial } from '@/servicios/modelos';
 
@@ -16,17 +14,43 @@ watch(
 );
 </script>
 <template>
-  <Dialog v-model:visible="mostrar" :header="`Historial de ${props.nombre}`" :modal="true" class="w-6xl">
-    <DataTable :value="historial" striped-rows>
-      <Column field="fechaCreacion" header="Fecha" style="width: 20%" sortable>
-        <template #body="slotProps">
-          {{ new Date(slotProps.data.fechaCreacion).toLocaleString() }}
-        </template>
-      </Column>
-      <Column field="usuario" header="Usuario" style="min-width: 10%" />
-      <Column field="accion" header="Acción" style="width: 20%" />
-      <Column field="anterior" header="Anterior" style="width: 25%" />
-      <Column field="actual" header="Actual" style="width: 25%" />
-    </DataTable>
+  <Dialog v-model:visible="mostrar" :header="`Historial de '${props.nombre}'`" :modal="true" class="w-full md:w-2xl">
+    <DataView :value="historial">
+      <template #list="{ items }">
+        <div class="flex flex-col gap-2">
+          <div
+            v-for="(item, index) in items"
+            :key="item.id"
+            :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
+          >
+            <!-- Fecha, usuario y acción -->
+            <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+              <span class="text-sm text-surface-500 dark:text-surface-400">
+                {{ new Date(item.fechaCreacion).toLocaleString() }}
+              </span>
+              <div class="flex items-center gap-2">
+                <Tag :value="item.usuario" severity="primary" />
+                <Tag :value="item.accion" severity="info" />
+              </div>
+            </div>
+            <!-- Anterior → Actual -->
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+              <div class="flex-1 min-w-0">
+                <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Anterior</span>
+                <span class="text-surface-700 dark:text-surface-200 break-words">{{ item.anterior ?? '—' }}</span>
+              </div>
+              <i class="pi pi-arrow-right text-surface-400 shrink-0" />
+              <div class="flex-1 min-w-0">
+                <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Actual</span>
+                <span class="text-surface-700 dark:text-surface-200 break-words">{{ item.actual ?? '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #empty>
+        <p class="text-center text-surface-400 py-6">Sin registros de historial.</p>
+      </template>
+    </DataView>
   </Dialog>
 </template>

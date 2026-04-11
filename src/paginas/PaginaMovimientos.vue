@@ -6,8 +6,6 @@ import * as TablesDbService from '@/servicios/TablesDbService';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { Fieldset, FloatLabel } from 'primevue';
 import { ObtenerUbicaciones } from '@/servicios/shared';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
 
 interface CajaSimple {
   id: string,
@@ -18,8 +16,7 @@ interface CajaSimple {
 const dialogVisible = ref(false);
 const itemEdicion = ref<Movimientos | null>(null);
 const movimientos = ref<MovimientosExtendido[]>([]);
-const fechaDesde = ref<Date>(new Date(new Date().setDate(new Date().getDate() - 7)));
-const fechaHasta = ref<Date>(new Date(new Date().setHours(23,59)));
+const rangoFechas = ref<(Date | null)[]>([new Date(new Date().setDate(new Date().getDate() - 7)), new Date(new Date().setHours(23,59))]);
 const cargando = ref<boolean>(false);
 
 const almacenistas = ref<Lista[]>([]);
@@ -78,15 +75,17 @@ onMounted(async () => {
     }
   }
 
-  movimientos.value = await ObtenerMovimientos();
+  await ObtenerMovimientos();
   cargando.value = false;
 });
 
-async function ObtenerMovimientos(): Promise<MovimientosExtendido[]> {
+async function ObtenerMovimientos(): Promise<void> {
+  if (!rangoFechas.value[0] || !rangoFechas.value[1])
+    return;
   cargando.value = true;
-  const movimientos = await TablesDbService.ObtenerMovimientos(fechaDesde.value, fechaHasta.value);
+  const movimientosDB = await TablesDbService.ObtenerMovimientos(rangoFechas.value[0], rangoFechas.value[1]);
   cargando.value = false;
-  return movimientos.map(movimiento => ({
+  movimientos.value = movimientosDB.map(movimiento => ({
     ...movimiento,
     producto: movimiento.productoId ? productosMap.get(movimiento.productoId) || null : null,
     caja: movimiento.cajaId ? cajasMap.get(movimiento.cajaId) || null : null,
@@ -94,14 +93,10 @@ async function ObtenerMovimientos(): Promise<MovimientosExtendido[]> {
   }));
 }
 
-watch(fechaDesde, async () => {
-  fechaDesde.value.setHours(0,0);
-  movimientos.value = await ObtenerMovimientos();
-});
-
-watch(fechaHasta, async () => {
-  fechaHasta.value.setHours(23,59);
-  movimientos.value = await ObtenerMovimientos();
+watch(rangoFechas, async () => {
+  rangoFechas.value[0]?.setHours(0,0);
+  rangoFechas.value[1]?.setHours(23,59);
+  await ObtenerMovimientos();
 });
 
 watch(grupoSeleccionado, async () => {
@@ -164,43 +159,51 @@ async function Guardar() {
   }
 
   dialogVisible.value = false;
-  movimientos.value = await ObtenerMovimientos();
+  await ObtenerMovimientos();
 }
 </script>
 
 <template>
   <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-3">
     <div class="text-xl mr-5">MOVIMIENTOS</div>
-    <div>
-      <label for="fechaDesde" class="mr-2">Desde</label>
-      <DatePicker v-model="fechaDesde" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
-    </div>
-    <div>
-      <label for="fechaHasta" class="mr-2">Hasta</label>
-      <DatePicker v-model="fechaHasta" dateFormat="dd/mm/yy" show-icon :pt="{ pcInputText: { root: 'w-28' } }" />
-    </div>
+    <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
     <Button v-if="Usuario" label="Gestionar Inventario" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
   </div>
 
-  <DataTable :value="movimientos" show-gridlines striped-rows size="small" :paginator="movimientos.length > 10" :rows="10"
-      :loading="cargando" sortField="fechaCreacion" :sortOrder="-1">
-    <Column field="fechaCreacion" header="Fecha" style="width: 16%" sortable>
-      <template #body="{ data }">
-        {{ new Date(data.fechaCreacion).toLocaleString() }}
-      </template>
-    </Column>
-    <Column field="esIngreso" header="Tipo" style="width: 7%" sortable>
-      <template #body="{ data }">
-        {{ data.esIngreso ? 'Ingreso' : 'Egreso' }}
-      </template>
-    </Column>
-    <Column field="producto.nombre" header="Producto" style="width: 24%" sortable />
-    <Column field="caja.nombre" header="Caja" style="width: 5%" sortable />
-    <Column field="cantidad" header="Cantidad" style="width: 7%" sortable />
-    <Column field="almacenista.nombre" header="Almacenista" style="width: 9%" sortable />
-    <Column field="justificacion" header="Justificación" />
-    <Column field="creadoPor" header="Creado por" style="width: 10%" sortable />
-  </DataTable>
+  <DataView :value="movimientos" data-key="id" paginator :rows="10" :rows-per-page-options="[10, 20, 50]" :loading="cargando">
+    <template #list="{ items }">
+      <div class="flex flex-col gap-2">
+        <div
+          v-for="(item, index) in (items as MovimientosExtendido[])"
+          :key="item.id"
+          :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
+        >
+          <!-- Fila superior: fecha, tipo, creado por -->
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="text-sm text-surface-500 dark:text-surface-400">
+              {{ new Date(item.fechaCreacion).toLocaleString() }}
+            </span>
+            <Tag :value="item.esIngreso ? 'Ingreso' : 'Egreso'" :severity="item.esIngreso ? 'success' : 'danger'" />
+            <span class="text-surface-400 dark:text-surface-500 ml-auto">{{ item.creadoPor }}</span>
+          </div>
+          <!-- Fila del producto -->
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm mb-1">
+            <span class="font-semibold text-surface-700 dark:text-surface-200 break-words">{{ item.producto?.nombre ?? '—' }}</span>
+            <span class="text-surface-500 dark:text-surface-400">Caja: <b>{{ item.caja?.nombre ?? '—' }}</b></span>
+            <span class="text-surface-500 dark:text-surface-400">Cantidad: <b>{{ item.cantidad }}</b></span>
+            <span class="text-surface-500 dark:text-surface-400">Almacenista: <b>{{ item.almacenista?.nombre ?? '—' }}</b></span>
+          </div>
+          <!-- Justificación (solo si existe) -->
+          <div v-if="item.justificacion" class="text-surface-400 dark:text-surface-500 italic">
+            {{ item.justificacion }}
+          </div>
+        </div>
+      </div>
+    </template>
+    <template #empty>
+      <p class="text-center text-surface-400 py-6">No se encontraron movimientos para el rango de fechas seleccionado.</p>
+    </template>
+  </DataView>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="Gestionar Inventario" :clickAceptar="Guardar" class="w-2xl"
     :desabilitarAceptar="itemEdicion?.productoId == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenistaId === null
