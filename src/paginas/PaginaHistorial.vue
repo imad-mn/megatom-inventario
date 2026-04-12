@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Historial } from '@/servicios/modelos.ts';
 import { onMounted, ref, watch } from 'vue';
 import { ExportarHistorial } from '@/servicios/ImportarExportar';
-import { Usuario } from '@/servicios/shared';
+import { ObtenerHistorial } from '@/servicios/historialService';
+import { useAuthStore } from '@/servicios/authStore';
+
+const authStore = useAuthStore();
+const { Usuario } = authStore;
 
 const historial = ref<Historial[]>([]);
 const rangoFechas = ref<(Date | null)[]>([new Date(new Date().setDate(new Date().getDate() - 7)), new Date(new Date().setHours(23, 59))]);
@@ -14,18 +17,14 @@ async function cargarHistorial() {
   if (rangoFechas.value[0] && rangoFechas.value[1]) {
     try {
       loading.value = true;
-      historial.value = await TablesDbService.ObtenerHistorial(rangoFechas.value[0], rangoFechas.value[1], usuario.value);
-    } catch (error) {
-      console.error('Error al cargar el historial:', error);
+      historial.value = await ObtenerHistorial(rangoFechas.value[0], rangoFechas.value[1], usuario.value);
     } finally {
       loading.value = false;
     }
   }
 }
 
-onMounted(async () => {
-  await cargarHistorial();
-});
+onMounted(async () => await cargarHistorial());
 
 watch(rangoFechas, async () => {
   rangoFechas.value[0]?.setHours(0,0);
@@ -38,7 +37,7 @@ watch(usuario, async () => {
 });
 
 async function DescargarHistorial() {
-  const csv = await ExportarHistorial();
+  const csv = await ExportarHistorial(historial.value);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Cantidades, Galpon, Lista, Producto } from '@/servicios/modelos.ts';
-import { computed, onMounted, ref, watchEffect } from 'vue';
+import type { Caja, Cantidades, Estante, Galpon, Lista, Nivel, Producto, Seccion } from '@/servicios/modelos.ts';
+import { ref, watchEffect } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
-import { Usuario } from '@/servicios/shared';
 import { Importar, Exportar } from '@/servicios/ImportarExportar';
-import { ObtenerUbicaciones, dialogoHistorial } from '@/servicios/shared';
+import { useGlobalStore } from '@/servicios/globalStore';
+import { useAuthStore } from '@/servicios/authStore';
+import { RegistrarHistorial } from '@/servicios/historialService';
 
 const confirm = useConfirm();
 
-const grupos = TablesDbService.ObtenerLista('grupos');
-const fabricantes = TablesDbService.ObtenerLista('fabricantes');
-const productos = ref<Producto[]>([]);
+const globalStore = useGlobalStore();
+const { Productos } = globalStore;
+
+const authStore = useAuthStore();
+const Usuario = authStore.Usuario;
+
+const grupos = globalStore.ObtenerLista('grupos');
+const fabricantes = globalStore.ObtenerLista('fabricantes');
 const productosFiltrados = ref<Producto[]>([]);
 
 const filtroGrupo = ref<Lista | null>(null);
@@ -30,6 +36,7 @@ const grupoDict = ref<Record<string, string>>({});
 const fabricanteDict = ref<Record<string, string>>({});
 grupoDict.value = Object.fromEntries(grupos.map(x => [x.id, x.nombre]));;
 fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
+const ubicacionDict = ref<Record<string, string[]>>({});
 
 let archivoFoto: File | undefined;
 const imagenEdicion = ref<string>();
@@ -43,29 +50,8 @@ const mostrarMensajeImportacion = ref(false);
 const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
-const ubicacionDict = ref<Record<string, string[]>>({});
-const galponesData = ref<Galpon[]>([]);
-const imagenesDict = ref<Record<string, string>>({});
-const cargando = ref(false);
-
-async function CargarImagenes(lista: Producto[]) {
-  for (const p of lista) {
-    if (p.imagenUrl && !imagenesDict.value[p.imagenUrl]) {
-      imagenesDict.value[p.imagenUrl] = await StorageService.Url(p.imagenUrl);
-    }
-  }
-}
-
-onMounted(async () => {
-  cargando.value = true;
-  productos.value = await TablesDbService.ObtenerTodos<Producto>(TablesDbService.Coleccion.Productos);
-  galponesData.value = await TablesDbService.ObtenerTodos<Galpon>(TablesDbService.Coleccion.Galpones);
-  cargando.value = false;
-  await CargarImagenes(productos.value);
-})
-
 watchEffect(() => {
-  productosFiltrados.value = productos.value.filter(p => {
+  productosFiltrados.value = Productos.filter(p => {
     return (filtroTexto.value.trim() === ''
         || p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase())
@@ -78,17 +64,12 @@ watchEffect(() => {
   productosFiltrados.value.sort((a,b) => a.nombre.localeCompare(b.nombre));
 });
 
-const galponSeleccionado = ref<string | null>(null);
-const estanteSeleccionado = ref<string | null>(null);
-const nivelSeleccionado = ref<string | null>(null);
-const seccionSeleccionada = ref<string | null>(null);
-const cajaSeleccionada = ref<string | null>(null);
+const galponSeleccionado = ref<Galpon | null>(null);
+const estanteSeleccionado = ref<Estante | null>(null);
+const nivelSeleccionado = ref<Nivel | null>(null);
+const seccionSeleccionada = ref<Seccion | null>(null);
+const cajaSeleccionada = ref<Caja | null>(null);
 const cantidadInicial = ref<number>(1);
-const galpones = computed(() => galponesData.value);
-const estantes = computed(() => galponesData.value.find(g => g.id === galponSeleccionado.value)?.estantes ?? []);
-const niveles = computed(() => estantes.value.find(e => e.id === estanteSeleccionado.value)?.niveles ?? []);
-const secciones = computed(() => niveles.value.find(n => n.id === nivelSeleccionado.value)?.secciones ?? []);
-const cajas = computed(() => secciones.value.find(s => s.id === seccionSeleccionada.value)?.cajas ?? []);
 
 function Agregar() {
   esNuevo.value = true;
@@ -112,37 +93,33 @@ async function Guardar() {
     if (archivoFoto) {
       itemEdicion.value.imagenUrl = await StorageService.Subir(archivoFoto);
       archivoFoto = undefined;
-      // Resolver la URL de la nueva imagen para mostrarla en el listado
-      if (itemEdicion.value.imagenUrl)
-        imagenesDict.value[itemEdicion.value.imagenUrl] = await StorageService.Url(itemEdicion.value.imagenUrl);
     }
 
     const productoNuevo = Stringify(itemEdicion.value);
     if (esNuevo.value) {
       await TablesDbService.Crear(TablesDbService.Coleccion.Productos, itemEdicion.value!);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, '[Producto] Creado', null, productoNuevo);
-      productos.value.push({ ...itemEdicion.value! });
+      await RegistrarHistorial(itemEdicion.value!.id, '[Producto] Creado', null, productoNuevo);
+      Productos.push({ ...itemEdicion.value! });
 
       if (cajaSeleccionada.value && cantidadInicial.value > 0) {
         const item: Cantidades = {
           id: '',
           productoId: itemEdicion.value.id,
           cantidad: cantidadInicial.value,
-          cajaId: cajaSeleccionada.value
+          cajaId: cajaSeleccionada.value.id
         };
         await TablesDbService.Crear(TablesDbService.Coleccion.Cantidades, item);
-        const caja = cajas.value.find(x => x.id === cajaSeleccionada.value);
-        await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, `'${itemEdicion.value!.nombre}' agregado a caja: ${caja?.nombre} (${cantidadInicial.value} unidades)`);
+        await RegistrarHistorial(itemEdicion.value!.id, `'${itemEdicion.value!.nombre}' agregado a caja: ${cajaSeleccionada.value.nombre} (${cantidadInicial.value} unidades)`);
       }
       dialogVisible.value = false;
     } else {
-      const anterior = productos.value.find(x => x.id === itemEdicion.value!.id);
+      const anterior = Productos.find(x => x.id === itemEdicion.value!.id);
       if (anterior) {
         await TablesDbService.Actualizar(TablesDbService.Coleccion.Productos, itemEdicion.value!);
         const productoAnterior = Stringify(anterior);
-        await TablesDbService.RegistrarHistorial(itemEdicion.value!.id, '[Producto] Modificado', productoAnterior, productoNuevo);
-        const indice = productos.value.indexOf(anterior);
-        productos.value[indice] = { ...itemEdicion.value! };
+        await RegistrarHistorial(itemEdicion.value!.id, '[Producto] Modificado', productoAnterior, productoNuevo);
+        const indice = Productos.indexOf(anterior);
+        Productos[indice] = { ...itemEdicion.value! };
         dialogVisible.value = false;
       }
     }
@@ -154,7 +131,7 @@ async function Guardar() {
 async function Editar(item: Producto) {
   esNuevo.value = false;
   itemEdicion.value = { ...item };
-  imagenEdicion.value = item.imagenUrl ? await StorageService.Url(item.imagenUrl) : undefined;
+  imagenEdicion.value = item.imagenUrl ?? undefined;
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
 }
@@ -167,13 +144,13 @@ function Quitar(item: Producto): void {
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
     accept: async () => {
-      const anterior = productos.value.find(x => x.id === item.id);
+      const anterior = Productos.find(x => x.id === item.id);
       if (anterior) {
         await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
         const anteriorJson = Stringify(anterior);
-        await TablesDbService.RegistrarHistorial(item.id, '[Producto] Eliminado', anteriorJson, null);
-        const indice = productos.value.indexOf(anterior);
-        productos.value.splice(indice, 1);
+        await RegistrarHistorial(item.id, '[Producto] Eliminado', anteriorJson, null);
+        const indice = Productos.indexOf(anterior);
+        Productos.splice(indice, 1);
         await StorageService.Eliminar(item.id);
       }
     }
@@ -194,7 +171,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
 }
 
 function RevisarNombreUnico() {
-  if (productos.value.findIndex(x => x.nombre == itemEdicion.value?.nombre) >= 0)
+  if (Productos.findIndex(x => x.nombre == itemEdicion.value?.nombre) >= 0)
     mostrarAdvertencia.value = true;
   else
     mostrarAdvertencia.value = false;
@@ -224,9 +201,9 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
     });
 }
 
-async function VerUbicacion(productoId: string) {
-  const cantidades = await TablesDbService.ObtenerCantidadesPorProducto(productoId);
-  const ubicaciones = ObtenerUbicaciones(cantidades, galponesData.value);
+function VerUbicacion(productoId: string) {
+  const cantidades = globalStore.ObtenerCantidadesPorProducto(productoId);
+  const ubicaciones = globalStore.ObtenerUbicaciones(cantidades);
   ubicacionDict.value[productoId] = ubicaciones;
 }
 
@@ -235,9 +212,9 @@ function Stringify(item: Producto): string {
 }
 
 function onHistorialClick(item: Producto) {
-  dialogoHistorial.value.mostrar = true;
-  dialogoHistorial.value.idElemento = item.id;
-  dialogoHistorial.value.nombreElemento = item.nombre;
+  globalStore.dialogoHistorial.mostrar = true;
+  globalStore.dialogoHistorial.idElemento = item.id;
+  globalStore.dialogoHistorial.nombreElemento = item.nombre;
 }
 
 async function DescargarExportacion() {
@@ -271,7 +248,7 @@ async function DescargarExportacion() {
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <Card v-for="item in slotProps.items" :key="item.id" style="overflow: hidden">
           <template #header>
-            <img v-if="item.imagenUrl && imagenesDict[item.imagenUrl]" :src="imagenesDict[item.imagenUrl]" alt="Foto" />
+            <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" />
           </template>
           <template #title>{{ item.nombre }}</template>
           <template #subtitle>{{ item.descripcion }}</template>
@@ -342,23 +319,23 @@ async function DescargarExportacion() {
       <div v-if="esNuevo" class="flex flex-col gap-3">
         <b>Ubicación</b>
         <FloatLabel variant="on">
-          <Select v-model="galponSeleccionado" :options="galpones" optionLabel="nombre" optionValue="id" showClear class="w-full" />
+          <Select v-model="galponSeleccionado" :options="globalStore.Galpones" optionLabel="nombre" optionValue="id" showClear class="w-full" />
           <label>Galpón</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="estanteSeleccionado" :options="estantes" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!galponSeleccionado" />
+          <Select v-model="estanteSeleccionado" :options="galponSeleccionado?.estantes" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!galponSeleccionado" />
           <label>Estante</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="nivelSeleccionado" :options="niveles" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!estanteSeleccionado" />
+          <Select v-model="nivelSeleccionado" :options="estanteSeleccionado?.niveles" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!estanteSeleccionado" />
           <label>Nivel</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="seccionSeleccionada" :options="secciones" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!nivelSeleccionado" />
+          <Select v-model="seccionSeleccionada" :options="nivelSeleccionado?.secciones" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!nivelSeleccionado" />
           <label>Sección</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="cajaSeleccionada" :options="cajas" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!seccionSeleccionada" />
+          <Select v-model="cajaSeleccionada" :options="seccionSeleccionada?.cajas" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!seccionSeleccionada" />
           <label>Caja</label>
         </FloatLabel>
         <FloatLabel variant="on">
@@ -387,9 +364,4 @@ async function DescargarExportacion() {
       <Message severity="success" v-show="mostrarMensajeImportacion">Los productos se han importado correctamente.</Message>
     </div>
   </Dialog>
-
-  <!-- Overlay de carga -->
-  <div v-if="cargando" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <ProgressSpinner />
-  </div>
 </template>

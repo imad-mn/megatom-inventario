@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth } from '@/servicios/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { Usuario } from '@/servicios/shared';
+import { useAuthStore } from '@/servicios/authStore';
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')
@@ -16,8 +15,8 @@ const severidad = ref<'info' | 'warn' | 'error' | 'success'>('info')
 const iniciarSesion = async () => {
   isLoading.value = true
   try {
-    await auth.signOut();
-    Usuario.value = await signInWithEmailAndPassword(auth, email.value, password.value);
+    await authStore.logOut();
+    await authStore.logIn(email.value, password.value);
     mensaje.value = 'Sesión iniciada con éxito.'
     severidad.value = 'success'
     router.push('/')

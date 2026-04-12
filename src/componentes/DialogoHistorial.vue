@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import * as TablesDbService from '@/servicios/TablesDbService';
 import { ref, watch } from 'vue';
 import type { Historial } from '@/servicios/modelos';
+import { ObtenerHistorialPorElemento } from '@/servicios/historialService';
 
 const props = defineProps<{ id: string, nombre: string }>();
 const mostrar = defineModel<boolean>('mostrar');
@@ -9,7 +9,7 @@ const historial = ref<Historial[]>([]);
 
 watch(
   () => props.id,
-  async (newId: string) => historial.value = await TablesDbService.ObtenerHistorialPorElemento(newId),
+  async (newId: string) => historial.value = await ObtenerHistorialPorElemento(newId),
   { immediate: true }
 );
 </script>

@@ -1,0 +1,35 @@
+import { collection, getDocs, query, where, type QueryConstraint } from "firebase/firestore";
+import { useAuthStore } from "./authStore";
+import { Coleccion, CrearConFecha, createConverterConFecha, ObtenerConFiltroFecha } from "./TablesDbService";
+import type { Historial } from "./modelos";
+import { db } from "./firebase";
+
+export async function RegistrarHistorial(idElemento: string, accion: string, anterior: string | null = null, actual: string | null = null): Promise<void> {
+  const { Usuario } = useAuthStore();
+  if (!Usuario) return;
+
+  const historialEntry = {
+    id: '', // Firestore generará el ID automáticamente
+    idElemento,
+    usuario: Usuario.user.displayName,
+    accion,
+    anterior,
+    actual,
+    fechaCreacion: new Date(),
+  };
+
+  await CrearConFecha(Coleccion.Historial, historialEntry);
+}
+
+// Función para obtener el historial por rango de fechas y opcionalmente por usuario
+export async function ObtenerHistorial(fechaDesde: Date, fechaHasta: Date, usuario: string | null): Promise<Historial[]> {
+  const extraQueries: QueryConstraint[] = usuario ? [where('usuario', '==', usuario)] : [];
+  return ObtenerConFiltroFecha<Historial>(Coleccion.Historial, fechaDesde, fechaHasta, extraQueries);
+}
+
+// Función para obtener todo el historial de un elemento específico
+export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
+  const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
+  const respuesta = await getDocs(query(collRef, where('idElemento', '==', idElemento)));
+  return respuesta.docs.map(d => d.data());
+}

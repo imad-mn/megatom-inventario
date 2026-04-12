@@ -1,26 +1,29 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { Lista, TipoLista } from '@/servicios/modelos.ts';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
 import * as TablesDbService from '@/servicios/TablesDbService';
 import DialogoEdicion from './DialogoEdicion.vue';
-import { Listas, Usuario } from '@/servicios/shared';
+import { useGlobalStore } from '@/servicios/globalStore';
+import { useAuthStore } from '@/servicios/authStore';
+import { RegistrarHistorial } from '@/servicios/historialService';
 
 interface ListaEditableProps {
   tipo: TipoLista;
 }
 const props = defineProps<ListaEditableProps>();
 const confirm = useConfirm();
+const globalStore = useGlobalStore();
+const usuario = useAuthStore().Usuario;
 
 const dialogVisible = ref(false);
 const itemEdicion = ref<Lista>({ id: '', tipo: props.tipo, nombre: '' });
 const esNuevo = ref(false);
 const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
 
-const itemsFiltrados = computed(() =>
-  Listas.value.filter(x => x.tipo === props.tipo)
-);
+const itemsFiltrados = globalStore.ObtenerLista(props.tipo);
+const { Listas } = globalStore;
 
 function Agregar() {
   esNuevo.value = true;
@@ -37,15 +40,15 @@ function Editar(item: Lista) {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear(TablesDbService.Coleccion.Listas, itemEdicion.value);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Creado`, null, itemEdicion.value.nombre);
-    Listas.value.push({ ...itemEdicion.value });
+    await RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Creado`, null, itemEdicion.value.nombre);
+    Listas.push({ ...itemEdicion.value });
   } else {
-    const anterior = Listas.value.find(x => x.id === itemEdicion.value.id);
+    const anterior = Listas.find(x => x.id === itemEdicion.value.id);
     if (anterior) {
       await TablesDbService.Actualizar(TablesDbService.Coleccion.Listas, itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Modificado`, anterior.nombre, itemEdicion.value.nombre);
-      const indice = Listas.value.findIndex(x => x.id === itemEdicion.value.id);
-      Listas.value[indice] = { ...itemEdicion.value };
+      await RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Modificado`, anterior.nombre, itemEdicion.value.nombre);
+      const indice = Listas.findIndex(x => x.id === itemEdicion.value.id);
+      Listas[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
@@ -59,12 +62,12 @@ function Quitar(item: Lista): void {
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
     accept: async () => {
-      const indice = Listas.value.findIndex(x => x.id === item.id);
+      const indice = Listas.findIndex(x => x.id === item.id);
       if (indice >= 0) {
         const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
-        await TablesDbService.RegistrarHistorial(item.id, `[${tipoElemento}] Eliminado`, item.nombre, null);
+        await RegistrarHistorial(item.id, `[${tipoElemento}] Eliminado`, item.nombre, null);
         await TablesDbService.Eliminar(TablesDbService.Coleccion.Listas, item);
-        Listas.value.splice(indice, 1);
+        Listas.splice(indice, 1);
       }
     }
   });
@@ -74,11 +77,11 @@ function Quitar(item: Lista): void {
 <template>
   <Panel :header="props.tipo.charAt(0).toUpperCase() + props.tipo.substring(1)" class="w-full md:w-sm">
     <template #icons>
-      <Button v-if="Usuario" label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
+      <Button v-if="usuario" label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>
     <div v-for="item in itemsFiltrados" :key="item.id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
       <div>{{ item.nombre }}</div>
-      <EditarQuitar v-if="Usuario" tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" :id-elemento="item.id" :nombre-elemento="item.nombre" />
+      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" :id-elemento="item.id" :nombre-elemento="item.nombre" />
     </div>
   </Panel>
 

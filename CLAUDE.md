@@ -68,7 +68,9 @@ All backend interaction goes through [src/servicios/](src/servicios/):
 - **`StorageService.ts`** — Product image upload/download via Firebase Storage
 - **`ImportarExportar.ts`** — CSV import/export logic using PapaParse
 - **`modelos.ts`** — All TypeScript type definitions
-- **`shared.ts`** — Global reactive state (`Usuario`, `Listas`, `GalponSeleccionado`, `EstanteSeleccionado`, `dialogoHistorial`) and shared utilities
+- **`globalStore.ts`** — Pinia store for global app state: `Listas`, `Galpones`, `Productos`, `Cantidades`, `GalponSeleccionado`, `EstanteSeleccionado`, `dialogoHistorial`. Also exposes helper methods (`ObtenerLista`, `ObtenerUbicaciones`, etc.). Loaded once at app startup via `CargarTodo()` in `App.vue`.
+- **`authStore.ts`** — Pinia store for auth state: `Usuario` (`UserCredential | undefined`), `logIn`, `logOut`.
+- **`historialService.ts`** — Helpers to write and query `Historial` entries in Firestore.
 
 ### Data Model
 
@@ -82,13 +84,17 @@ Defined in [src/servicios/modelos.ts](src/servicios/modelos.ts):
 
 ### State Management
 
-No external state library. Uses Vue 3 reactivity (`ref`, `computed`, `watchEffect`) directly. Global state lives as exported reactive refs in `shared.ts` (`Usuario`, `Listas`, `GalponSeleccionado`, `EstanteSeleccionado`, `dialogoHistorial`).
+Uses **Pinia** stores (no Vuex). Two stores:
+- `useGlobalStore()` — app data (galpones, productos, cantidades, listas). Never call at module level; always call inside functions or component setup.
+- `useAuthStore()` — authentication state.
+
+The same rule applies to any helper file that uses a store (e.g. `ImportarExportar.ts`, `historialService.ts`): call `useXStore()` inside the function body, not at the top of the module, or Pinia will throw `"getActivePinia() was called but there was no active Pinia"`.
 
 ### Authentication
 
-- Firebase Authentication; `Usuario` reactive ref (from `shared.ts`) holds a `UserCredential` or `undefined`
-- Admin-only pages (`/historial`, `/listas`) check `Usuario.value` before showing controls
-- Export buttons for Historial are restricted to specific user display names (`imad`, `giovanni`)
+- Firebase Authentication; `Usuario` ref in `authStore` holds a `UserCredential` or `undefined`.
+- Admin-only pages (`/historial`, `/listas`) check `authStore.Usuario` before showing controls.
+- Export buttons for Historial are restricted to specific user display names (`Imad`, `Giovanni`).
 
 ### Styling
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { dialogoHistorial } from '@/servicios/shared';
 import type { Menu } from 'primevue';
 import type { MenuItem } from 'primevue/menuitem';
 import { ref } from 'vue';
+import { useGlobalStore } from '@/servicios/globalStore';
 
 interface EditarQuitarProps {
   onAgregarClick?: () => void;
@@ -16,10 +16,13 @@ interface EditarQuitarProps {
 }
 const props = defineProps<EditarQuitarProps>();
 
+const globalStore = useGlobalStore();
+const { dialogoHistorial } = globalStore;
+
 function onHistorialClick() {
-  dialogoHistorial.value.mostrar = true;
-  dialogoHistorial.value.idElemento = props.idElemento;
-  dialogoHistorial.value.nombreElemento = props.nombreElemento;
+  dialogoHistorial.mostrar = true;
+  dialogoHistorial.idElemento = props.idElemento;
+  dialogoHistorial.nombreElemento = props.nombreElemento;
 }
 
 const botones = ref<MenuItem[]>([

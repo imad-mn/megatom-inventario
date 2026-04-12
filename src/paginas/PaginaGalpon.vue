@@ -6,14 +6,19 @@ import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
-import { EstanteSeleccionado, GalponSeleccionado, Usuario } from '@/servicios/shared';
+import { RegistrarHistorial } from '@/servicios/historialService';
+import { useGlobalStore } from '@/servicios/globalStore';
+import { useAuthStore } from '@/servicios/authStore';
 
 const confirm = useConfirm();
 const router = useRouter();
+const globalStore = useGlobalStore();
+const { GalponSeleccionado } = globalStore;
+const Usuario = useAuthStore().Usuario;
 
 const estantes = computed(() =>
-  [...GalponSeleccionado.value!.estantes].sort((a, b) =>
-    GalponSeleccionado.value!.ordenDescendente
+  [...GalponSeleccionado!.estantes].sort((a, b) =>
+    GalponSeleccionado!.ordenDescendente
       ? b.nombre.localeCompare(a.nombre)
       : a.nombre.localeCompare(b.nombre)
   )
@@ -34,30 +39,30 @@ function Agregar() {
 async function Guardar() {
   if (esNuevo.value) {
     const nuevoEstante: Estante = { ...itemEdicion.value, niveles: [] };
-    GalponSeleccionado.value!.estantes.push(nuevoEstante);
-    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Estante] Creado', null, itemEdicion.value.nombre);
+    GalponSeleccionado!.estantes.push(nuevoEstante);
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
+    await RegistrarHistorial(itemEdicion.value.id, '[Estante] Creado', null, itemEdicion.value.nombre);
   } else if (esEditandoGalpon.value) {
-    const nombreAnterior = GalponSeleccionado.value!.nombre;
-    GalponSeleccionado.value!.nombre = itemEdicion.value.nombre;
-    GalponSeleccionado.value!.ordenDescendente = itemEdicion.value.ordenDescendente;
-    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
-    await TablesDbService.RegistrarHistorial(GalponSeleccionado.value!.id, '[Galpón] Modificado', nombreAnterior, itemEdicion.value.nombre);
+    const nombreAnterior = GalponSeleccionado!.nombre;
+    GalponSeleccionado!.nombre = itemEdicion.value.nombre;
+    GalponSeleccionado!.ordenDescendente = itemEdicion.value.ordenDescendente;
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
+    await RegistrarHistorial(GalponSeleccionado!.id, '[Galpón] Modificado', nombreAnterior, itemEdicion.value.nombre);
   } else {
-    const estante = GalponSeleccionado.value!.estantes.find(e => e.id === itemEdicion.value.id);
+    const estante = GalponSeleccionado!.estantes.find(e => e.id === itemEdicion.value.id);
     if (estante) {
       const nombreAnterior = estante.nombre;
       estante.nombre = itemEdicion.value.nombre;
       estante.ordenDescendente = itemEdicion.value.ordenDescendente;
-      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Estante] Modificado', nombreAnterior, itemEdicion.value.nombre);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
+      await RegistrarHistorial(itemEdicion.value.id, '[Estante] Modificado', nombreAnterior, itemEdicion.value.nombre);
     }
   }
   dialogVisible.value = false;
 }
 
 function Ver(item: Estante) {
-  EstanteSeleccionado.value = item;
+  globalStore.EstanteSeleccionado = item;
   router.push({ name: 'Estante', params: { estante: item.id } });
 }
 
@@ -76,9 +81,9 @@ function Quitar(item: Estante): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await TablesDbService.RegistrarHistorial(item.id, '[Estante] Eliminado', item.nombre, null);
-      GalponSeleccionado.value!.estantes = GalponSeleccionado.value!.estantes.filter(e => e.id !== item.id);
-      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado.value!);
+      await RegistrarHistorial(item.id, '[Estante] Eliminado', item.nombre, null);
+      GalponSeleccionado!.estantes = GalponSeleccionado!.estantes.filter(e => e.id !== item.id);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
     }
   });
 }
@@ -91,12 +96,12 @@ function Quitar(item: Estante): void {
       <span class="p-button-label hidden md:inline">Galpones</span>
     </Button>
     <div class="text-xl">GALPÓN {{GalponSeleccionado!.nombre}}</div>
-    <div>
-      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
+    <div v-if="Usuario">
+      <Button severity="success" variant="outlined" class="mr-2" @click="Editar(GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
         <span class="p-button-label hidden md:inline">Galpón</span>
       </Button>
-      <Button v-if="Usuario" label="Estante" class="w-auto" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Estante'">
+      <Button label="Estante" class="w-auto" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Estante'">
         <span class="p-button-icon p-button-icon-left pi pi-plus" />
         <span class="p-button-label hidden md:inline">Estante</span>
       </Button>
@@ -113,7 +118,7 @@ function Quitar(item: Estante): void {
           <div>{{ 'Estante ' + item.nombre }}</div>
         </div>
       </Button>
-      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="item.nombre" />
+      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="item.nombre" />
     </div>
   </div>
 

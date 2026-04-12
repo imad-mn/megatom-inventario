@@ -19,6 +19,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "firebase": "^12.11.0",
     "papaparse": "^5.5.3",
+    "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
     "tailwindcss": "^4.1.16",

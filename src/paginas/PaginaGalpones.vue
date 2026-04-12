@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Galpon } from '@/servicios/modelos.ts';
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from 'vue-router';
 import { Button } from 'primevue';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
-import { GalponSeleccionado, Usuario } from '@/servicios/shared';
+import { useAuthStore } from '@/servicios/authStore';
+import { useGlobalStore } from '@/servicios/globalStore';
+import { RegistrarHistorial } from '@/servicios/historialService';
+
+const authStore = useAuthStore();
+const { Usuario } = authStore;
 
 const confirm = useConfirm();
 const router = useRouter();
@@ -15,11 +20,9 @@ const router = useRouter();
 const dialogVisible = ref(false);
 const itemEdicion = ref<Galpon>({ id: '', nombre: '', ordenDescendente: false, estantes: [] });
 const esNuevo = ref(false);
-const galpones = ref<Galpon[]>([]);
 
-onMounted(async () => {
-  galpones.value = await TablesDbService.ObtenerTodos<Galpon>(TablesDbService.Coleccion.Galpones);
-});
+const globalStore = useGlobalStore();
+const { Galpones } = globalStore;
 
 function Agregar() {
   esNuevo.value = true;
@@ -30,21 +33,21 @@ function Agregar() {
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear(TablesDbService.Coleccion.Galpones, itemEdicion.value);
-    await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, itemEdicion.value.nombre);
-    galpones.value.push({ ...itemEdicion.value });
+    await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, itemEdicion.value.nombre);
+    Galpones.push({ ...itemEdicion.value });
   } else {
-    const indice = galpones.value.findIndex(x => x.id === itemEdicion.value.id);
+    const indice = Galpones.findIndex(x => x.id === itemEdicion.value.id);
     if (indice >= 0) {
       await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, itemEdicion.value);
-      await TablesDbService.RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', galpones.value[indice]?.nombre, itemEdicion.value.nombre);
-      galpones.value[indice] = { ...itemEdicion.value };
+      await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', Galpones[indice]?.nombre, itemEdicion.value.nombre);
+      Galpones[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
 }
 
 function Ver(item: Galpon) {
-  GalponSeleccionado.value = item;
+  globalStore.GalponSeleccionado = item;
   router.push({ name: 'Galpón', params: { id: item.id } });
 }
 
@@ -62,10 +65,10 @@ function Quitar(item: Galpon): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await TablesDbService.RegistrarHistorial(item.id, '[Galpón] Eliminado', item.nombre, null);
-      const indice = galpones.value.findIndex(x => x.id === item.id);
+      await RegistrarHistorial(item.id, '[Galpón] Eliminado', item.nombre, null);
+      const indice = Galpones.findIndex(x => x.id === item.id);
       await TablesDbService.Eliminar(TablesDbService.Coleccion.Galpones, item);
-      if (indice >= 0) galpones.value.splice(indice, 1);
+      if (indice >= 0) Galpones.splice(indice, 1);
     }
   });
 }
@@ -80,9 +83,9 @@ function Quitar(item: Galpon): void {
     </div>
   </div>
 
-  <div v-if="galpones.length === 0" class="italic text-muted-color mt-3">No hay galpones</div>
+  <div v-if="Galpones.length === 0" class="italic text-muted-color mt-3">No hay galpones</div>
   <div class="flex flex-wrap gap-2 justify-center">
-    <div v-for="item in galpones" :key="item.id"
+    <div v-for="item in Galpones" :key="item.id"
       class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>
@@ -90,7 +93,7 @@ function Quitar(item: Galpon): void {
           <div>{{ 'Galpón ' + item.nombre }}</div>
         </div>
       </Button>
-      <EditarQuitar v-if="Usuario" @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="item.nombre" />
+      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="item.nombre" />
     </div>
   </div>
 

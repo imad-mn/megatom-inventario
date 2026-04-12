@@ -3,12 +3,16 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
-import { Coleccion, ObtenerTodos } from './servicios/TablesDbService';
 import DialogoHistorial from './componentes/DialogoHistorial.vue';
-import { dialogoHistorial, Listas, Usuario } from './servicios/shared';
-import { auth } from './servicios/firebase';
+import { useGlobalStore } from './servicios/globalStore';
+import { useAuthStore } from './servicios/authStore';
 
 const router = useRouter();
+const globalStore = useGlobalStore();
+const authStore = useAuthStore();
+const cargando = ref(false);
+
+const { dialogoHistorial, CargarTodo } = globalStore;
 
 const menuItems = ref<MenuItem[]>([
   {
@@ -41,16 +45,17 @@ const menuItems = ref<MenuItem[]>([
 ]);
 
 const menuItemsVisibles = computed(() =>
-  menuItems.value.filter(item => !(item as MenuItem & { isAdmin?: boolean }).isAdmin || Usuario.value)
+  menuItems.value.filter(item => !(item as MenuItem & { isAdmin?: boolean }).isAdmin || authStore.Usuario)
 );
 
 onMounted(async () => {
-  Listas.value = await ObtenerTodos(Coleccion.Listas);
+  cargando.value = true;
+  await CargarTodo();
+  cargando.value = false;
 })
 
 async function cerrarSesion() {
-  await auth.signOut();
-  Usuario.value = undefined;
+  await authStore.logOut();
   router.push('/');
 }
 </script>
@@ -66,8 +71,8 @@ async function cerrarSesion() {
       </RouterLink>
     </template>
     <template #end>
-      <div v-if="Usuario">
-        <span><i class="pi pi-user" />&nbsp;{{ Usuario.user.displayName }}</span>
+      <div v-if="authStore.Usuario">
+        <span><i class="pi pi-user" />&nbsp;{{ authStore.Usuario.user.displayName }}</span>
         <Button
           icon="pi pi-sign-out"
           variant="text"
@@ -77,7 +82,7 @@ async function cerrarSesion() {
         />
       </div>
       <Button
-        v-if="!Usuario"
+        v-if="!authStore.Usuario"
         label="Admin"
         icon="pi pi-key"
         variant="text"
@@ -89,4 +94,8 @@ async function cerrarSesion() {
   <RouterView />
   <ConfirmDialog />
   <DialogoHistorial v-model:mostrar="dialogoHistorial.mostrar" :id="dialogoHistorial.idElemento" :nombre="dialogoHistorial.nombreElemento" />
+
+  <div v-if="cargando" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <ProgressSpinner />
+  </div>
 </template>

@@ -1,7 +1,8 @@
 import Papa from 'papaparse';
-import { Actualizar, Coleccion, Crear, CrearYObtenerID, ObtenerTodos, RegistrarHistorial } from './TablesDbService';
+import { Actualizar, Coleccion, Crear } from './TablesDbService';
 import type { Cantidades, Estante, Galpon, Historial, IdNombre, Lista, Nivel, Producto, Seccion } from './modelos';
-import { Listas } from './shared';
+import { useGlobalStore } from './globalStore';
+import { RegistrarHistorial } from './historialService';
 
 export type Fila = {
   galpon: string;
@@ -21,11 +22,8 @@ export type Fila = {
 
 /** Contexto compartido durante la importación: datos ya cargados y mutables para ir agregando nuevos. */
 interface ContextoImportacion {
-  productos: Producto[];
   grupos: Lista[];
   fabricantes: Lista[];
-  cantidades: Cantidades[];
-  galpones: Galpon[];
   galponesModificados: Set<string>;
 }
 
@@ -63,12 +61,10 @@ async function ProcesarArchivo(
   data: Fila[],
   reportarProgreso: (cont: number) => void
 ): Promise<void> {
+  const globalStore = useGlobalStore();
   const ctx: ContextoImportacion = {
-    productos: await ObtenerTodos<Producto>(Coleccion.Productos),
-    grupos: Listas.value.filter((l) => l.tipo === 'grupos'),
-    fabricantes: Listas.value.filter((l) => l.tipo === 'fabricantes'),
-    cantidades: await ObtenerTodos<Cantidades>(Coleccion.Cantidades),
-    galpones: await ObtenerTodos<Galpon>(Coleccion.Galpones),
+    grupos: globalStore.ObtenerLista('grupos'),
+    fabricantes: globalStore.ObtenerLista('fabricantes'),
     galponesModificados: new Set(),
   };
 
@@ -84,7 +80,7 @@ async function ProcesarArchivo(
   }
 
   // Guardar todos los galpones que fueron modificados
-  for (const galpon of ctx.galpones) {
+  for (const galpon of globalStore.Galpones) {
     if (ctx.galponesModificados.has(galpon.id)) {
       await Actualizar(Coleccion.Galpones, galpon);
     }
@@ -100,12 +96,13 @@ function parsearPesoUnitarioFila(valor: string): number {
 }
 
 async function obtenerOCrearGalpon(ctx: ContextoImportacion, nombre: string): Promise<Galpon> {
-  const existente = ctx.galpones.find(g => g.nombre === nombre);
+  const globalStore = useGlobalStore();
+  const existente = globalStore.Galpones.find(g => g.nombre === nombre);
   if (existente) return existente;
 
   const galpon: Galpon = { id: '', nombre, ordenDescendente: false, estantes: [] };
-  galpon.id = await CrearYObtenerID(Coleccion.Galpones, galpon);
-  ctx.galpones.push(galpon);
+  galpon.id = await Crear(Coleccion.Galpones, galpon);
+  globalStore.Galpones.push(galpon);
   await RegistrarHistorial(galpon.id, '[Galpon] Creado', null, nombre);
   return galpon;
 }
@@ -151,6 +148,7 @@ function obtenerOCrearCaja(ctx: ContextoImportacion, galpon: Galpon, seccion: Se
 }
 
 async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void> {
+  const globalStore = useGlobalStore();
   const galpon = await obtenerOCrearGalpon(ctx, fila.galpon);
   const estante = obtenerOCrearEstante(ctx, galpon, fila.estante);
   const nivel = obtenerOCrearNivel(ctx, galpon, estante, fila.nivel);
@@ -160,10 +158,10 @@ async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void>
   const grupo = await obtenerOCrearLista(ctx.grupos, 'grupos', fila.grupo);
   const fabricante = await obtenerOCrearLista(ctx.fabricantes, 'fabricantes', fila.fabricante);
 
-  const producto = await obtenerOCrearProducto(fila, grupo.id, fabricante.id, ctx.productos);
+  const producto = await obtenerOCrearProducto(fila, grupo.id, fabricante.id, globalStore.Productos);
 
   const cantidad = parsearCantidadFila(fila.cantidad);
-  const itemCantidad = ctx.cantidades.find(
+  const itemCantidad = globalStore.Cantidades.find(
     (c) => c.cajaId === cajon.id && c.productoId === producto.id
   );
 
@@ -175,7 +173,7 @@ async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void>
       cajaId: cajon.id,
     };
     await Crear(Coleccion.Cantidades, nuevo);
-    ctx.cantidades.push(nuevo);
+    globalStore.Cantidades.push(nuevo);
     await RegistrarHistorial(producto.id, `[Importación] '${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`, null, `${cantidad} unidades`);
   } else {
     const cantidadAnterior = itemCantidad.cantidad;
@@ -193,9 +191,10 @@ async function obtenerOCrearLista(
   const existente = lista.find((x) => x.nombre === nombre);
   if (existente) return existente;
 
+  const globalStore = useGlobalStore();
   const item: Lista = { id: '', tipo, nombre };
   await Crear(Coleccion.Listas, item);
-  Listas.value.push(item);
+  globalStore.Listas.push(item);
   lista.push(item);
   const etiqueta = tipo === 'grupos' ? 'Grupo' : tipo === 'fabricantes' ? 'Fabricante' : 'Almacenista';
   await RegistrarHistorial(item.id, `[${etiqueta}] Creado`, null, nombre);
@@ -251,24 +250,19 @@ function obtenerRutaCajon(cajonId: string, galpones: Galpon[]): { galpon: string
  * Cada fila es un producto en un cajón; si un producto está en varios cajones, se exporta una fila por cada uno.
  */
 export async function Exportar(): Promise<string> {
-  const [productos, cantidades, galpones] = await Promise.all([
-    ObtenerTodos<Producto>(Coleccion.Productos),
-    ObtenerTodos<Cantidades>(Coleccion.Cantidades),
-    ObtenerTodos<Galpon>(Coleccion.Galpones),
-  ]);
-
-  const grupos = Listas.value.filter(l => l.tipo === 'grupos');
-  const fabricantes = Listas.value.filter(l => l.tipo === 'fabricantes');
+  const globalStore = useGlobalStore();
+  const grupos = globalStore.ObtenerLista('grupos');
+  const fabricantes = globalStore.ObtenerLista('fabricantes');
   const grupoPorId = Object.fromEntries(grupos.map(x => [x.id, x.nombre]));
   const fabricantePorId = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
-  const productoPorId = Object.fromEntries(productos.map(p => [p.id, p]));
+  const productoPorId = Object.fromEntries(globalStore.Productos.map(p => [p.id, p]));
 
   const filas: Fila[] = [];
 
-  for (const c of cantidades) {
+  for (const c of globalStore.Cantidades) {
     const cajonId = typeof c.cajaId === 'string' ? c.cajaId : (c.cajaId as unknown as string);
     const productoId = typeof c.productoId === 'string' ? c.productoId : (c.productoId as Producto).id;
-    const ruta = obtenerRutaCajon(cajonId, galpones);
+    const ruta = obtenerRutaCajon(cajonId, globalStore.Galpones);
     const producto = productoPorId[productoId];
     if (!ruta || !producto) continue;
 
@@ -296,8 +290,7 @@ export async function Exportar(): Promise<string> {
   return Papa.unparse(filas, { delimiter: ';', header: true });
 }
 
-export async function ExportarHistorial(): Promise<string> {
-  const historial = await ObtenerTodos<Historial>(Coleccion.Historial);
+export async function ExportarHistorial(historial: Historial[]): Promise<string> {
   const filas = historial.map(x => ({ Fecha: x.fechaCreacion.toLocaleString(), Usuario: x.usuario, Accion: x.accion, Anterior: x.anterior, Actual: x.actual }));
   return Papa.unparse(filas, { delimiter: ';', header: true });
 }
