@@ -292,7 +292,7 @@ async function Mover() {
         <div class="flex items-center">
           <div class="font-medium">Nivel {{ nivel.nombre }}</div>
           <Button v-if="Usuario" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar('Seccion', nivel)" v-tooltip.bottom="'Agregar Sección'" class="ml-2" />
-          <EditarQuitar tamaño="small" @editarClick="Editar(nivel, 'Nivel')" @quitarClick="Quitar(nivel, 'Nivel')" :id-elemento="nivel.id" :nombre-elemento="nivel.nombre" />
+          <EditarQuitar tamaño="small" @editarClick="Editar(nivel, 'Nivel')" @quitarClick="Quitar(nivel, 'Nivel')" :id-elemento="nivel.id" :nombre-elemento="'Nivel ' + nivel.nombre" />
         </div>
       </template>
       <div class="flex flex-wrap md:flex-nowrap gap-2 justify-center">
