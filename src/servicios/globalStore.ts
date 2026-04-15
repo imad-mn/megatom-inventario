@@ -1,5 +1,5 @@
 import type { Cantidades, CantidadesConProducto, Estante, Galpon, Lista, Producto } from './modelos';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { defineStore } from 'pinia'
 import { Coleccion, ObtenerTodos } from './TablesDbService';
 
@@ -29,8 +29,11 @@ export const useGlobalStore = defineStore('global', () => {
   }
 
   function ObtenerLista(tipo: string): Lista[] {
-    return Listas.value.filter(x => x.tipo == tipo);
+    const filtrados = Listas.value.filter(x => x.tipo == tipo);
+    return [...filtrados].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
+
+  const ListasMap = computed(() => Object.fromEntries(new Map(Listas.value.map(l => [l.id, l.nombre]))));
 
   function ObtenerCantidadesPorProducto(productoId: string): Cantidades[] {
     return Cantidades.value.filter(c => c.productoId === productoId);
@@ -71,6 +74,7 @@ export const useGlobalStore = defineStore('global', () => {
 
   return {
     Listas,
+    ListasMap,
     Galpones,
     Productos,
     Cantidades,

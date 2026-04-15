@@ -31,7 +31,6 @@ const grupoSeleccionado = ref<string | null>(null);
 let productosMap: Map<string, Producto>;
 const productosDelGrupo = ref<Producto[]>([]);
 const productoSeleccionado = ref<Producto | null>(null);
-const fabricanteDict = ref<Record<string, string>>({});
 
 let cantidadesDelProducto: Cantidades[] = [];
 const ubicacionesDelProducto = ref<string[]>([]);
@@ -52,9 +51,6 @@ onMounted(async () => {
   almacenistasMap = new Map(almacenistas.value.map(a => [a.id, a]));
 
   grupos.value = globalStore.ObtenerLista('grupos');
-
-  const fabricantes = globalStore.ObtenerLista('fabricantes');
-  fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
 
   productosMap = new Map(globalStore.Productos.map(p => [p.id, p]));
 
@@ -180,11 +176,11 @@ async function Guardar() {
               {{ new Date(item.fechaCreacion).toLocaleString() }}
             </span>
             <Tag :value="item.esIngreso ? 'Ingreso' : 'Egreso'" :severity="item.esIngreso ? 'success' : 'danger'" />
+            <span class="font-semibold text-surface-700 dark:text-surface-200 break-words">{{ item.producto?.nombre ?? '—' }}</span>
             <span class="text-surface-400 dark:text-surface-500 ml-auto">{{ item.creadoPor }}</span>
           </div>
           <!-- Fila del producto -->
           <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm mb-1">
-            <span class="font-semibold text-surface-700 dark:text-surface-200 break-words">{{ item.producto?.nombre ?? '—' }}</span>
             <span class="text-surface-500 dark:text-surface-400">Caja: <b>{{ item.caja?.nombre ?? '—' }}</b></span>
             <span class="text-surface-500 dark:text-surface-400">Cantidad: <b>{{ item.cantidad }}</b></span>
             <span class="text-surface-500 dark:text-surface-400">Almacenista: <b>{{ item.almacenista?.nombre ?? '—' }}</b></span>
@@ -217,7 +213,7 @@ async function Guardar() {
         <div v-if="productoSeleccionado">
           <div><b>Código:&nbsp;</b>{{ productoSeleccionado?.codigo }}</div>
           <div><b>Descripción:&nbsp;</b>{{ productoSeleccionado?.descripcion }}</div>
-          <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[productoSeleccionado?.fabricanteId] }}</div>
+          <div><b>Fabricante:&nbsp;</b>{{ globalStore.ListasMap[productoSeleccionado?.fabricanteId] }}</div>
           <div><b>Peso Unitario:&nbsp;</b>{{ productoSeleccionado?.pesoUnitario?.toFixed(2) }} Kg</div>
           <ul class="list-disc list-inside">
             <li v-for="ubic in ubicacionesDelProducto" :key="ubic">{{ ubic }}</li>

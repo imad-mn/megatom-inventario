@@ -22,7 +22,6 @@ const itemEdicion = ref<Galpon>({ id: '', nombre: '', ordenDescendente: false, e
 const esNuevo = ref(false);
 
 const globalStore = useGlobalStore();
-const { Galpones } = globalStore;
 
 function Agregar() {
   esNuevo.value = true;
@@ -34,13 +33,13 @@ async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear(TablesDbService.Coleccion.Galpones, itemEdicion.value);
     await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, itemEdicion.value.nombre);
-    Galpones.push({ ...itemEdicion.value });
+    globalStore.Galpones.push({ ...itemEdicion.value });
   } else {
-    const indice = Galpones.findIndex(x => x.id === itemEdicion.value.id);
+    const indice = globalStore.Galpones.findIndex(x => x.id === itemEdicion.value.id);
     if (indice >= 0) {
       await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, itemEdicion.value);
-      await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', Galpones[indice]?.nombre, itemEdicion.value.nombre);
-      Galpones[indice] = { ...itemEdicion.value };
+      await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', globalStore.Galpones[indice]?.nombre, itemEdicion.value.nombre);
+      globalStore.Galpones[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
@@ -66,9 +65,9 @@ function Quitar(item: Galpon): void {
     acceptIcon: 'pi pi-trash',
     accept: async () => {
       await RegistrarHistorial(item.id, '[Galpón] Eliminado', item.nombre, null);
-      const indice = Galpones.findIndex(x => x.id === item.id);
+      const indice = globalStore.Galpones.findIndex(x => x.id === item.id);
       await TablesDbService.Eliminar(TablesDbService.Coleccion.Galpones, item);
-      if (indice >= 0) Galpones.splice(indice, 1);
+      if (indice >= 0) globalStore.Galpones.splice(indice, 1);
     }
   });
 }
@@ -77,15 +76,15 @@ function Quitar(item: Galpon): void {
 <template>
   <div class="flex  justify-between items-center mb-10">
     <div></div>
-    <div class="text-xl justify-self-center">GALPONES</div>
+    <div class="text-xl justify-self-center">globalStore.Galpones</div>
     <div>
       <Button v-if="Usuario" label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Galpón'" />
     </div>
   </div>
 
-  <div v-if="Galpones.length === 0" class="italic text-muted-color mt-3">No hay galpones</div>
+  <div v-if="globalStore.Galpones.length === 0" class="italic text-muted-color mt-3">No hay globalStore.Galpones</div>
   <div class="flex flex-wrap gap-2 justify-center">
-    <div v-for="item in Galpones" :key="item.id"
+    <div v-for="item in globalStore.Galpones" :key="item.id"
       class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>
@@ -93,7 +92,7 @@ function Quitar(item: Galpon): void {
           <div>{{ 'Galpón ' + item.nombre }}</div>
         </div>
       </Button>
-      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="item.nombre" />
+      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Galpón ' + item.nombre" />
     </div>
   </div>
 

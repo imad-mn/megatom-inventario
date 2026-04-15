@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
 import type { Caja, Cantidades, Estante, Galpon, Lista, Nivel, Producto, Seccion } from '@/servicios/modelos.ts';
-import { ref, watchEffect } from 'vue';
+import { computed, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
@@ -15,14 +15,12 @@ import { RegistrarHistorial } from '@/servicios/historialService';
 const confirm = useConfirm();
 
 const globalStore = useGlobalStore();
-const { Productos } = globalStore;
-
 const authStore = useAuthStore();
 const Usuario = authStore.Usuario;
 
 const grupos = globalStore.ObtenerLista('grupos');
 const fabricantes = globalStore.ObtenerLista('fabricantes');
-const productosFiltrados = ref<Producto[]>([]);
+const estados = globalStore.ObtenerLista('estados');
 
 const filtroGrupo = ref<Lista | null>(null);
 const filtroFabricante = ref<Lista | null>(null);
@@ -32,10 +30,6 @@ const dialogVisible = ref(false);
 const itemEdicion = ref<Producto>();
 const esNuevo = ref(false);
 
-const grupoDict = ref<Record<string, string>>({});
-const fabricanteDict = ref<Record<string, string>>({});
-grupoDict.value = Object.fromEntries(grupos.map(x => [x.id, x.nombre]));;
-fabricanteDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
 const ubicacionDict = ref<Record<string, string[]>>({});
 
 let archivoFoto: File | undefined;
@@ -50,18 +44,18 @@ const mostrarMensajeImportacion = ref(false);
 const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
-watchEffect(() => {
-  productosFiltrados.value = Productos.filter(p => {
+ const productosFiltrados = computed(() => {
+  const filtrados = globalStore.Productos.filter(p => {
     return (filtroTexto.value.trim() === ''
         || p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || (p.codigo !== null && p.codigo.toLowerCase().includes(filtroTexto.value.toLowerCase()))
-        || grupoDict.value[p.grupoId]?.toLowerCase().includes(filtroTexto.value.toLowerCase())
-        || fabricanteDict.value[p.fabricanteId]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
+        || globalStore.ListasMap[p.grupoId]?.toLowerCase().includes(filtroTexto.value.toLowerCase())
+        || globalStore.ListasMap[p.fabricanteId]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
       && (filtroGrupo.value === null || p.grupoId === filtroGrupo.value.id)
       && (filtroFabricante.value === null || p.fabricanteId === filtroFabricante.value.id);
   });
-  productosFiltrados.value.sort((a,b) => a.nombre.localeCompare(b.nombre));
+  return [...filtrados].sort((a,b) => a.nombre.localeCompare(b.nombre));
 });
 
 const galponSeleccionado = ref<Galpon | null>(null);
@@ -74,7 +68,7 @@ const cantidadInicial = ref<number>(1);
 function Agregar() {
   esNuevo.value = true;
   imagenEdicion.value = undefined;
-  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenUrl: null };
+  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenUrl: null, estadoId: null };
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
   galponSeleccionado.value = null;
@@ -99,7 +93,7 @@ async function Guardar() {
     if (esNuevo.value) {
       await TablesDbService.Crear(TablesDbService.Coleccion.Productos, itemEdicion.value!);
       await RegistrarHistorial(itemEdicion.value!.id, '[Producto] Creado', null, productoNuevo);
-      Productos.push({ ...itemEdicion.value! });
+      globalStore.Productos.push({ ...itemEdicion.value! });
 
       if (cajaSeleccionada.value && cantidadInicial.value > 0) {
         const item: Cantidades = {
@@ -113,13 +107,13 @@ async function Guardar() {
       }
       dialogVisible.value = false;
     } else {
-      const anterior = Productos.find(x => x.id === itemEdicion.value!.id);
+      const anterior = globalStore.Productos.find(x => x.id === itemEdicion.value!.id);
       if (anterior) {
         await TablesDbService.Actualizar(TablesDbService.Coleccion.Productos, itemEdicion.value!);
         const productoAnterior = Stringify(anterior);
         await RegistrarHistorial(itemEdicion.value!.id, '[Producto] Modificado', productoAnterior, productoNuevo);
-        const indice = Productos.indexOf(anterior);
-        Productos[indice] = { ...itemEdicion.value! };
+        const indice = globalStore.Productos.indexOf(anterior);
+        globalStore.Productos[indice] = { ...itemEdicion.value! };
         dialogVisible.value = false;
       }
     }
@@ -144,13 +138,13 @@ function Quitar(item: Producto): void {
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
     accept: async () => {
-      const anterior = Productos.find(x => x.id === item.id);
+      const anterior = globalStore.Productos.find(x => x.id === item.id);
       if (anterior) {
         await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
         const anteriorJson = Stringify(anterior);
         await RegistrarHistorial(item.id, '[Producto] Eliminado', anteriorJson, null);
-        const indice = Productos.indexOf(anterior);
-        Productos.splice(indice, 1);
+        const indice = globalStore.Productos.indexOf(anterior);
+        globalStore.Productos.splice(indice, 1);
         await StorageService.Eliminar(item.id);
       }
     }
@@ -171,7 +165,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
 }
 
 function RevisarNombreUnico() {
-  if (Productos.findIndex(x => x.nombre == itemEdicion.value?.nombre) >= 0)
+  if (globalStore.Productos.findIndex(x => x.nombre == itemEdicion.value?.nombre) >= 0)
     mostrarAdvertencia.value = true;
   else
     mostrarAdvertencia.value = false;
@@ -208,7 +202,7 @@ function VerUbicacion(productoId: string) {
 }
 
 function Stringify(item: Producto): string {
-  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${grupoDict.value[item.grupoId]} | Fabricante: ${fabricanteDict.value[item.fabricanteId]} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
+  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${globalStore.ListasMap[item.grupoId]} | Fabricante: ${globalStore.ListasMap[item.fabricanteId]} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
 }
 
 function onHistorialClick(item: Producto) {
@@ -246,7 +240,7 @@ async function DescargarExportacion() {
   <DataView :value="productosFiltrados">
     <template #list="slotProps">
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Card v-for="item in slotProps.items" :key="item.id" style="overflow: hidden">
+        <Card v-for="item in slotProps.items as Producto[]" :key="item.id" style="overflow: hidden">
           <template #header>
             <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" />
           </template>
@@ -255,9 +249,10 @@ async function DescargarExportacion() {
           <template #content>
             <div><b>Código:&nbsp;</b>{{ item.codigo }}</div>
             <b>Grupo:&nbsp;</b>
-            <div>{{ grupoDict[item.grupoId] }}</div>
-            <div><b>Fabricante:&nbsp;</b>{{ fabricanteDict[item.fabricanteId] }}</div>
+            <div>{{ globalStore.ListasMap[item.grupoId] }}</div>
+            <div><b>Fabricante:&nbsp;</b>{{ globalStore.ListasMap[item.fabricanteId] }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
+            <div><b>Estado:&nbsp;</b>{{ item.estadoId ? globalStore.ListasMap[item.estadoId] : '' }}</div>
             <Button v-if="!ubicacionDict[item.id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.id)" />
             <div v-else>
               <div><b>Ubicación:</b></div>
@@ -300,6 +295,10 @@ async function DescargarExportacion() {
       <FloatLabel variant="on">
         <InputNumber id="pesoUnitario" v-model="itemEdicion!.pesoUnitario" mode="decimal" :minFractionDigits="0" :maxFractionDigits="2" class="w-full" />
         <label for="pesoUnitario">Peso Unitario (kg)</label>
+      </FloatLabel>
+      <FloatLabel variant="on">
+        <Select id="estado" v-model="itemEdicion!.estadoId" :options="estados" optionValue="id" optionLabel="nombre" class="w-full" />
+        <label for="estado">Estado</label>
       </FloatLabel>
       <FloatLabel variant="on">
         <Textarea id="descripcion" v-model="itemEdicion!.descripcion" class="w-full" rows="2" />

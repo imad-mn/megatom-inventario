@@ -13,12 +13,11 @@ import { useAuthStore } from '@/servicios/authStore';
 const confirm = useConfirm();
 const router = useRouter();
 const globalStore = useGlobalStore();
-const { GalponSeleccionado } = globalStore;
 const Usuario = useAuthStore().Usuario;
 
 const estantes = computed(() =>
-  [...GalponSeleccionado!.estantes].sort((a, b) =>
-    GalponSeleccionado!.ordenDescendente
+  [...globalStore.GalponSeleccionado!.estantes].sort((a, b) =>
+    globalStore.GalponSeleccionado!.ordenDescendente
       ? b.nombre.localeCompare(a.nombre)
       : a.nombre.localeCompare(b.nombre)
   )
@@ -39,22 +38,22 @@ function Agregar() {
 async function Guardar() {
   if (esNuevo.value) {
     const nuevoEstante: Estante = { ...itemEdicion.value, niveles: [] };
-    GalponSeleccionado!.estantes.push(nuevoEstante);
-    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
+    globalStore.GalponSeleccionado!.estantes.push(nuevoEstante);
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
     await RegistrarHistorial(itemEdicion.value.id, '[Estante] Creado', null, itemEdicion.value.nombre);
   } else if (esEditandoGalpon.value) {
-    const nombreAnterior = GalponSeleccionado!.nombre;
-    GalponSeleccionado!.nombre = itemEdicion.value.nombre;
-    GalponSeleccionado!.ordenDescendente = itemEdicion.value.ordenDescendente;
-    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
-    await RegistrarHistorial(GalponSeleccionado!.id, '[Galpón] Modificado', nombreAnterior, itemEdicion.value.nombre);
+    const nombreAnterior = globalStore.GalponSeleccionado!.nombre;
+    globalStore.GalponSeleccionado!.nombre = itemEdicion.value.nombre;
+    globalStore.GalponSeleccionado!.ordenDescendente = itemEdicion.value.ordenDescendente;
+    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
+    await RegistrarHistorial(globalStore.GalponSeleccionado!.id, '[Galpón] Modificado', nombreAnterior, itemEdicion.value.nombre);
   } else {
-    const estante = GalponSeleccionado!.estantes.find(e => e.id === itemEdicion.value.id);
+    const estante = globalStore.GalponSeleccionado!.estantes.find(e => e.id === itemEdicion.value.id);
     if (estante) {
       const nombreAnterior = estante.nombre;
       estante.nombre = itemEdicion.value.nombre;
       estante.ordenDescendente = itemEdicion.value.ordenDescendente;
-      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
       await RegistrarHistorial(itemEdicion.value.id, '[Estante] Modificado', nombreAnterior, itemEdicion.value.nombre);
     }
   }
@@ -82,8 +81,8 @@ function Quitar(item: Estante): void {
     acceptIcon: 'pi pi-trash',
     accept: async () => {
       await RegistrarHistorial(item.id, '[Estante] Eliminado', item.nombre, null);
-      GalponSeleccionado!.estantes = GalponSeleccionado!.estantes.filter(e => e.id !== item.id);
-      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, GalponSeleccionado!);
+      globalStore.GalponSeleccionado!.estantes = globalStore.GalponSeleccionado!.estantes.filter(e => e.id !== item.id);
+      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
     }
   });
 }
@@ -95,9 +94,9 @@ function Quitar(item: Estante): void {
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">Galpones</span>
     </Button>
-    <div class="text-xl">GALPÓN {{GalponSeleccionado!.nombre}}</div>
+    <div class="text-xl">GALPÓN {{globalStore.GalponSeleccionado!.nombre}}</div>
     <div v-if="Usuario">
-      <Button severity="success" variant="outlined" class="mr-2" @click="Editar(GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
+      <Button severity="success" variant="outlined" class="mr-2" @click="Editar(globalStore.GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
         <span class="p-button-label hidden md:inline">Galpón</span>
       </Button>
@@ -118,16 +117,16 @@ function Quitar(item: Estante): void {
           <div>{{ 'Estante ' + item.nombre }}</div>
         </div>
       </Button>
-      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="item.nombre" />
+      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Estante ' + item.nombre" />
     </div>
   </div>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Estante"
+  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="esEditandoGalpon ? 'Galpón' : 'Estante'"
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full">
         <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
-        <label for="nombre">Estante</label>
+        <label for="nombre">{{ esEditandoGalpon ? 'Galpón' : 'Estante' }}</label>
       </FloatLabel>
       <div class="flex gap-2 items-center">
         <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />

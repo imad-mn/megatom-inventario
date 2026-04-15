@@ -18,12 +18,14 @@ export type Fila = {
   pesoUnitario: string;
   pesoTotal: string;
   descripcion: string;
+  estado: string;
 };
 
 /** Contexto compartido durante la importación: datos ya cargados y mutables para ir agregando nuevos. */
 interface ContextoImportacion {
   grupos: Lista[];
   fabricantes: Lista[];
+  estados: Lista[];
   galponesModificados: Set<string>;
 }
 
@@ -65,6 +67,7 @@ async function ProcesarArchivo(
   const ctx: ContextoImportacion = {
     grupos: globalStore.ObtenerLista('grupos'),
     fabricantes: globalStore.ObtenerLista('fabricantes'),
+    estados: globalStore.ObtenerLista('estados'),
     galponesModificados: new Set(),
   };
 
@@ -157,8 +160,9 @@ async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void>
 
   const grupo = await obtenerOCrearLista(ctx.grupos, 'grupos', fila.grupo);
   const fabricante = await obtenerOCrearLista(ctx.fabricantes, 'fabricantes', fila.fabricante);
+  const estado = await obtenerOCrearLista(ctx.estados, 'estados', fila.estado);
 
-  const producto = await obtenerOCrearProducto(fila, grupo.id, fabricante.id, globalStore.Productos);
+  const producto = await obtenerOCrearProducto(fila, grupo.id, fabricante.id, estado.id, globalStore.Productos);
 
   const cantidad = parsearCantidadFila(fila.cantidad);
   const itemCantidad = globalStore.Cantidades.find(
@@ -205,6 +209,7 @@ async function obtenerOCrearProducto(
   fila: Fila,
   grupoId: string,
   fabricanteId: string,
+  estadoId: string,
   productos: Producto[]
 ): Promise<Producto> {
   const existente = productos.find(
@@ -221,6 +226,7 @@ async function obtenerOCrearProducto(
     grupoId: grupoId,
     fabricanteId: fabricanteId,
     imagenUrl: null,
+    estadoId: estadoId,
   };
   await Crear(Coleccion.Productos, producto);
   productos.push(producto);
@@ -251,10 +257,6 @@ function obtenerRutaCajon(cajonId: string, galpones: Galpon[]): { galpon: string
  */
 export async function Exportar(): Promise<string> {
   const globalStore = useGlobalStore();
-  const grupos = globalStore.ObtenerLista('grupos');
-  const fabricantes = globalStore.ObtenerLista('fabricantes');
-  const grupoPorId = Object.fromEntries(grupos.map(x => [x.id, x.nombre]));
-  const fabricantePorId = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
   const productoPorId = Object.fromEntries(globalStore.Productos.map(p => [p.id, p]));
 
   const filas: Fila[] = [];
@@ -277,13 +279,14 @@ export async function Exportar(): Promise<string> {
       seccion: ruta.seccion,
       cajon: ruta.cajon,
       nombre: producto.nombre,
-      grupo: grupoPorId[producto.grupoId] ?? '',
-      fabricante: fabricantePorId[producto.fabricanteId] ?? '',
+      grupo: globalStore.ListasMap[producto.grupoId] ?? '',
+      fabricante: globalStore.ListasMap[producto.fabricanteId] ?? '',
       codigo: producto.codigo ?? '',
       cantidad: `${cantidad} Unit`,
       pesoUnitario: String(pesoUnitario).replace('.', ',') + ' Kg',
       pesoTotal: String(pesoTotal).replace('.', ',') + ' Kg',
       descripcion: producto.descripcion ?? '',
+      estado: producto.estadoId ? globalStore.ListasMap[producto.estadoId] || '' : '',
     });
   }
 

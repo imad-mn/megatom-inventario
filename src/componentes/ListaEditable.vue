@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import type { Lista, TipoLista } from '@/servicios/modelos.ts';
 import EditarQuitar from '../componentes/EditarQuitar.vue';
@@ -22,8 +22,10 @@ const itemEdicion = ref<Lista>({ id: '', tipo: props.tipo, nombre: '' });
 const esNuevo = ref(false);
 const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
 
-const itemsFiltrados = globalStore.ObtenerLista(props.tipo);
-const { Listas } = globalStore;
+const itemsFiltrados = computed(() => {
+  const filtrados = globalStore.Listas.filter(x => x.tipo === props.tipo);
+  return [...filtrados].sort((a, b) => a.nombre.localeCompare(b.nombre));
+});
 
 function Agregar() {
   esNuevo.value = true;
@@ -41,14 +43,14 @@ async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear(TablesDbService.Coleccion.Listas, itemEdicion.value);
     await RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Creado`, null, itemEdicion.value.nombre);
-    Listas.push({ ...itemEdicion.value });
+    globalStore.Listas.push({ ...itemEdicion.value });
   } else {
-    const anterior = Listas.find(x => x.id === itemEdicion.value.id);
+    const anterior = globalStore.Listas.find(x => x.id === itemEdicion.value.id);
     if (anterior) {
       await TablesDbService.Actualizar(TablesDbService.Coleccion.Listas, itemEdicion.value);
       await RegistrarHistorial(itemEdicion.value.id, `[${tipoElemento}] Modificado`, anterior.nombre, itemEdicion.value.nombre);
-      const indice = Listas.findIndex(x => x.id === itemEdicion.value.id);
-      Listas[indice] = { ...itemEdicion.value };
+      const indice = globalStore.Listas.findIndex(x => x.id === itemEdicion.value.id);
+      globalStore.Listas[indice] = { ...itemEdicion.value };
     }
   }
   dialogVisible.value = false;
@@ -62,12 +64,12 @@ function Quitar(item: Lista): void {
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
     accept: async () => {
-      const indice = Listas.findIndex(x => x.id === item.id);
+      const indice = globalStore.Listas.findIndex(x => x.id === item.id);
       if (indice >= 0) {
         const tipoElemento = props.tipo === 'fabricantes' ? 'Fabricante' : props.tipo === 'grupos' ? 'Grupo' : 'Almacenista';
         await RegistrarHistorial(item.id, `[${tipoElemento}] Eliminado`, item.nombre, null);
         await TablesDbService.Eliminar(TablesDbService.Coleccion.Listas, item);
-        Listas.splice(indice, 1);
+        globalStore.Listas.splice(indice, 1);
       }
     }
   });
@@ -75,7 +77,7 @@ function Quitar(item: Lista): void {
 </script>
 
 <template>
-  <Panel :header="props.tipo.charAt(0).toUpperCase() + props.tipo.substring(1)" class="w-full md:w-sm">
+  <Panel :header="props.tipo.charAt(0).toUpperCase() + props.tipo.substring(1)" class="w-full md:w-auto">
     <template #icons>
       <Button v-if="usuario" label="Agregar" icon="pi pi-plus" severity="info" size="small" variant="text" @click="Agregar" />
     </template>

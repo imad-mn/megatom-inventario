@@ -30,8 +30,6 @@ const cajaSeleccionada = ref<Caja | null>(null);
 const productosEnCaja = ref<CantidadesConProducto[]>([]);
 const productosEnCajas = ref<CantidadesConProducto[]>([]);
 const mostrarDialogoCaja = ref(false);
-const gruposDict = ref<Record<string, string>>({});
-const fabricantesDict = ref<Record<string, string>>({});
 const deshabilitarSiguienteCaja = ref(false);
 const deshabilitarCajaAnterior = ref(false);
 
@@ -47,11 +45,6 @@ const seccionesNivel = computed(() => {
 
 onMounted(() => {
   grupos.value = globalStore.ObtenerLista('grupos');
-  gruposDict.value = Object.fromEntries(grupos.value.map(x => [x.id, x.nombre]));
-
-  const fabricantes = globalStore.ObtenerLista('fabricantes');
-  fabricantesDict.value = Object.fromEntries(fabricantes.map(x => [x.id, x.nombre]));
-
   productosEnCajas.value = globalStore.ObtenerCantidadesConProductos();
 });
 
@@ -168,6 +161,8 @@ async function VerCaja(caja: Caja) {
   productosEnCaja.value = productosEnCajas.value.filter(x => x.cajaId === caja.id);
   cajaSeleccionada.value = caja;
   mostrarDialogoCaja.value = true;
+  deshabilitarSiguienteCaja.value = false;
+  deshabilitarCajaAnterior.value = false;
 }
 
 async function CajaAnterior() {
@@ -307,7 +302,7 @@ async function Mover() {
         <Panel v-else v-for="seccion in [...nivel.secciones].sort((a, b) => Ordenar(a, b, nivel.ordenDescendente))"
             :key="seccion.id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'">
           <template #icons v-if="Usuario">
-            <BotonesCompacto @agregarClick="Agregar('Caja', undefined, seccion)" @moverClick="MostrarDialogoMover(seccion, 'Seccion')" @editarClick="Editar(seccion, 'Seccion')" @quitarClick="Quitar(seccion, 'Seccion', nivel)" :id-elemento="seccion.id" :nombre-elemento="seccion.nombre" button-severity="secondary" queAgregar="Caja" />
+            <BotonesCompacto @agregarClick="Agregar('Caja', undefined, seccion)" @moverClick="MostrarDialogoMover(seccion, 'Seccion')" @editarClick="Editar(seccion, 'Seccion')" @quitarClick="Quitar(seccion, 'Seccion', nivel)" :id-elemento="seccion.id" :nombre-elemento="'Sección ' + seccion.nombre" button-severity="secondary" queAgregar="Caja" />
           </template>
           <div v-if="seccion.cajas.length === 0" class="italic text-muted-color m-1">
             No hay cajas en esta Sección.
@@ -316,7 +311,7 @@ async function Mover() {
               class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
               <Button variant="text" severity="warn" size="small" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? '*' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap', root: 'px-1' }"
                 v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md', text: 'text-sm' } }" />
-              <BotonesCompacto v-if="Usuario" @moverClick="MostrarDialogoMover(caja, 'Caja')" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" :id-elemento="caja.id" :nombre-elemento="caja.nombre" button-severity="warn" />
+              <BotonesCompacto v-if="Usuario" @moverClick="MostrarDialogoMover(caja, 'Caja')" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" :id-elemento="caja.id" :nombre-elemento="'Caja ' + caja.nombre" button-severity="warn" />
           </div>
         </Panel>
       </div>
@@ -347,19 +342,20 @@ async function Mover() {
     </template>
     <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
     <div v-else v-for="item in productosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
-      <div class="flex flex-wrap gap-4">
-        <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined" alt="Foto" class="rounded-xl md:w-45 md:h-45" />
+      <div class="flex gap-2">
+        <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined" alt="Foto" class="rounded-xl md:w-50 md:h-50" />
         <div>
-          <div><b>Nombre: </b>{{ item.producto.nombre }}</div>
-          <div><b>Grupo: </b>{{ gruposDict[item.producto.grupoId] }}</div>
-          <div><b>Fabricante: </b>{{ fabricantesDict[item.producto.fabricanteId] }}</div>
+          <div class="text-wrap"><b>Nombre: </b>{{ item.producto.nombre }}</div>
+          <div><b>Grupo: </b>{{ globalStore.ListasMap[item.producto.grupoId] }}</div>
+          <div><b>Fabricante: </b>{{ globalStore.ListasMap[item.producto.fabricanteId] }}</div>
           <div><b>Código: </b>{{ item.producto.codigo }}</div>
+          <div><b>Estado: </b>{{ item.producto.estadoId ? globalStore.ListasMap[item.producto.estadoId] : '' }}</div>
           <div class="mt-3"><b>Cantidad: </b>{{ item.cantidad }}</div>
           <div><b>Peso Unitario: </b>{{ item.producto.pesoUnitario }} Kg.</div>
           <div><b>Peso Total: </b>{{ (item.producto.pesoUnitario * item.cantidad).toFixed(2) }} Kg.</div>
         </div>
       </div>
-      <div class="mt-3"><b>Descripción: </b>{{ item.producto.descripcion }}</div>
+      <div class="mt-1"><b>Descripción: </b>{{ item.producto.descripcion }}</div>
     </div>
   </Dialog>
 

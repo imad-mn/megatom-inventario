@@ -15,6 +15,7 @@ export type Producto = IdNombre & {
   grupoId: string;
   fabricanteId: string;
   imagenUrl: string | null;
+  estadoId: string | null;
 }
 
 export type ItemOrdenable = IdNombre & {
@@ -68,7 +69,7 @@ export type MovimientosExtendido = Movimientos & {
   almacenista: IdNombre | null;
 }
 
-export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas' | 'usuario';
+export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas' | 'estados';
 export type Lista = IdNombre & {
   tipo: TipoLista;
 }
