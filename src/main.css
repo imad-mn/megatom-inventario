@@ -44,3 +44,12 @@ label {
     display: none !important;
   }
 }
+/* No imprimir */
+@media print{
+  .noprint {
+      display:none !important;
+  }
+   @page {
+    size: landscape;
+  }
+}

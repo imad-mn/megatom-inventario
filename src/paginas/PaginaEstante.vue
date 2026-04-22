@@ -27,7 +27,6 @@ const seccionParaNuevoItem = ref<Seccion | null>(null);
 
 const grupos = ref<Lista[]>([]);
 const cajaSeleccionada = ref<Caja | null>(null);
-const productosEnCaja = ref<CantidadesConProducto[]>([]);
 const productosEnCajas = ref<CantidadesConProducto[]>([]);
 const mostrarDialogoCaja = ref(false);
 const deshabilitarSiguienteCaja = ref(false);
@@ -158,8 +157,8 @@ function Quitar(item: { id: string; nombre: string }, tipo: TipoEdicion, nivel?:
 }
 
 async function VerCaja(caja: Caja) {
-  productosEnCaja.value = productosEnCajas.value.filter(x => x.cajaId === caja.id);
-  cajaSeleccionada.value = caja;
+  globalStore.ProductosEnCaja = productosEnCajas.value.filter(x => x.cajaId === caja.id);
+  globalStore.CajaSeleccionada = caja;
   mostrarDialogoCaja.value = true;
   deshabilitarSiguienteCaja.value = false;
   deshabilitarCajaAnterior.value = false;
@@ -334,14 +333,18 @@ async function Mover() {
 
   <Dialog v-model:visible="mostrarDialogoCaja" :modal="true" class="md:w-2xl">
     <template #header>
-      <div class="flex justify-center items-center w-full">
-        <Button icon="pi pi-arrow-left" severity="secondary" variant="text" v-tooltip.bottom="'Anterior'" @click="CajaAnterior" :disabled="deshabilitarCajaAnterior" />
-        <div class="mx-2 text-xl font-medium">Caja {{ cajaSeleccionada?.nombre }}</div>
-        <Button icon="pi pi-arrow-right" severity="secondary" variant="text" v-tooltip.bottom="'Siguiente'" @click="CajaSiguiente" :disabled="deshabilitarSiguienteCaja" />
+      <div class="flex justify-between w-full">
+        <div />
+        <div class="flex items-center">
+          <Button icon="pi pi-arrow-left" severity="secondary" variant="text" v-tooltip.bottom="'Anterior'" @click="CajaAnterior" :disabled="deshabilitarCajaAnterior" />
+          <div class="mx-2 text-xl font-medium">Caja {{ cajaSeleccionada?.nombre }}</div>
+          <Button icon="pi pi-arrow-right" severity="secondary" variant="text" v-tooltip.bottom="'Siguiente'" @click="CajaSiguiente" :disabled="deshabilitarSiguienteCaja" />
+        </div>
+        <Button icon="pi pi-print" severity="secondary" variant="text" v-tooltip.bottom="'Vista Impresion'" @click="router.push('/etiqueta')" />
       </div>
     </template>
-    <div v-if="productosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
-    <div v-else v-for="item in productosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
+    <div v-if="globalStore.ProductosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
+    <div v-else v-for="item in globalStore.ProductosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex gap-2">
         <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined" alt="Foto" class="rounded-xl md:w-50 md:h-50" />
         <div>

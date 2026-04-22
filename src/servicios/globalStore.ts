@@ -1,4 +1,4 @@
-import type { Cantidades, CantidadesConProducto, Estante, Galpon, Lista, Producto } from './modelos';
+import type { Cantidades, CantidadesConProducto, Estante, Galpon, IdNombre, Lista, Producto } from './modelos';
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia'
 import { Coleccion, ObtenerTodos } from './TablesDbService';
@@ -11,6 +11,8 @@ export const useGlobalStore = defineStore('global', () => {
 
   const GalponSeleccionado = ref<Galpon | null>(null);
   const EstanteSeleccionado = ref<Estante | null>(null);
+  const CajaSeleccionada = ref<IdNombre | null>(null);
+  const ProductosEnCaja = ref<CantidadesConProducto[]>([]);
 
   const dialogoHistorial = ref({ mostrar: false, idElemento: '', nombreElemento: '' });
 
@@ -80,6 +82,8 @@ export const useGlobalStore = defineStore('global', () => {
     Cantidades,
     GalponSeleccionado,
     EstanteSeleccionado,
+    CajaSeleccionada,
+    ProductosEnCaja,
     dialogoHistorial,
 
     CargarTodo,

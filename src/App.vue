@@ -61,7 +61,7 @@ async function cerrarSesion() {
 </script>
 
 <template>
-  <Menubar :model="menuItemsVisibles" class="mb-3!" breakpoint="768px">
+  <Menubar :model="menuItemsVisibles" class="mb-3! noprint" breakpoint="768px">
     <template #start>
       <RouterLink to="/">
         <div class="flex items-center">
