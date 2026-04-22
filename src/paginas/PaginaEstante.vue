@@ -26,7 +26,6 @@ const nivelParaNuevoItem = ref<Nivel | null>(null);
 const seccionParaNuevoItem = ref<Seccion | null>(null);
 
 const grupos = ref<Lista[]>([]);
-const cajaSeleccionada = ref<Caja | null>(null);
 const productosEnCajas = ref<CantidadesConProducto[]>([]);
 const mostrarDialogoCaja = ref(false);
 const deshabilitarSiguienteCaja = ref(false);
@@ -165,14 +164,14 @@ async function VerCaja(caja: Caja) {
 }
 
 async function CajaAnterior() {
-  if (!cajaSeleccionada.value) return;
+  if (!globalStore.CajaSeleccionada) return;
   if (deshabilitarSiguienteCaja.value) deshabilitarSiguienteCaja.value = false;
 
-  const padres = encontrarPadresDeCaja(cajaSeleccionada.value.id);
+  const padres = encontrarPadresDeCaja(globalStore.CajaSeleccionada.id);
   if (!padres) return;
   const { nivel, seccion } = padres;
 
-  const indiceCaja = seccion.cajas.findIndex(c => c.id === cajaSeleccionada.value!.id);
+  const indiceCaja = seccion.cajas.findIndex(c => c.id === globalStore.CajaSeleccionada!.id);
   if (indiceCaja > 0) {
     await VerCaja(seccion.cajas[indiceCaja - 1]!);
     return;
@@ -193,14 +192,14 @@ async function CajaAnterior() {
 }
 
 async function CajaSiguiente() {
-  if (!cajaSeleccionada.value) return;
+  if (!globalStore.CajaSeleccionada) return;
   if (deshabilitarCajaAnterior.value) deshabilitarCajaAnterior.value = false;
 
-  const padres = encontrarPadresDeCaja(cajaSeleccionada.value.id);
+  const padres = encontrarPadresDeCaja(globalStore.CajaSeleccionada.id);
   if (!padres) return;
   const { nivel, seccion } = padres;
 
-  const indiceCaja = seccion.cajas.findIndex(c => c.id === cajaSeleccionada.value!.id);
+  const indiceCaja = seccion.cajas.findIndex(c => c.id === globalStore.CajaSeleccionada!.id);
   if (indiceCaja < seccion.cajas.length - 1) {
     await VerCaja(seccion.cajas[indiceCaja + 1]!);
     return;
@@ -265,7 +264,7 @@ async function Mover() {
 
 <template>
   <div id="encabezado" class="flex justify-between items-center mb-3">
-    <Button severity="secondary" variant="outlined" @click="() => router.push(`/galpon/${globalStore.GalponSeleccionado!.id}`)">
+    <Button severity="secondary" variant="outlined" @click="() => router.push('/galpon')">
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">Galpón {{globalStore.GalponSeleccionado!.nombre}}</span>
     </Button>
@@ -337,10 +336,10 @@ async function Mover() {
         <div />
         <div class="flex items-center">
           <Button icon="pi pi-arrow-left" severity="secondary" variant="text" v-tooltip.bottom="'Anterior'" @click="CajaAnterior" :disabled="deshabilitarCajaAnterior" />
-          <div class="mx-2 text-xl font-medium">Caja {{ cajaSeleccionada?.nombre }}</div>
+          <div class="mx-2 text-xl font-medium">Caja {{ globalStore.CajaSeleccionada?.nombre }}</div>
           <Button icon="pi pi-arrow-right" severity="secondary" variant="text" v-tooltip.bottom="'Siguiente'" @click="CajaSiguiente" :disabled="deshabilitarSiguienteCaja" />
         </div>
-        <Button icon="pi pi-print" severity="secondary" variant="text" v-tooltip.bottom="'Vista Impresion'" @click="router.push('/etiqueta')" />
+        <Button class="mr-4" icon="pi pi-print" severity="secondary" variant="text" v-tooltip.bottom="'Vista Impresion'" @click="router.push('/etiqueta')" />
       </div>
     </template>
     <div v-if="globalStore.ProductosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>

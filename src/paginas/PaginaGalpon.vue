@@ -62,7 +62,7 @@ async function Guardar() {
 
 function Ver(item: Estante) {
   globalStore.EstanteSeleccionado = item;
-  router.push({ name: 'Estante', params: { estante: item.id } });
+  router.push('/estante');
 }
 
 function Editar(item: ItemOrdenable, editandoGalpon = false) {
