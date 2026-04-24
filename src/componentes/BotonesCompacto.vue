@@ -62,5 +62,5 @@ const toggle = (event: Event) => {
 
 <template>
   <Menu ref="menu" :model="botones" :popup="true" />
-  <Button :severity="buttonSeverity" icon="pi pi-ellipsis-v" variant="text" @click="toggle" size="small" />
+  <Button :severity="buttonSeverity" icon="pi pi-ellipsis-v" variant="text" @click="toggle" :pt="{ root: 'px-2 w-auto' }" />
 </template>

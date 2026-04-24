@@ -255,18 +255,19 @@ async function obtenerOCrearLista(
   tipo: Lista['tipo'],
   nombre: string
 ): Promise<Lista> {
+  nombre = nombre.trim();
   try {
-  const existente = lista.find((x) => x.nombre === nombre);
-  if (existente) return existente;
+    const existente = lista.find((x) => x.nombre === nombre);
+    if (existente) return existente;
 
-  const globalStore = useGlobalStore();
-  const item: Lista = { id: '', tipo, nombre };
-  await Crear(Coleccion.Listas, item);
-  globalStore.Listas.push(item);
-  lista.push(item);
-  const etiqueta = tipo === 'grupos' ? 'Grupo' : tipo === 'fabricantes' ? 'Fabricante' : 'Almacenista';
-  await RegistrarHistorial(item.id, `[${etiqueta}] Creado`, null, nombre);
-  return item;
+    const globalStore = useGlobalStore();
+    const item: Lista = { id: '', tipo, nombre };
+    await Crear(Coleccion.Listas, item);
+    globalStore.Listas.push(item);
+    lista.push(item);
+    const etiqueta = tipo === 'grupos' ? 'Grupo' : tipo === 'fabricantes' ? 'Fabricante' : 'Almacenista';
+    await RegistrarHistorial(item.id, `[${etiqueta}] Creado`, null, nombre);
+    return item;
   } catch (error) {
     const mensaje = `Error al obtener o crear la lista de tipo ${tipo}, nombre ${nombre}:`;
     console.error(mensaje, error);

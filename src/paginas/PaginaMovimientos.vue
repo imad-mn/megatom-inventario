@@ -213,7 +213,7 @@ async function Guardar() {
         <div v-if="productoSeleccionado">
           <div><b>Código:&nbsp;</b>{{ productoSeleccionado?.codigo }}</div>
           <div><b>Descripción:&nbsp;</b>{{ productoSeleccionado?.descripcion }}</div>
-          <div><b>Fabricante:&nbsp;</b>{{ globalStore.ListasMap[productoSeleccionado?.fabricanteId] }}</div>
+          <div><b>Fabricante:&nbsp;</b>{{ productoSeleccionado?.fabricanteId ? globalStore.ListasMap[productoSeleccionado?.fabricanteId] : ''}}</div>
           <div><b>Peso Unitario:&nbsp;</b>{{ productoSeleccionado?.pesoUnitario?.toFixed(2) }} Kg</div>
           <ul class="list-disc list-inside">
             <li v-for="ubic in ubicacionesDelProducto" :key="ubic">{{ ubic }}</li>

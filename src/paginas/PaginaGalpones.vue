@@ -76,14 +76,14 @@ function Quitar(item: Galpon): void {
 <template>
   <div class="flex  justify-between items-center mb-10">
     <div></div>
-    <div class="text-xl justify-self-center">Galpones</div>
+    <div class="text-xl justify-self-center">GALPONES</div>
     <div>
       <Button v-if="Usuario" label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Galpón'" />
     </div>
   </div>
 
   <div v-if="globalStore.Galpones.length === 0" class="italic text-muted-color mt-3">No hay Galpones</div>
-  <div class="flex flex-wrap gap-2 justify-center">
+  <div class="flex flex-wrap gap-10 justify-center">
     <div v-for="item in globalStore.Galpones.sort((a, b) => a.nombre.localeCompare(b.nombre))" :key="item.id"
       class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2 max-w-40">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">

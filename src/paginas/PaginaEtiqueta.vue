@@ -36,13 +36,14 @@ const selectedOption = ref('Todo');
         <div class="text-center text-4xl font-semibold underline mb-10">CAJÓN #{{ globalStore.CajaSeleccionada?.nombre }}</div>
         <p class="text-nowrap text-2xl/8">
           <b>NOMBRE: </b>{{ item.producto.nombre }} <br />
-          <b>GRUPO: </b>{{ globalStore.ListasMap[item.producto.grupoId] }} <br />
-          <b>FABRICANTE: </b>{{ globalStore.ListasMap[item.producto.fabricanteId] }} <br />
+          <b>GRUPO: </b>{{ item.producto.grupoId ? globalStore.ListasMap[item.producto.grupoId] : ''}} <br />
+          <b>FABRICANTE: </b>{{ item.producto.fabricanteId ? globalStore.ListasMap[item.producto.fabricanteId] : '' }} <br />
           <b>CÓDIGO-SERIAL: </b>{{ item.producto.codigo }} <br />
           <br />
           <b>CANTIDAD: </b>{{ item.cantidad.toLocaleString('es-VE') }} UNIDADES <br />
           <b>PESO UNITARIO: </b>{{ item.producto.pesoUnitario }} KG <br />
           <b>PESO TOTAL: </b>{{ (item.producto.pesoUnitario * item.cantidad).toLocaleString('es-VE') }} KG <br />
+          <b>ESTADO: </b>{{ item.producto.estadoId ? globalStore.ListasMap[item.producto.estadoId] : '' }}<br />
           <b>DETALLE: </b>{{ item.producto.descripcion }}
         </p>
       </div>

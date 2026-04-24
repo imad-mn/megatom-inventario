@@ -59,7 +59,7 @@ async function DescargarHistorial() {
     <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
   </div>
 
-  <DataView :value="historial" :data-key="'id'" paginator :rows="10" :rows-per-page-options="[10, 20, 50]" :loading="loading">
+  <DataView :value="historial" :data-key="'id'" paginator :rows="5" :rows-per-page-options="[5, 10, 20]" :loading="loading">
     <template #list="{ items }">
       <div class="flex flex-col gap-2">
         <div
