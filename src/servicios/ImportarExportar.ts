@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import { Actualizar, Coleccion, Crear } from './TablesDbService';
-import type { Cantidades, Estante, Galpon, Historial, IdNombre, Lista, Nivel, Producto, Seccion } from './modelos';
+import type { Estante, Galpon, Historial, IdNombre, Lista, Nivel, Producto, Seccion } from './modelos';
 import { useGlobalStore } from './globalStore';
 import { RegistrarHistorial } from './historialService';
 
@@ -35,7 +35,26 @@ function parsearCsv(file: File): Promise<Fila[]> {
       delimiter: ';',
       header: true,
       skipEmptyLines: true,
-      encoding: "UTF-8",
+      encoding: "ISO-8859-1",
+      transformHeader: (header: string): string => {
+        const headerMap: Record<string, string> = {
+          'GALPÓN': 'galpon',
+          'ESTANTE': 'estante',
+          'NIVEL': 'nivel',
+          'SECCIÓN': 'seccion',
+          'CAJÓN': 'cajon',
+          'NOMBRE': 'nombre',
+          'GRUPO': 'grupo',
+          'FABRICANTE': 'fabricante',
+          'CÓDIGO': 'codigo',
+          'CANTIDAD': 'cantidad',
+          'PESO UNITARIO': 'pesoUnitario',
+          'PESO TOTAL': 'pesoTotal',
+          'DESCRIPCIÓN': 'descripcion',
+          'ESTADO': 'estado'
+        };
+        return headerMap[header] || header;
+      },
       complete: (result) => resolve(result.data),
       error: (err) => reject(err),
     });
@@ -43,19 +62,19 @@ function parsearCsv(file: File): Promise<Fila[]> {
 }
 
 export async function Importar(
-  file: File,
+  archivo: File,
   reportarTotal: (total: number) => void,
   reportarProgreso: (cont: number) => void,
-  completar: () => void
+  completar: () => void,
+  reportarError: (error: string) => void
 ): Promise<void> {
   try {
-    const data = await parsearCsv(file);
+    const data = await parsearCsv(archivo);
     reportarTotal(data.length);
     await ProcesarArchivo(data, reportarProgreso);
     completar();
   } catch (error) {
-    console.error('Error al importar el archivo CSV:', error);
-    completar();
+    reportarError(error as string);
   }
 }
 
@@ -74,18 +93,20 @@ async function ProcesarArchivo(
   for (let i = 0; i < data.length; i++) {
     const fila = data[i];
     if (!fila) continue;
-    try {
-      await ProcesarFila(fila, ctx);
-    } catch (error) {
-      console.error(`Error al procesar la fila con producto "${fila.nombre}":`, error);
-    }
+    await ProcesarFila(fila, ctx);
     reportarProgreso(i + 1);
   }
 
   // Guardar todos los galpones que fueron modificados
   for (const galpon of globalStore.Galpones) {
     if (ctx.galponesModificados.has(galpon.id)) {
+      try {
       await Actualizar(Coleccion.Galpones, galpon);
+      } catch (error) {
+        const mensaje = `Error al actualizar el galpón ${galpon.nombre} después de la importación:`;
+        console.error(mensaje, error);
+        throw mensaje;
+      }
     }
   }
 }
@@ -98,92 +119,134 @@ function parsearPesoUnitarioFila(valor: string): number {
   return Number(valor.split(' ')[0]?.replace(',', '.')) || 0;
 }
 
-async function obtenerOCrearGalpon(ctx: ContextoImportacion, nombre: string): Promise<Galpon> {
-  const globalStore = useGlobalStore();
-  const existente = globalStore.Galpones.find(g => g.nombre === nombre);
-  if (existente) return existente;
+async function obtenerOCrearGalpon(nombre: string): Promise<Galpon> {
+  try {
+    const globalStore = useGlobalStore();
+    const existente = globalStore.Galpones.find(g => g.nombre === nombre);
+    if (existente) return existente;
 
-  const galpon: Galpon = { id: '', nombre, ordenDescendente: false, estantes: [] };
-  galpon.id = await Crear(Coleccion.Galpones, galpon);
-  globalStore.Galpones.push(galpon);
-  await RegistrarHistorial(galpon.id, '[Galpon] Creado', null, nombre);
-  return galpon;
+    const galpon: Galpon = { id: '', nombre, descripcion: '', ordenDescendente: false, estantes: [] };
+    await Crear(Coleccion.Galpones, galpon);
+    globalStore.Galpones.push(galpon);
+    await RegistrarHistorial(galpon.id, '[Galpon] Creado', null, nombre);
+    return galpon;
+  } catch (error) {
+    const mensaje = `Error al obtener o crear el galpón ${nombre}:`;
+    console.error(mensaje, error);
+    throw mensaje;
+  }
 }
 
 function obtenerOCrearEstante(ctx: ContextoImportacion, galpon: Galpon, nombre: string): Estante {
-  const existente = galpon.estantes.find(e => e.nombre === nombre);
-  if (existente) return existente;
+  try {
+    const existente = galpon.estantes.find(e => e.nombre === nombre);
+    if (existente) return existente;
 
-  const estante: Estante = { id: crypto.randomUUID(), nombre, ordenDescendente: false, niveles: [] };
-  galpon.estantes.push(estante);
-  ctx.galponesModificados.add(galpon.id);
-  return estante;
+    const estante: Estante = { id: crypto.randomUUID(), nombre, ordenDescendente: false, niveles: [] };
+    galpon.estantes.push(estante);
+    ctx.galponesModificados.add(galpon.id);
+    return estante;
+  } catch (error) {
+    const mensaje = `Error al obtener o crear el estante ${nombre}:`;
+    console.error(mensaje, error);
+    throw mensaje;
+  }
 }
 
 function obtenerOCrearNivel(ctx: ContextoImportacion, galpon: Galpon, estante: Estante, nombre: string): Nivel {
-  const existente = estante.niveles.find(n => n.nombre === nombre);
-  if (existente) return existente;
+  try {
+    const existente = estante.niveles.find(n => n.nombre === nombre);
+    if (existente) return existente;
 
-  const nivel: Nivel = { id: crypto.randomUUID(), nombre, ordenDescendente: false, secciones: [] };
-  estante.niveles.push(nivel);
-  ctx.galponesModificados.add(galpon.id);
-  return nivel;
+    const nivel: Nivel = { id: crypto.randomUUID(), nombre, ordenDescendente: false, secciones: [] };
+    estante.niveles.push(nivel);
+    ctx.galponesModificados.add(galpon.id);
+    return nivel;
+  } catch (error) {
+    const mensaje = `Error al obtener o crear el nivel ${nombre}:`;
+    console.error(mensaje, error);
+    throw mensaje;
+  }
 }
 
 function obtenerOCrearSeccion(ctx: ContextoImportacion, galpon: Galpon, nivel: Nivel, nombre: string): Seccion {
-  const existente = nivel.secciones.find(s => s.nombre === nombre);
-  if (existente) return existente;
+  try {
+    const existente = nivel.secciones.find(s => s.nombre === nombre);
+    if (existente) return existente;
 
-  const seccion: Seccion = { id: crypto.randomUUID(), nombre, cajas: [] };
-  nivel.secciones.push(seccion);
-  ctx.galponesModificados.add(galpon.id);
-  return seccion;
+    const seccion: Seccion = { id: crypto.randomUUID(), nombre, cajas: [] };
+    nivel.secciones.push(seccion);
+    ctx.galponesModificados.add(galpon.id);
+    return seccion;
+  } catch (error) {
+    const mensaje = `Error al obtener o crear la sección ${nombre}:`;
+    console.error(mensaje, error);
+    throw mensaje;
+  }
 }
 
 function obtenerOCrearCaja(ctx: ContextoImportacion, galpon: Galpon, seccion: Seccion, nombre: string): IdNombre {
-  const existente = seccion.cajas.find(c => c.nombre === nombre);
-  if (existente) return existente;
+  try {
+    const existente = seccion.cajas.find(c => c.nombre === nombre);
+    if (existente) return existente;
 
-  const caja: IdNombre = { id: crypto.randomUUID(), nombre };
-  seccion.cajas.push(caja);
-  ctx.galponesModificados.add(galpon.id);
-  return caja;
+    const caja: IdNombre = { id: crypto.randomUUID(), nombre };
+    seccion.cajas.push(caja);
+    ctx.galponesModificados.add(galpon.id);
+    return caja;
+  } catch (error) {
+    const mensaje = `Error al obtener o crear la caja ${nombre}:`;
+    console.error(mensaje, error);
+    throw mensaje;
+  }
 }
 
 async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void> {
   const globalStore = useGlobalStore();
-  const galpon = await obtenerOCrearGalpon(ctx, fila.galpon);
+  const galpon = await obtenerOCrearGalpon(fila.galpon);
   const estante = obtenerOCrearEstante(ctx, galpon, fila.estante);
   const nivel = obtenerOCrearNivel(ctx, galpon, estante, fila.nivel);
   const seccion = obtenerOCrearSeccion(ctx, galpon, nivel, fila.seccion);
   const cajon = obtenerOCrearCaja(ctx, galpon, seccion, fila.cajon);
 
-  const grupo = await obtenerOCrearLista(ctx.grupos, 'grupos', fila.grupo);
-  const fabricante = await obtenerOCrearLista(ctx.fabricantes, 'fabricantes', fila.fabricante);
-  const estado = await obtenerOCrearLista(ctx.estados, 'estados', fila.estado);
+  const grupo = fila.grupo ? await obtenerOCrearLista(ctx.grupos, 'grupos', fila.grupo) : null;
+  const fabricante = fila.fabricante ? await obtenerOCrearLista(ctx.fabricantes, 'fabricantes', fila.fabricante) : null;
+  const estado = fila.estado ? await obtenerOCrearLista(ctx.estados, 'estados', fila.estado) : null;
 
-  const producto = await obtenerOCrearProducto(fila, grupo.id, fabricante.id, estado.id, globalStore.Productos);
+  if (fila.nombre.trim() === '') {
+    console.warn(`La fila con cajón '${fila.cajon}' no tiene un nombre de producto. Se omitirá esta fila.`);
+    return;
+  }
+  const producto = await obtenerOCrearProducto(fila, grupo?.id ?? null, fabricante?.id ?? null, estado?.id ?? null, globalStore.Productos);
+  await crearOActualizarCantidades(fila.cantidad, cajon, producto);
+}
 
-  const cantidad = parsearCantidadFila(fila.cantidad);
-  const itemCantidad = globalStore.Cantidades.find(
-    (c) => c.cajaId === cajon.id && c.productoId === producto.id
-  );
+async function crearOActualizarCantidades(cantidadFila: string, cajon: IdNombre, producto: Producto) {
+  try {
+    const globalStore = useGlobalStore();
+    const cantidad = parsearCantidadFila(cantidadFila);
+    let itemCantidad = globalStore.Cantidades.find(c => c.cajaId === cajon.id && c.productoId === producto.id);
 
-  if (!itemCantidad) {
-    const nuevo: Cantidades = {
-      id: '',
-      productoId: producto.id,
-      cantidad,
-      cajaId: cajon.id,
-    };
-    await Crear(Coleccion.Cantidades, nuevo);
-    globalStore.Cantidades.push(nuevo);
-    await RegistrarHistorial(producto.id, `[Importación] '${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`, null, `${cantidad} unidades`);
-  } else {
-    const cantidadAnterior = itemCantidad.cantidad;
-    itemCantidad.cantidad = cantidad;
-    await Actualizar(Coleccion.Cantidades, itemCantidad);
-    await RegistrarHistorial(producto.id, `[Importación] Cantidad actualizada en caja ${cajon.nombre}`, String(cantidadAnterior), String(cantidad));
+    if (!itemCantidad) {
+      itemCantidad = {
+        id: '',
+        productoId: producto.id,
+        cantidad,
+        cajaId: cajon.id,
+      };
+      await Crear(Coleccion.Cantidades, itemCantidad);
+      globalStore.Cantidades.push(itemCantidad);
+      await RegistrarHistorial(producto.id, `[Importación] '${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`, null, `${cantidad} unidades`);
+    } else {
+      const cantidadAnterior = itemCantidad.cantidad;
+      itemCantidad.cantidad = cantidad;
+      await Actualizar(Coleccion.Cantidades, itemCantidad);
+      await RegistrarHistorial(producto.id, `[Importación] Cantidad actualizada en caja ${cajon.nombre}`, String(cantidadAnterior), String(cantidad));
+    }
+  } catch (error) {
+    const mensaje = `Error al crear o actualizar las cantidades para el producto ${producto.nombre} en la caja ${cajon.nombre}:`;
+    console.error(mensaje, error);
+    throw mensaje;
   }
 }
 
@@ -192,6 +255,7 @@ async function obtenerOCrearLista(
   tipo: Lista['tipo'],
   nombre: string
 ): Promise<Lista> {
+  try {
   const existente = lista.find((x) => x.nombre === nombre);
   if (existente) return existente;
 
@@ -203,15 +267,21 @@ async function obtenerOCrearLista(
   const etiqueta = tipo === 'grupos' ? 'Grupo' : tipo === 'fabricantes' ? 'Fabricante' : 'Almacenista';
   await RegistrarHistorial(item.id, `[${etiqueta}] Creado`, null, nombre);
   return item;
+  } catch (error) {
+    const mensaje = `Error al obtener o crear la lista de tipo ${tipo}, nombre ${nombre}:`;
+    console.error(mensaje, error);
+    throw mensaje;
+  }
 }
 
 async function obtenerOCrearProducto(
   fila: Fila,
-  grupoId: string,
-  fabricanteId: string,
-  estadoId: string,
+  grupoId: string | null,
+  fabricanteId: string | null,
+  estadoId: string | null,
   productos: Producto[]
 ): Promise<Producto> {
+  try {
   const existente = productos.find(
     (p) => p.nombre === fila.nombre && p.codigo === fila.codigo
   );
@@ -233,6 +303,11 @@ async function obtenerOCrearProducto(
   const productoDesc = `Nombre: ${producto.nombre} | Código: ${producto.codigo} | Grupo: ${fila.grupo} | Fabricante: ${fila.fabricante} | Descripción: ${producto.descripcion} | Peso Unitario: ${producto.pesoUnitario} Kg`;
   await RegistrarHistorial(producto.id, '[Producto] Creado', null, productoDesc);
   return producto;
+  } catch (error) {
+    const mensaje = `Error al obtener o crear el producto ${fila.nombre} con código ${fila.codigo}:`;
+    console.error(mensaje, error);
+    throw mensaje;
+  }
 }
 
 function obtenerRutaCajon(cajonId: string, galpones: Galpon[]): { galpon: string; estante: string; nivel: string; seccion: string; cajon: string } | null {
@@ -279,8 +354,8 @@ export async function Exportar(): Promise<string> {
       seccion: ruta.seccion,
       cajon: ruta.cajon,
       nombre: producto.nombre,
-      grupo: globalStore.ListasMap[producto.grupoId] ?? '',
-      fabricante: globalStore.ListasMap[producto.fabricanteId] ?? '',
+      grupo: producto.grupoId ? globalStore.ListasMap[producto.grupoId] || '' : '',
+      fabricante: producto.fabricanteId ? globalStore.ListasMap[producto.fabricanteId] || '' : '',
       codigo: producto.codigo ?? '',
       cantidad: `${cantidad} Unit`,
       pesoUnitario: String(pesoUnitario).replace('.', ',') + ' Kg',

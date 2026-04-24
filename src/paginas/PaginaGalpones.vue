@@ -18,27 +18,27 @@ const confirm = useConfirm();
 const router = useRouter();
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<Galpon>({ id: '', nombre: '', ordenDescendente: false, estantes: [] });
+const itemEdicion = ref<Galpon>({ id: '', nombre: '', descripcion: '', ordenDescendente: false, estantes: [] });
 const esNuevo = ref(false);
 
 const globalStore = useGlobalStore();
 
 function Agregar() {
   esNuevo.value = true;
-  itemEdicion.value = { id: '', nombre: '', ordenDescendente: false, estantes: [] };
+  itemEdicion.value = { id: '', nombre: '', descripcion: '', ordenDescendente: false, estantes: [] };
   dialogVisible.value = true;
 }
 
 async function Guardar() {
   if (esNuevo.value) {
     await TablesDbService.Crear(TablesDbService.Coleccion.Galpones, itemEdicion.value);
-    await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, itemEdicion.value.nombre);
+    await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Creado', null, `${itemEdicion.value.nombre}-${itemEdicion.value.descripcion}`);
     globalStore.Galpones.push({ ...itemEdicion.value });
   } else {
     const indice = globalStore.Galpones.findIndex(x => x.id === itemEdicion.value.id);
     if (indice >= 0) {
       await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, itemEdicion.value);
-      await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', globalStore.Galpones[indice]?.nombre, itemEdicion.value.nombre);
+      await RegistrarHistorial(itemEdicion.value.id, '[Galpón] Modificado', `${globalStore.Galpones[indice]?.nombre}-${globalStore.Galpones[indice]?.descripcion}`, `${itemEdicion.value.nombre}-${itemEdicion.value.descripcion}`);
       globalStore.Galpones[indice] = { ...itemEdicion.value };
     }
   }
@@ -47,7 +47,7 @@ async function Guardar() {
 
 function Ver(item: Galpon) {
   globalStore.GalponSeleccionado = item;
-  router.push({ name: 'Galpón', params: { id: item.id } });
+  router.push('/galpon');
 }
 
 function Editar(item: Galpon) {
@@ -64,7 +64,7 @@ function Quitar(item: Galpon): void {
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await RegistrarHistorial(item.id, '[Galpón] Eliminado', item.nombre, null);
+      await RegistrarHistorial(item.id, '[Galpón] Eliminado', `${item.nombre}-${item.descripcion}`, null);
       const indice = globalStore.Galpones.findIndex(x => x.id === item.id);
       await TablesDbService.Eliminar(TablesDbService.Coleccion.Galpones, item);
       if (indice >= 0) globalStore.Galpones.splice(indice, 1);
@@ -84,12 +84,13 @@ function Quitar(item: Galpon): void {
 
   <div v-if="globalStore.Galpones.length === 0" class="italic text-muted-color mt-3">No hay Galpones</div>
   <div class="flex flex-wrap gap-2 justify-center">
-    <div v-for="item in globalStore.Galpones" :key="item.id"
-      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2">
+    <div v-for="item in globalStore.Galpones.sort((a, b) => a.nombre.localeCompare(b.nombre))" :key="item.id"
+      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2 max-w-40">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>
           <i class="pi pi-warehouse text-6xl mb-4"></i>
-          <div>{{ 'Galpón ' + item.nombre }}</div>
+          <div class="text-muted-color font-semibold">{{ 'Galpón ' + item.nombre }}</div>
+          <div class="text-muted-color text-wrap">{{ item.descripcion }}</div>
         </div>
       </Button>
       <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Galpón ' + item.nombre" />
@@ -102,6 +103,10 @@ function Quitar(item: Galpon): void {
       <FloatLabel variant="on" class="w-full mt-1">
         <label for="nombre">Galpón</label>
         <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
+      </FloatLabel>
+      <FloatLabel variant="on" class="w-full mt-1">
+        <label for="descripcion">Descripción</label>
+        <InputText id="descripcion" v-model="itemEdicion.descripcion" class="w-full" :invalid="!itemEdicion?.descripcion" aria-autocomplete="none"  @keyup.enter="Guardar" />
       </FloatLabel>
       <div class="flex gap-2 items-center">
         <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />

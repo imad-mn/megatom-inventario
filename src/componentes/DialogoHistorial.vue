@@ -9,7 +9,10 @@ const historial = ref<Historial[]>([]);
 
 watch(
   () => props.id,
-  async (newId: string) => historial.value = await ObtenerHistorialPorElemento(newId),
+  async (newId: string) => {
+    historial.value = [];
+    historial.value = await ObtenerHistorialPorElemento(newId);
+  },
   { immediate: true }
 );
 </script>

@@ -12,8 +12,8 @@ export type Producto = IdNombre & {
   codigo: string | null;
   descripcion: string | null;
   pesoUnitario: number;
-  grupoId: string;
-  fabricanteId: string;
+  grupoId: string | null;
+  fabricanteId: string | null;
   imagenUrl: string | null;
   estadoId: string | null;
 }
@@ -36,6 +36,7 @@ export type Estante = ItemOrdenable & {
 }
 
 export type Galpon = ItemOrdenable & {
+  descripcion: string | null;
   estantes: Estante[];
 }
 

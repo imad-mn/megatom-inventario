@@ -41,6 +41,7 @@ const fileupload = ref<FileUploadMethods>();
 const progresoImportacion = ref(0);
 const totalRegistros = ref(0);
 const mostrarMensajeImportacion = ref(false);
+const errorImportacion = ref('');
 const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
@@ -50,8 +51,8 @@ const permitirCerrarDialogoImportar = ref(true);
         || p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || (p.codigo !== null && p.codigo.toLowerCase().includes(filtroTexto.value.toLowerCase()))
-        || globalStore.ListasMap[p.grupoId]?.toLowerCase().includes(filtroTexto.value.toLowerCase())
-        || globalStore.ListasMap[p.fabricanteId]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
+        || (p.grupoId && globalStore.ListasMap[p.grupoId]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
+        || (p.fabricanteId && globalStore.ListasMap[p.fabricanteId]?.toLowerCase().includes(filtroTexto.value.toLowerCase())))
       && (filtroGrupo.value === null || p.grupoId === filtroGrupo.value.id)
       && (filtroFabricante.value === null || p.fabricanteId === filtroFabricante.value.id);
   });
@@ -183,6 +184,7 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
   if (!archivo)
     return;
 
+  errorImportacion.value = '';
   deshabilitarBotonImportar.value = true;
   permitirCerrarDialogoImportar.value = false;
   await Importar(
@@ -192,6 +194,10 @@ async function ImportarProductos(e: FileUploadUploaderEvent) {
     () => {
       mostrarMensajeImportacion.value = true;
       permitirCerrarDialogoImportar.value = true;
+    },
+    (error) => {
+      permitirCerrarDialogoImportar.value = true;
+      errorImportacion.value = error;
     });
 }
 
@@ -202,7 +208,7 @@ function VerUbicacion(productoId: string) {
 }
 
 function Stringify(item: Producto): string {
-  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${globalStore.ListasMap[item.grupoId]} | Fabricante: ${globalStore.ListasMap[item.fabricanteId]} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
+  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : ''} | Fabricante: ${item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : ''} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
 }
 
 function onHistorialClick(item: Producto) {
@@ -249,10 +255,10 @@ async function DescargarExportacion() {
           <template #content>
             <div><b>Código:&nbsp;</b>{{ item.codigo }}</div>
             <b>Grupo:&nbsp;</b>
-            <div>{{ globalStore.ListasMap[item.grupoId] }}</div>
-            <div><b>Fabricante:&nbsp;</b>{{ globalStore.ListasMap[item.fabricanteId] }}</div>
+            <div>{{ item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : '' }}</div>
+            <div><b>Fabricante:&nbsp;</b>{{ item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : '' }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
-            <div><b>Estado:&nbsp;</b>{{ item.estadoId ? globalStore.ListasMap[item.estadoId] : '' }}</div>
+            <div><b>Estado:&nbsp;</b>{{ item.estadoId ? globalStore.ListasMap[item.estadoId] || '' : '' }}</div>
             <Button v-if="!ubicacionDict[item.id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.id)" />
             <div v-else>
               <div><b>Ubicación:</b></div>
@@ -359,8 +365,9 @@ async function DescargarExportacion() {
         @select="() => deshabilitarBotonImportar = false"
         @uploader="ImportarProductos" />
       <Button label="Importar" icon="pi pi-file-import" severity="primary" variant="outlined" :disabled="deshabilitarBotonImportar" @click="fileupload?.upload()" />
-      <ProgressBar :value="(progresoImportacion * 100)/totalRegistros">{{ `${progresoImportacion}/${totalRegistros}` }}</ProgressBar>
+      <ProgressBar :value="Math.ceil((progresoImportacion / totalRegistros) * 100)">{{ `${progresoImportacion}/${totalRegistros}` }}</ProgressBar>
       <Message severity="success" v-show="mostrarMensajeImportacion">Los productos se han importado correctamente.</Message>
+      <Message severity="error" v-show="errorImportacion">{{ errorImportacion }}</Message>
     </div>
   </Dialog>
 </template>

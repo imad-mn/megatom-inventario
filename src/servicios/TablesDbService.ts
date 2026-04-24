@@ -56,10 +56,10 @@ export function createConverterConFecha<T extends ConFechaCreacion>(): Firestore
   };
 }
 
-export async function Crear<T extends ModeloBase>(collectionName: string, item: T): Promise<string> {
+export async function Crear<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
   const collRef = collection(db, collectionName).withConverter(createConverter<T>());
   const docRef = await addDoc(collRef, item);
-  return docRef.id;
+  item.id = docRef.id;
 }
 
 export async function Actualizar<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
