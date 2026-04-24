@@ -11,6 +11,8 @@ interface EditarQuitarProps {
   vertical?: boolean;
   onEditarClick: () => void;
   onQuitarClick: () => void;
+  onImprimirClick?: () => void;
+  botonImprimir?: boolean;
   idElemento: string;
   nombreElemento: string;
 }
@@ -28,5 +30,6 @@ function onHistorialClick() {
     <Button icon="pi pi-history" severity="info" variant="text" :size="props.tamaño" v-tooltip.bottom="'Historial'" @click="onHistorialClick" />
     <Button icon="pi pi-pen-to-square" severity="success" variant="text" :size="props.tamaño" v-tooltip.bottom="'Editar'" @click="props.onEditarClick" />
     <Button icon="pi pi-trash" severity="danger" variant="text" :size="props.tamaño" v-tooltip.bottom="'Quitar'" @click="props.onQuitarClick" />
+    <Button v-if="props.botonImprimir" icon="pi pi-print" severity="secondary" variant="text" :size="props.tamaño" v-tooltip.bottom="'Imprimir'" @click="props.onImprimirClick" />
   </div>
 </template>

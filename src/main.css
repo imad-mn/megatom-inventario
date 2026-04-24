@@ -49,7 +49,4 @@ label {
   .noprint {
       display:none !important;
   }
-   @page {
-    size: landscape;
-  }
 }

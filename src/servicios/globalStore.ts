@@ -13,6 +13,7 @@ export const useGlobalStore = defineStore('global', () => {
   const EstanteSeleccionado = ref<Estante | null>(null);
   const CajaSeleccionada = ref<IdNombre | null>(null);
   const ProductosEnCaja = ref<CantidadesConProducto[]>([]);
+  const listaSeleccionada = ref<IdNombre | null>(null);
 
   const dialogoHistorial = ref({ mostrar: false, idElemento: '', nombreElemento: '' });
 
@@ -74,6 +75,28 @@ export const useGlobalStore = defineStore('global', () => {
     return ubicaciones;
   }
 
+  function ObtenerGruposEnEstanteSeleccionado(): string[] {
+    if (!EstanteSeleccionado.value) return [];
+
+    const gruposSet = new Set<string>();
+
+    for (const nivel of EstanteSeleccionado.value.niveles) {
+      for (const seccion of nivel.secciones) {
+        for (const caja of seccion.cajas) {
+          const cantidades = Cantidades.value.filter(c => c.cajaId === caja.id);
+          for (const cantidad of cantidades) {
+            const producto = Productos.value.find(p => p.id === cantidad.productoId);
+            if (producto && producto.grupoId) {
+              gruposSet.add(producto.grupoId);
+            }
+          }
+        }
+      }
+    }
+
+    return Array.from(gruposSet).map(grupoId => ListasMap.value[grupoId] || 'Grupo Desconocido');
+  }
+
   return {
     Listas,
     ListasMap,
@@ -85,11 +108,13 @@ export const useGlobalStore = defineStore('global', () => {
     CajaSeleccionada,
     ProductosEnCaja,
     dialogoHistorial,
+    listaSeleccionada,
 
     CargarTodo,
     ObtenerLista,
     ObtenerCantidadesPorProducto,
     ObtenerCantidadesConProductos,
     ObtenerUbicaciones,
+    ObtenerGruposEnEstanteSeleccionado
   };
 });

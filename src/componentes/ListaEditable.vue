@@ -8,9 +8,13 @@ import DialogoEdicion from './DialogoEdicion.vue';
 import { useGlobalStore } from '@/servicios/globalStore';
 import { useAuthStore } from '@/servicios/authStore';
 import { RegistrarHistorial } from '@/servicios/historialService';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 interface ListaEditableProps {
   tipo: TipoLista;
+  botonImprimir?: boolean;
 }
 const props = defineProps<ListaEditableProps>();
 const confirm = useConfirm();
@@ -74,6 +78,11 @@ function Quitar(item: Lista): void {
     }
   });
 }
+
+function Imprimir(item: Lista) {
+  globalStore.listaSeleccionada = item;
+  router.push(`/imprimir/${props.tipo}`);
+}
 </script>
 
 <template>
@@ -83,7 +92,8 @@ function Quitar(item: Lista): void {
     </template>
     <div v-for="item in itemsFiltrados" :key="item.id" class="flex items-center justify-between p-1 border-b border-surface-200 dark:border-surface-700">
       <div>{{ item.nombre }}</div>
-      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" :id-elemento="item.id" :nombre-elemento="item.nombre" />
+      <EditarQuitar tamaño="small" @editar-click="Editar(item)" @quitarClick="Quitar(item)" :id-elemento="item.id" :nombre-elemento="item.nombre"
+        :boton-imprimir="props.botonImprimir" @imprimir-click="Imprimir(item)" />
     </div>
   </Panel>
 

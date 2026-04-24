@@ -270,7 +270,15 @@ async function Mover() {
     </Button>
     <div class="text-xl">ESTANTE {{globalStore.EstanteSeleccionado!.nombre}}</div>
     <div>
-      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(globalStore.EstanteSeleccionado!, 'Estante')">
+      <Button v-if="Usuario" severity="secondary" variant="outlined" class="mr-2" @click="router.push('/imprimir/secciones')">
+        <span class="p-button-icon p-button-icon-left pi pi-print" />
+        <span class="p-button-label hidden md:inline">Sección</span>
+      </Button>
+      <Button v-if="Usuario" severity="secondary" variant="outlined" class="mr-2" @click="router.push('/imprimir/gruposEstante')">
+        <span class="p-button-icon p-button-icon-left pi pi-print" />
+        <span class="p-button-label hidden md:inline">Grupo</span>
+      </Button>
+      <Button v-if="Usuario" icon="pi pi-pen-to-square" label="Estante" severity="success" variant="outlined" class="mr-2" @click="Editar(globalStore.EstanteSeleccionado!, 'Estante')">
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
         <span class="p-button-label hidden md:inline">Estante</span>
       </Button>
@@ -339,7 +347,7 @@ async function Mover() {
           <div class="mx-2 text-xl font-medium">Caja {{ globalStore.CajaSeleccionada?.nombre }}</div>
           <Button icon="pi pi-arrow-right" severity="secondary" variant="text" v-tooltip.bottom="'Siguiente'" @click="CajaSiguiente" :disabled="deshabilitarSiguienteCaja" />
         </div>
-        <Button class="mr-4" icon="pi pi-print" severity="secondary" variant="text" v-tooltip.bottom="'Vista Impresion'" @click="router.push('/etiqueta')" />
+        <Button class="mr-4" icon="pi pi-print" severity="secondary" variant="text" v-tooltip.bottom="'Vista Impresion'" @click="router.push('/imprimir/caja')" />
       </div>
     </template>
     <div v-if="globalStore.ProductosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>

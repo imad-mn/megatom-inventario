@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import type { Caja, Cantidades, Estante, Galpon, IdNombre, Lista, Movimientos, MovimientosExtendido, Nivel, Producto, Seccion } from '@/servicios/modelos';
-import { Actualizar, Coleccion, Crear, CrearConFecha, ObtenerConFiltroFecha } from '@/servicios/TablesDbService';
+import { Actualizar, Coleccion, Crear, CrearConFecha, Eliminar, ObtenerConFiltroFecha } from '@/servicios/TablesDbService';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { Fieldset, FloatLabel } from 'primevue';
 import { useGlobalStore } from '@/servicios/globalStore';
@@ -146,7 +146,10 @@ async function Guardar() {
   } else {
     if (cantidadAModificar) {
       cantidadAModificar.cantidad -= itemEdicion.value.cantidad;
-      await Actualizar(Coleccion.Cantidades, cantidadAModificar);
+      if (cantidadAModificar.cantidad == 0)
+        await Eliminar(Coleccion.Cantidades, cantidadAModificar);
+      else
+        await Actualizar(Coleccion.Cantidades, cantidadAModificar);
     }
   }
 

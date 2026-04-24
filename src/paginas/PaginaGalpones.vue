@@ -71,6 +71,11 @@ function Quitar(item: Galpon): void {
     }
   });
 }
+
+function ImprimirGalpon(item: Galpon) {
+  globalStore.GalponSeleccionado = item;
+  router.push('/imprimir/galpon');
+}
 </script>
 
 <template>
@@ -93,7 +98,7 @@ function Quitar(item: Galpon): void {
           <div class="text-muted-color text-wrap">{{ item.descripcion }}</div>
         </div>
       </Button>
-      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Galpón ' + item.nombre" />
+      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :boton-imprimir="true" @imprimir-click="ImprimirGalpon(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Galpón ' + item.nombre" />
     </div>
   </div>
 

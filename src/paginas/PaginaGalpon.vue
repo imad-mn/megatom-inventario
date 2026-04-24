@@ -86,6 +86,11 @@ function Quitar(item: Estante): void {
     }
   });
 }
+
+function ImprimirEstante(item: Estante) {
+  globalStore.EstanteSeleccionado = item;
+  router.push('/imprimir/estante');
+}
 </script>
 
 <template>
@@ -94,7 +99,7 @@ function Quitar(item: Estante): void {
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">Galpones</span>
     </Button>
-    <div class="text-xl">GALPÓN {{globalStore.GalponSeleccionado!.nombre}}</div>
+    <div class="text-xl">GALPÓN {{globalStore.GalponSeleccionado!.nombre}} - {{ globalStore.GalponSeleccionado!.descripcion }}</div>
     <div>
       <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(globalStore.GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
@@ -117,7 +122,7 @@ function Quitar(item: Estante): void {
           <div class="text-muted-color">{{ 'Estante ' + item.nombre }}</div>
         </div>
       </Button>
-      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Estante ' + item.nombre" />
+      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :boton-imprimir="true" @imprimir-click="ImprimirEstante(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Estante ' + item.nombre" />
     </div>
   </div>
 

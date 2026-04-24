@@ -53,6 +53,8 @@ const permitirCerrarDialogoImportar = ref(true);
         || (p.codigo !== null && p.codigo.toLowerCase().includes(filtroTexto.value.toLowerCase()))
         || (p.grupoId && globalStore.ListasMap[p.grupoId]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
         || (p.fabricanteId && globalStore.ListasMap[p.fabricanteId]?.toLowerCase().includes(filtroTexto.value.toLowerCase())))
+        || (p.estadoId && globalStore.ListasMap[p.estadoId]?.toLowerCase().includes(filtroTexto.value.toLowerCase()))
+        || p.pesoUnitario.toString().includes(filtroTexto.value)
       && (filtroGrupo.value === null || p.grupoId === filtroGrupo.value.id)
       && (filtroFabricante.value === null || p.fabricanteId === filtroFabricante.value.id);
   });
