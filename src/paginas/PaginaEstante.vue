@@ -260,16 +260,21 @@ async function Mover() {
   await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
   mostrarDialogoMover.value = false;
 }
+
+function ImprimirCaja(caja: Caja) {
+  globalStore.CajaSeleccionada = caja;
+  router.push('/imprimir/caja');
+}
 </script>
 
 <template>
-  <div id="encabezado" class="flex justify-between items-center mb-3">
-    <Button severity="secondary" variant="outlined" @click="() => router.push('/galpon')">
+  <div id="encabezado" class="flex justify-between md:grid md:grid-cols-3 items-center mb-3">
+    <Button class="justify-self-start" severity="secondary" variant="outlined" @click="() => router.push('/galpon')">
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">Galpón {{globalStore.GalponSeleccionado!.nombre}}</span>
     </Button>
-    <div class="text-xl">ESTANTE {{globalStore.EstanteSeleccionado!.nombre}}</div>
-    <div>
+    <div class="justify-self-center text-xl">ESTANTE {{globalStore.EstanteSeleccionado!.nombre}}</div>
+    <div class="justify-self-end">
       <Button v-if="Usuario" severity="secondary" variant="outlined" class="mr-2" @click="router.push('/imprimir/secciones')">
         <span class="p-button-icon p-button-icon-left pi pi-print" />
         <span class="p-button-label hidden md:inline">Sección</span>
@@ -314,10 +319,10 @@ async function Mover() {
             No hay cajas en esta Sección.
           </div>
           <div v-else v-for="caja in seccion.cajas" :key="caja.id"
-              class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" :class="{ 'px-3': Usuario == null }">
+              class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" :class="{ 'px-2': Usuario == null }">
               <Button variant="text" severity="warn" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? '*' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap', root: 'px-1' }"
                 v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md' } }" />
-              <BotonesCompacto v-if="Usuario" @moverClick="MostrarDialogoMover(caja, 'Caja')" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" :id-elemento="caja.id" :nombre-elemento="'Caja ' + caja.nombre" button-severity="warn" />
+              <BotonesCompacto v-if="Usuario" @moverClick="MostrarDialogoMover(caja, 'Caja')" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" @imprimir-click="ImprimirCaja(caja)" :id-elemento="caja.id" :nombre-elemento="'Caja ' + caja.nombre" button-severity="warn" />
           </div>
         </Panel>
       </div>
@@ -347,13 +352,14 @@ async function Mover() {
           <div class="mx-2 text-xl font-medium">Caja {{ globalStore.CajaSeleccionada?.nombre }}</div>
           <Button icon="pi pi-arrow-right" severity="secondary" variant="text" v-tooltip.bottom="'Siguiente'" @click="CajaSiguiente" :disabled="deshabilitarSiguienteCaja" />
         </div>
-        <Button class="mr-4" icon="pi pi-print" severity="secondary" variant="text" v-tooltip.bottom="'Vista Impresion'" @click="router.push('/imprimir/caja')" />
+        <Button v-if="Usuario" class="mr-4" icon="pi pi-print" severity="secondary" variant="text" v-tooltip.bottom="'Vista Impresion'" @click="router.push('/imprimir/caja')" />
       </div>
     </template>
     <div v-if="globalStore.ProductosEnCaja.length === 0" class="italic text-muted-color">No hay productos en esta caja</div>
     <div v-else v-for="item in globalStore.ProductosEnCaja" :key="item.id" class="p-2 border-2 rounded-md border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex gap-2">
         <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined" alt="Foto" class="rounded-xl md:w-50 md:h-50" />
+        <!-- <Button icon="pi pi-pen-to-square" severity="success" rounded variant="text" class="absolute -top-2 -right-2" /> -->
         <div>
           <div class="text-wrap"><b>Nombre: </b>{{ item.producto.nombre }}</div>
           <div><b>Grupo: </b>{{ item.producto.grupoId ? globalStore.ListasMap[item.producto.grupoId] : ''}}</div>

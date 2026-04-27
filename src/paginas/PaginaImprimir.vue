@@ -71,12 +71,12 @@ const selectedOption = ref('Todo');
     </div>
     <div v-else-if="$route.params.tipo == 'grupos'" class="text-[8rem]">
       <div class="underline">GRUPO</div>
-      {{ globalStore.listaSeleccionada?.nombre }}
+      {{ globalStore.listaSeleccionada?.nombre.substring(globalStore.listaSeleccionada?.nombre.indexOf('-') + 2) }}
     </div>
     <div v-else-if="$route.params.tipo == 'gruposEstante'" class="text-[8rem]">
       <div v-for="grupo in globalStore.ObtenerGruposEnEstanteSeleccionado()" :key="grupo">
         <div class="underline">GRUPO</div>
-        {{ grupo }}
+        {{ grupo.substring(grupo.indexOf('-') + 2) }}
       </div>
     </div>
   </div>

@@ -9,6 +9,7 @@ interface EditarQuitarProps {
   onMoverClick: () => void;
   onEditarClick: () => void;
   onQuitarClick: () => void;
+  onImprimirClick?: () => void;
   idElemento: string;
   nombreElemento: string;
   buttonSeverity: 'secondary' | 'success' | 'info' | 'warn' | 'help' | 'danger' | 'contrast';
@@ -51,6 +52,12 @@ const botones = ref<MenuItem[]>([
     icon: 'pi pi-trash',
     label: 'Quitar',
     command: () => props.onQuitarClick(),
+  },
+  {
+    icon: 'pi pi-print',
+    label: 'Imprimir',
+    command: () => props.onImprimirClick?.(),
+    visible: props.onImprimirClick != undefined,
   },
 ]);
 

@@ -79,18 +79,18 @@ function ImprimirGalpon(item: Galpon) {
 </script>
 
 <template>
-  <div class="flex  justify-between items-center mb-10">
-    <div></div>
-    <div class="text-xl justify-self-center">GALPONES</div>
-    <div>
-      <Button v-if="Usuario" label="Galpón" icon="pi pi-plus" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Galpón'" />
-    </div>
+  <div class="grid grid-cols-3 items-center mb-10">
+    <div class="col-start-2 justify-self-center text-xl">GALPONES</div>
+    <Button class="justify-self-end" v-show="Usuario" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Galpón'">
+      <span class="p-button-icon p-button-icon-left pi pi-plus" />
+      <span class="p-button-label hidden md:inline">Galpón</span>
+    </Button>
   </div>
 
   <div v-if="globalStore.Galpones.length === 0" class="italic text-muted-color mt-3">No hay Galpones</div>
   <div class="flex flex-wrap gap-10 justify-center">
     <div v-for="item in globalStore.Galpones.sort((a, b) => a.nombre.localeCompare(b.nombre))" :key="item.id"
-      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2 max-w-40">
+      class="flex justify-center border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2 w-39">
       <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
         <div>
           <i class="pi pi-warehouse text-6xl mb-4"></i>

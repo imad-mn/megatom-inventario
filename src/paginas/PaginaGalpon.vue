@@ -94,18 +94,18 @@ function ImprimirEstante(item: Estante) {
 </script>
 
 <template>
-  <div class="flex justify-between items-center mb-10">
-    <Button severity="secondary" variant="outlined" @click="() => router.push('/galpones')">
+  <div class="flex justify-between md:grid md:grid-cols-3 items-center mb-10">
+    <Button class="justify-self-start" severity="secondary" variant="outlined" @click="() => router.push('/galpones')">
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">Galpones</span>
     </Button>
-    <div class="text-xl">GALPÓN {{globalStore.GalponSeleccionado!.nombre}} - {{ globalStore.GalponSeleccionado!.descripcion }}</div>
-    <div>
+    <div class="justify-self-center text-xl">GALPÓN {{globalStore.GalponSeleccionado!.nombre}} - {{ globalStore.GalponSeleccionado!.descripcion }}</div>
+    <div class="justify-self-end">
       <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(globalStore.GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
         <span class="p-button-label hidden md:inline">Galpón</span>
       </Button>
-      <Button v-if="Usuario" label="Estante" class="w-auto" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Estante'">
+      <Button v-if="Usuario" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Estante'">
         <span class="p-button-icon p-button-icon-left pi pi-plus" />
         <span class="p-button-label hidden md:inline">Estante</span>
       </Button>
