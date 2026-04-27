@@ -90,13 +90,11 @@ function ImprimirGalpon(item: Galpon) {
   <div v-if="globalStore.Galpones.length === 0" class="italic text-muted-color mt-3">No hay Galpones</div>
   <div class="flex flex-wrap gap-10 justify-center">
     <div v-for="item in globalStore.Galpones.sort((a, b) => a.nombre.localeCompare(b.nombre))" :key="item.id"
-      class="flex justify-center border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2 w-39">
-      <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'">
-        <div>
+      class="flex border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2 w-39">
+      <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Galpón'" class="flex flex-col justify-start">
           <i class="pi pi-warehouse text-6xl mb-4"></i>
           <div class="text-muted-color font-semibold">{{ 'Galpón ' + item.nombre }}</div>
           <div class="text-muted-color text-wrap">{{ item.descripcion }}</div>
-        </div>
       </Button>
       <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :boton-imprimir="true" @imprimir-click="ImprimirGalpon(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Galpón ' + item.nombre" />
     </div>
