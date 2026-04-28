@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Caja, Cantidades, Estante, Galpon, Lista, Nivel, Producto, Seccion } from '@/servicios/modelos.ts';
+import type { Caja, Cantidades, Estante, Galpon, Lista, Nivel, Producto, Seccion, TipoLista } from '@/servicios/modelos.ts';
 import { computed, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
@@ -18,9 +18,9 @@ const globalStore = useGlobalStore();
 const authStore = useAuthStore();
 const Usuario = authStore.Usuario;
 
-const grupos = globalStore.ObtenerLista('grupos');
-const fabricantes = globalStore.ObtenerLista('fabricantes');
-const estados = globalStore.ObtenerLista('estados');
+const grupos = ref<Lista[]>(globalStore.ObtenerLista('grupos'));
+const fabricantes = ref<Lista[]>(globalStore.ObtenerLista('fabricantes'));
+const estados = globalStore.ObtenerLista('estados').map(x => ({ id: x.id, nombre: x.nombre.substring(3), tipo: x.tipo }));
 
 const filtroGrupo = ref<Lista | null>(null);
 const filtroFabricante = ref<Lista | null>(null);
@@ -67,6 +67,9 @@ const nivelSeleccionado = ref<Nivel | null>(null);
 const seccionSeleccionada = ref<Seccion | null>(null);
 const cajaSeleccionada = ref<Caja | null>(null);
 const cantidadInicial = ref<number>(1);
+
+const listaEdicion = ref<Lista>({ id: '', nombre: '', tipo: 'grupos' });
+const agregandoLista = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
@@ -229,6 +232,23 @@ async function DescargarExportacion() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+function AgregarLista(tipo: TipoLista) {
+  listaEdicion.value = { id: '', tipo: tipo, nombre: '' };
+  agregandoLista.value = true;
+}
+async function GuardarLista() {
+  await TablesDbService.Crear(TablesDbService.Coleccion.Listas, listaEdicion.value);
+  await RegistrarHistorial(listaEdicion.value.id, `[${listaEdicion.value.tipo}] Creado`, null, listaEdicion.value.nombre);
+  globalStore.Listas.push({ ...listaEdicion.value });
+
+  if (listaEdicion.value.tipo == 'grupos')
+    grupos.value = globalStore.ObtenerLista('grupos');
+  else if (listaEdicion.value.tipo == 'fabricantes')
+    fabricantes.value = globalStore.ObtenerLista('fabricantes');
+
+  agregandoLista.value = false;
+}
 </script>
 
 <template>
@@ -289,11 +309,23 @@ async function DescargarExportacion() {
         <label for="nombre">Nombre</label>
       </FloatLabel>
       <FloatLabel variant="on">
-        <Select id="grupo" v-model="itemEdicion!.grupoId" :options="grupos" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.grupoId" />
+        <Select id="grupo" v-model="itemEdicion!.grupoId" :options="grupos" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.grupoId">
+          <template #footer>
+            <div class="p-1">
+              <Button label="Agregar Grupo" fluid severity="secondary" variant="text" size="small" icon="pi pi-plus" @click="AgregarLista('grupos')" />
+            </div>
+          </template>
+        </Select>
         <label for="grupo">Grupo</label>
       </FloatLabel>
       <FloatLabel variant="on">
-        <Select id="fabricante" v-model="itemEdicion!.fabricanteId" :options="fabricantes" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.fabricanteId" />
+        <Select id="fabricante" v-model="itemEdicion!.fabricanteId" :options="fabricantes" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.fabricanteId">
+          <template #footer>
+            <div class="p-1">
+              <Button label="Agregar Fabricante" fluid severity="secondary" variant="text" size="small" icon="pi pi-plus" @click="AgregarLista('fabricantes')" />
+            </div>
+          </template>
+        </Select>
         <label for="fabricante">Fabricante</label>
       </FloatLabel>
       <FloatLabel variant="on">
@@ -319,7 +351,9 @@ async function DescargarExportacion() {
         choose-label="Escoger Foto"
         :custom-upload="true"
         class="p-button-outlined"
-        @select="SeleccionarFoto" />
+        @select="SeleccionarFoto">
+        <template #filelabel>&nbsp;</template>
+      </FileUpload>
       <div class="text-sm text-gray-500">Tamaño máximo de la foto: 512 KB.</div>
       <img v-if="imagenEdicion" :src="imagenEdicion" alt="Foto" class="rounded-xl w-full" />
       <Message severity="warn" v-if="mostrarAdvertencia">Ya existe un producto con ese nombre</Message>
@@ -365,6 +399,7 @@ async function DescargarExportacion() {
         class="p-button-outlined"
         custom-upload
         @select="() => deshabilitarBotonImportar = false"
+        choose-label="xx"
         @uploader="ImportarProductos" />
       <Button label="Importar" icon="pi pi-file-import" severity="primary" variant="outlined" :disabled="deshabilitarBotonImportar" @click="fileupload?.upload()" />
       <ProgressBar :value="Math.ceil((progresoImportacion / totalRegistros) * 100)">{{ `${progresoImportacion}/${totalRegistros}` }}</ProgressBar>
@@ -372,4 +407,13 @@ async function DescargarExportacion() {
       <Message severity="error" v-show="errorImportacion">{{ errorImportacion }}</Message>
     </div>
   </Dialog>
+
+  <!-- Diálogo para agregar Grupos o Fabricantes -->
+  <DialogoEdicion v-model:mostrar="agregandoLista" :esAgregar="true" :clickAceptar="GuardarLista" :nombre-objeto="listaEdicion.tipo"
+    :desabilitarAceptar="listaEdicion.nombre.trim() === ''">
+    <FloatLabel variant="on" class="w-full mt-1">
+      <label for="nombre">Nombre</label>
+      <InputText id="nombre" v-model="listaEdicion.nombre" autofocus class="w-full" :invalid="!listaEdicion?.nombre"  @keyup.enter="Guardar" />
+    </FloatLabel>
+  </DialogoEdicion>
 </template>

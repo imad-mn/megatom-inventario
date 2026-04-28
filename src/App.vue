@@ -35,8 +35,8 @@ function IrArriba() {
   <RouterView />
   <ConfirmDialog />
   <DialogoHistorial v-model:mostrar="dialogoHistorial.mostrar" :id="dialogoHistorial.idElemento" :nombre="dialogoHistorial.nombreElemento" />
-  <div v-if="mostrarBotonArriba" class="flex justify-center noprint">
-    <Button label="Ir Arriba" class="fixed bottom-2" icon="pi pi-arrow-up" severity="secondary" @click="IrArriba" />
+  <div v-if="mostrarBotonArriba" class="flex justify-end noprint">
+    <Button class="fixed bottom-2" icon="pi pi-arrow-up" rounded severity="secondary" @click="IrArriba" />
   </div>
   <div v-if="cargando" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
     <ProgressSpinner />

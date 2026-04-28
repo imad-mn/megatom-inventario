@@ -38,10 +38,10 @@ const elementoAMover = ref<{ id: string; nombre: string; tipo: 'Caja' | 'Seccion
 const nuevoPadreNivel = ref<Nivel | null>(null);
 const nuevoPadreSeccion = ref<Seccion | null>(null);
 
-const editandoProducto = ref(false);
+const imagenEdicion = ref<string>();
 const productoEditando = ref<Producto | null>(null);
 let archivoFoto: File | undefined;
-const imagenEdicion = ref<string>();
+const estados = globalStore.ObtenerLista('estados').map(x => ({ id: x.id, nombre: x.nombre.substring(3), tipo: x.tipo }));
 
 const seccionesNivel = computed(() => {
   if (!nuevoPadreNivel.value || !elementoAMover.value) return [];
@@ -168,7 +168,6 @@ async function VerCaja(caja: Caja) {
   mostrarDialogoCaja.value = true;
   deshabilitarSiguienteCaja.value = false;
   deshabilitarCajaAnterior.value = false;
-  editandoProducto.value = false;
 }
 
 async function CajaAnterior() {
@@ -277,15 +276,14 @@ function ImprimirCaja(caja: Caja) {
 function EditarProducto(producto: Producto) {
   productoEditando.value = producto;
   imagenEdicion.value = producto.imagenUrl ?? undefined;
-  editandoProducto.value = true;
   deshabilitarCajaAnterior.value = true;
   deshabilitarSiguienteCaja.value = true;
 }
 function CancelarEdicionProducto() {
-  editandoProducto.value = false;
+  productoEditando.value = null;
+  imagenEdicion.value = undefined;
   deshabilitarCajaAnterior.value = false;
   deshabilitarSiguienteCaja.value = false;
-  productoEditando.value = null;
 }
 async function GuardarEdicionProducto(cantidadProducto: CantidadesConProducto) {
   if (!productoEditando.value) return;
@@ -311,8 +309,6 @@ async function GuardarEdicionProducto(cantidadProducto: CantidadesConProducto) {
   }
   CancelarEdicionProducto();
 }
-
-// Al seleccionar la foto, la muestra en el diálogo de edición
 function SeleccionarFoto(e: FileUploadSelectEvent) {
   archivoFoto = (<File[]>e.files)[0];
   if (archivoFoto == null)
@@ -418,47 +414,50 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
     <div v-else v-for="item in globalStore.ProductosEnCaja" :key="item.id" class="p-2 border-2 rounded-xl border-gray bg-yellow-50 dark:bg-yellow-900 mb-2">
       <div class="flex gap-2">
         <div>
-          <img :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined" alt="Foto" class="rounded-xl md:w-50 md:h-50" />
+          <img v-if="productoEditando" :src="imagenEdicion" alt="Foto" class="rounded-xl md:w-50 md:h-50" />
+          <img v-else :hidden="!item.producto.imagenUrl" :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined" alt="Foto" class="rounded-xl md:w-50 md:h-50" />
           <FileUpload
-            v-if="editandoProducto"
+            v-if="productoEditando == item.producto"
             mode="basic"
             accept="image/*"
             :maxFileSize="524288"
-            choose-label="Escoger Foto"
+            choose-label="IMAGEN"
             :custom-upload="true"
             class="p-button-outlined mt-2"
-            @select="SeleccionarFoto" />
+            @select="SeleccionarFoto">
+            <template #filelabel>&nbsp;</template>
+        </FileUpload>
         </div>
         <div class="flex-1 flex flex-col gap-1">
           <div class="text-wrap flex items-center gap-2">
             <b>Nombre:</b>
-            <span v-if="!editandoProducto">{{ item.producto.nombre }}</span>
+            <span v-if="productoEditando != item.producto">{{ item.producto.nombre }}</span>
             <InputText v-else v-model="productoEditando!.nombre" class="flex-1" />
           </div>
           <div class="flex items-center gap-2">
             <b>Grupo:</b>
-            <span v-if="!editandoProducto">{{ item.producto.grupoId ? globalStore.ListasMap[item.producto.grupoId] : ''}}</span>
+            <span v-if="productoEditando != item.producto">{{ item.producto.grupoId ? globalStore.ListasMap[item.producto.grupoId] : ''}}</span>
             <Select class="flex-1" v-else v-model="productoEditando!.grupoId" :options="grupos" optionValue="id" optionLabel="nombre" />
           </div>
           <div class="flex items-center gap-2">
             <b>Fabricante: </b>
-            <span v-if="!editandoProducto">{{ item.producto.fabricanteId ? globalStore.ListasMap[item.producto.fabricanteId] : ''}}</span>
+            <span v-if="productoEditando != item.producto">{{ item.producto.fabricanteId ? globalStore.ListasMap[item.producto.fabricanteId] : ''}}</span>
             <Select v-else v-model="productoEditando!.fabricanteId" :options="globalStore.ObtenerLista('fabricantes')" optionValue="id" optionLabel="nombre" class="flex-1" />
           </div>
           <div class="flex items-center gap-2">
             <b>Código: </b>
-            <span v-if="!editandoProducto">{{ item.producto.codigo }}</span>
+            <span v-if="productoEditando != item.producto">{{ item.producto.codigo }}</span>
             <InputText v-else v-model="productoEditando!.codigo" class="flex-1" />
           </div>
 
           <div class="mt-3">
             <b>Cantidad: </b>
             <span>{{ item.cantidad.toLocaleString('es-VE') }}</span>
-            <i v-if="editandoProducto" class="pi pi-info-circle ml-2 text-primary" v-tooltip.bottom="'La cantida puede modificarse en la página: Movimientos'" />
+            <i v-if="productoEditando == item.producto" class="pi pi-info-circle ml-2 text-primary" v-tooltip.bottom="'La cantida puede modificarse en la página: Movimientos'" />
           </div>
           <div class="flex items-center gap-2">
             <b>Peso Unitario:</b>
-            <span v-if="!editandoProducto">{{ item.producto.pesoUnitario.toLocaleString('es-VE', { maximumFractionDigits: 2 }) }} Kg.</span>
+            <span v-if="productoEditando != item.producto">{{ item.producto.pesoUnitario.toLocaleString('es-VE', { maximumFractionDigits: 2 }) }} Kg.</span>
             <InputNumber v-else v-model="productoEditando!.pesoUnitario" mode="decimal" :minFractionDigits="0" :maxFractionDigits="2" class="flex-1" />
           </div>
           <div>
@@ -467,21 +466,21 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
           </div>
           <div class="flex items-center gap-2">
             <b>Estado: </b>
-            <span v-if="!editandoProducto">{{ item.producto.estadoId ? globalStore.ListasMap[item.producto.estadoId] : '' }}</span>
-            <Select v-else v-model="productoEditando!.estadoId" :options="globalStore.ObtenerLista('estados')" optionValue="id" optionLabel="nombre" class="flex-1" />
+            <span v-if="productoEditando != item.producto">{{ item.producto.estadoId ? globalStore.ListasMap[item.producto.estadoId] : '' }}</span>
+            <Select v-else v-model="productoEditando!.estadoId" :options="estados" optionValue="id" optionLabel="nombre" class="flex-1" />
           </div>
         </div>
       </div>
-      <div class="mt-1 flex items-center">
+      <div class="mt-1 pl-2 flex items-center">
         <div class="flex-1 flex items-center gap-2">
           <b>Descripción:</b>
-          <span v-if="!editandoProducto">{{ item.producto.descripcion }}</span>
+          <span v-if="productoEditando != item.producto">{{ item.producto.descripcion }}</span>
           <InputText v-else v-model="productoEditando!.descripcion" class="flex-1" />
         </div>
         <div v-if="Usuario" class="flex-none ml-2">
-          <Button v-if="!editandoProducto" label="Editar" icon="pi pi-pen-to-square" severity="success" variant="outlined" @click="EditarProducto(item.producto)" />
-          <Button v-if="editandoProducto" icon="pi pi-times-circle" severity="danger" variant="outlined" @click="CancelarEdicionProducto" v-tooltip.bottom="'Cancelar'" />
-          <Button v-if="editandoProducto" icon="pi pi-save" severity="primary" variant="outlined" @click="GuardarEdicionProducto(item)" v-tooltip.bottom="'Guardar'" class="ml-2" />
+          <Button v-if="productoEditando != item.producto" label="Editar" icon="pi pi-pen-to-square" severity="success" variant="outlined" @click="EditarProducto(item.producto)" />
+          <Button v-if="productoEditando == item.producto" icon="pi pi-times-circle" severity="danger" variant="outlined" @click="CancelarEdicionProducto" v-tooltip.bottom="'Cancelar'" />
+          <Button v-if="productoEditando == item.producto" icon="pi pi-save" severity="primary" variant="outlined" @click="GuardarEdicionProducto(item)" v-tooltip.bottom="'Guardar'" class="ml-2" />
         </div>
       </div>
     </div>
