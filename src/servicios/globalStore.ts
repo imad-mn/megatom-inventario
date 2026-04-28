@@ -25,7 +25,7 @@ export const useGlobalStore = defineStore('global', () => {
       ObtenerTodos<Cantidades>(Coleccion.Cantidades)
     ]).then(([productos, galpones, listas, cantidades]) => {
       Productos.value = productos;
-      Galpones.value = galpones;
+      Galpones.value = galpones.sort((a, b) => a.nombre.localeCompare(b.nombre));
       Listas.value = listas;
       Cantidades.value = cantidades;
     });

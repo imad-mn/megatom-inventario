@@ -203,6 +203,9 @@ async function Guardar() {
   <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="Gestionar Inventario" :clickAceptar="Guardar" class="w-2xl"
     :desabilitarAceptar="itemEdicion?.productoId == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenistaId === null
     || (itemEdicion.esIngreso && cajaSeleccionada == null) || (!itemEdicion.esIngreso && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))">
+    <div class="flex justify-center">
+      <ToggleButton v-model="itemEdicion!.esIngreso" onLabel="Ingreso" offLabel="Egreso" off-icon="pi pi-arrow-left" on-icon="pi pi-arrow-right" />
+    </div>
     <div class="flex gap-3">
       <Fieldset legend="Producto" class="w-3/5 p-3" :pt="{ contentWrapper: 'min-w-0' }">
         <FloatLabel variant="on" class="mb-3">
@@ -223,31 +226,30 @@ async function Guardar() {
           </ul>
         </div>
       </Fieldset>
-      <div class="w-2/5 flex flex-col gap-3">
-        <ToggleButton v-model="itemEdicion!.esIngreso" onLabel="Ingreso" offLabel="Egreso" off-icon="pi pi-arrow-left" on-icon="pi pi-arrow-right" />
+      <div class="w-2/5 flex flex-col gap-3 mt-5">
         <FloatLabel variant="on">
           <Select id="almacenista" v-model="itemEdicion!.almacenistaId" :options="almacenistas" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.almacenistaId" />
           <label for="almacenista">Almacenista</label>
         </FloatLabel>
         <div v-if="itemEdicion!.esIngreso" class="flex flex-col gap-3">
           <FloatLabel variant="on">
-            <Select v-model="galponSeleccionado" :options="globalStore.Galpones" optionLabel="nombre" optionValue="id" showClear class="w-full" />
+            <Select v-model="galponSeleccionado" :options="globalStore.Galpones" :optionLabel="(data: Galpon) => `${data.nombre} - ${data.descripcion}`" showClear class="w-full" />
             <label>Galpón</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="estanteSeleccionado" :options="galponSeleccionado?.estantes" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!galponSeleccionado" />
+            <Select v-model="estanteSeleccionado" :options="galponSeleccionado?.estantes" optionLabel="nombre" showClear class="w-full" :disabled="!galponSeleccionado" />
             <label>Estante</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="nivelSeleccionado" :options="estanteSeleccionado?.niveles" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!estanteSeleccionado" />
+            <Select v-model="nivelSeleccionado" :options="estanteSeleccionado?.niveles" optionLabel="nombre" showClear class="w-full" :disabled="!estanteSeleccionado" />
             <label>Nivel</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="seccionSeleccionada" :options="nivelSeleccionado?.secciones" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!nivelSeleccionado" />
+            <Select v-model="seccionSeleccionada" :options="nivelSeleccionado?.secciones" optionLabel="nombre" showClear class="w-full" :disabled="!nivelSeleccionado" />
             <label>Sección</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="cajaSeleccionada" :options="seccionSeleccionada?.cajas" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!seccionSeleccionada" :invalid="cajaSeleccionada == null" />
+            <Select v-model="cajaSeleccionada" :options="seccionSeleccionada?.cajas" optionLabel="nombre" showClear class="w-full" :disabled="!seccionSeleccionada" :invalid="cajaSeleccionada == null" />
             <label>Caja</label>
           </FloatLabel>
         </div>
