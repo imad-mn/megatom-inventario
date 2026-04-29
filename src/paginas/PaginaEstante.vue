@@ -330,11 +330,11 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
     </Button>
     <div class="justify-self-center text-xl">ESTANTE {{globalStore.EstanteSeleccionado!.nombre}}</div>
     <div class="justify-self-end">
-      <Button v-if="Usuario" severity="primary" variant="outlined" class="mr-2" @click="router.push('/imprimir/secciones')">
+      <Button v-if="Usuario" severity="primary" variant="outlined" class="hidden md:inline-flex mr-2" @click="router.push('/imprimir/secciones')">
         <span class="p-button-icon p-button-icon-left pi pi-print" />
         <span class="p-button-label hidden md:inline">Sección</span>
       </Button>
-      <Button v-if="Usuario" severity="primary" variant="outlined" class="mr-2" @click="router.push('/imprimir/gruposEstante')">
+      <Button v-if="Usuario" severity="primary" variant="outlined" class="hidden md:inline-flex mr-2" @click="router.push('/imprimir/gruposEstante')">
         <span class="p-button-icon p-button-icon-left pi pi-print" />
         <span class="p-button-label hidden md:inline">Grupo</span>
       </Button>
@@ -366,18 +366,20 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
           No hay secciones en este Nivel.
         </div>
         <Panel v-else v-for="seccion in [...nivel.secciones].sort((a, b) => Ordenar(a, b, nivel.ordenDescendente))"
-            :key="seccion.id" :header="seccion.nombre" :pt:header:class="Usuario ? '' : 'justify-center'" :pt:content:class="'p-0'">
+            :key="seccion.id" :header="seccion.nombre" :pt:header:class="'justify-center'" :pt:content:class="'p-0'">
           <template #icons v-if="Usuario">
             <BotonesCompacto @agregarClick="Agregar('Caja', undefined, seccion)" @moverClick="MostrarDialogoMover(seccion, 'Seccion')" @editarClick="Editar(seccion, 'Seccion')" @quitarClick="Quitar(seccion, 'Seccion', nivel)" :id-elemento="seccion.id" :nombre-elemento="'Sección ' + seccion.nombre" button-severity="secondary" queAgregar="Caja" />
           </template>
           <div v-if="seccion.cajas.length === 0" class="italic text-muted-color m-1">
             No hay cajas en esta Sección.
           </div>
-          <div v-else v-for="caja in seccion.cajas" :key="caja.id"
-              class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" :class="{ 'px-2': Usuario == null }">
-              <Button variant="text" severity="warn" :label="'Caja ' + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? '*' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap', root: 'px-1' }"
-                v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md' } }" />
-              <BotonesCompacto v-if="Usuario" @moverClick="MostrarDialogoMover(caja, 'Caja')" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" @imprimir-click="ImprimirCaja(caja)" :id-elemento="caja.id" :nombre-elemento="'Caja ' + caja.nombre" button-severity="warn" />
+          <div v-else class="flex">
+            <div v-for="caja in seccion.cajas" :key="caja.id"
+                class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" :class="{ 'px-2': Usuario == null }">
+                <Button variant="text" severity="warn" :label="(seccion.cajas.length > 1 ? 'C-' : 'Caja ') + caja.nombre + (productosNombresEnCaja[caja.id] == undefined ? '*' : '')" @click="VerCaja(caja)" :pt="{ label: 'text-nowrap', root: 'px-1' }"
+                  v-tooltip.bottom="{ value: productosNombresEnCaja[caja.id] ?? 'Caja vacía', pt: { root: 'min-w-auto max-w-md' } }" />
+                <BotonesCompacto v-if="Usuario" @moverClick="MostrarDialogoMover(caja, 'Caja')" @editarClick="Editar(caja, 'Caja')" @quitarClick="Quitar(caja, 'Caja', undefined, seccion)" @imprimir-click="ImprimirCaja(caja)" :id-elemento="caja.id" :nombre-elemento="'Caja ' + caja.nombre" button-severity="warn" />
+            </div>
           </div>
         </Panel>
       </div>

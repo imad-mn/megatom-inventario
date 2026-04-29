@@ -43,6 +43,7 @@ const nivelSeleccionado = ref<Nivel | null>(null);
 const seccionSeleccionada = ref<Seccion | null>(null);
 const cajaSeleccionada = ref<Caja | null>(null);
 let cajasMap: Map<string, IdNombre>;
+const cajaIngreso = ref<'Caja del Producto' | 'Cualquier Caja'>('Caja del Producto');
 
 onMounted(async () => {
   cargando.value = true;
@@ -112,7 +113,7 @@ watch(productoSeleccionado, async () => {
 
 function Agregar() {
   dialogVisible.value = true;
-  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: null, esIngreso: false, creadoPor: Usuario?.user.displayName ?? '', fechaCreacion: new Date(), cajaId: '' };
+  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: null, tipo: 'INGRESO', creadoPor: Usuario?.user.displayName ?? '', fechaCreacion: new Date(), cajaId: '' };
 
   grupoSeleccionado.value = null;
   productoSeleccionado.value = null;
@@ -123,18 +124,18 @@ function Agregar() {
 async function Guardar() {
   // Validaciones
   if (itemEdicion.value == null || productoSeleccionado.value == null
-    || (!itemEdicion.value.esIngreso && (cajaDelProductoSeleccionada.value == null || cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad))
-    || (itemEdicion.value.esIngreso && cajaSeleccionada.value == null))
+    || (itemEdicion.value.tipo == 'EGRESO' && (cajaDelProductoSeleccionada.value == null || cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad))
+    || (itemEdicion.value.tipo == 'INGRESO' && ((cajaIngreso.value == 'Cualquier Caja' && cajaSeleccionada.value == null) || (cajaIngreso.value == 'Caja del Producto' && cajaDelProductoSeleccionada.value == null))))
     return;
 
-  const cajaId = itemEdicion.value.esIngreso ? cajaSeleccionada.value?.id : cajaDelProductoSeleccionada.value?.id;
+  const cajaId = itemEdicion.value.tipo == 'INGRESO' && cajaIngreso.value == 'Cualquier Caja' ? cajaSeleccionada.value?.id : cajaDelProductoSeleccionada.value?.id;
 
   // Guarda el registro del movimiento
   await CrearConFecha(Coleccion.Movimientos, { ...itemEdicion.value, productoId: productoSeleccionado.value?.id, cajaId: cajaId });
 
   // Actualiza la cantidad en cantidad existente o agrega a una caja
   let cantidadAModificar = cantidadesDelProducto.find(x => x.cajaId == cajaId);
-  if (itemEdicion.value.esIngreso) {
+  if (itemEdicion.value.tipo == 'INGRESO') {
     if (cantidadAModificar) {
       cantidadAModificar.cantidad += itemEdicion.value.cantidad;
       await Actualizar(Coleccion.Cantidades, cantidadAModificar);
@@ -162,7 +163,7 @@ async function Guardar() {
   <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-3">
     <div class="text-xl mr-5">MOVIMIENTOS</div>
     <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
-    <Button v-if="Usuario" label="Gestionar Inventario" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
+    <Button v-if="Usuario" label="GESTIONES" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
   </div>
 
   <DataView :value="movimientos" data-key="id" paginator :rows="10" :rows-per-page-options="[10, 20, 50]" :loading="cargando">
@@ -178,7 +179,7 @@ async function Guardar() {
             <span class="text-sm text-surface-500 dark:text-surface-400">
               {{ new Date(item.fechaCreacion).toLocaleString() }}
             </span>
-            <Tag :value="item.esIngreso ? 'Ingreso' : 'Egreso'" :severity="item.esIngreso ? 'success' : 'danger'" />
+            <Tag :value="item.tipo" :severity="item.tipo == 'INGRESO' ? 'success' : 'danger'" />
             <span class="font-semibold text-surface-700 dark:text-surface-200 break-words">{{ item.producto?.nombre ?? '—' }}</span>
             <span class="text-surface-400 dark:text-surface-500 ml-auto">{{ item.creadoPor }}</span>
           </div>
@@ -200,14 +201,16 @@ async function Guardar() {
     </template>
   </DataView>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="Gestionar Inventario" :clickAceptar="Guardar" class="w-2xl"
+  <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="GESTIONES" :clickAceptar="Guardar" class="w-2xl"
     :desabilitarAceptar="itemEdicion?.productoId == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenistaId === null
-    || (itemEdicion.esIngreso && cajaSeleccionada == null) || (!itemEdicion.esIngreso && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))">
+    || (itemEdicion.tipo == 'INGRESO' && ((cajaIngreso == 'Cualquier Caja' && cajaSeleccionada == null) || (cajaIngreso == 'Caja del Producto' && cajaDelProductoSeleccionada == null)))
+    || (itemEdicion.tipo == 'EGRESO' && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))
+    || (itemEdicion.justificacion == null || itemEdicion.justificacion.trim().length < 20)">
     <div class="flex justify-center">
-      <ToggleButton v-model="itemEdicion!.esIngreso" onLabel="Ingreso" offLabel="Egreso" off-icon="pi pi-arrow-left" on-icon="pi pi-arrow-right" />
+      <SelectButton v-model="itemEdicion!.tipo" :options="['INGRESO', 'EGRESO']" />
     </div>
     <div class="flex gap-3">
-      <Fieldset legend="Producto" class="w-3/5 p-3" :pt="{ contentWrapper: 'min-w-0' }">
+      <Fieldset :legend="itemEdicion?.tipo == 'INGRESO' ? 'Agregar Producto' : 'Extraer Producto'" class="w-3/5 p-3" :pt="{ contentWrapper: 'min-w-0' }">
         <FloatLabel variant="on" class="mb-3">
           <Select id="grupo" v-model="grupoSeleccionado" :options="grupos" optionValue="id" optionLabel="nombre" class="w-full" />
           <label for="grupo">Grupo</label>
@@ -231,7 +234,8 @@ async function Guardar() {
           <Select id="almacenista" v-model="itemEdicion!.almacenistaId" :options="almacenistas" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.almacenistaId" />
           <label for="almacenista">Almacenista</label>
         </FloatLabel>
-        <div v-if="itemEdicion!.esIngreso" class="flex flex-col gap-3">
+        <SelectButton v-if="itemEdicion!.tipo == 'INGRESO'" v-model="cajaIngreso" :options="['Caja del Producto', 'Cualquier Caja']" />
+        <div v-if="itemEdicion!.tipo == 'INGRESO' && cajaIngreso == 'Cualquier Caja'" class="flex flex-col gap-3">
           <FloatLabel variant="on">
             <Select v-model="galponSeleccionado" :options="globalStore.Galpones" :optionLabel="(data: Galpon) => `${data.nombre} - ${data.descripcion}`" showClear class="w-full" />
             <label>Galpón</label>
@@ -258,13 +262,14 @@ async function Guardar() {
           <label for="cajas">Caja</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <InputNumber id="cantidad" v-model="itemEdicion!.cantidad" :min="0" class="w-full" :invalid="!itemEdicion?.cantidad || itemEdicion.cantidad <= 0 || (!itemEdicion.esIngreso && cajaDelProductoSeleccionada != null && itemEdicion.cantidad > cajaDelProductoSeleccionada?.cantidad)" />
+          <InputNumber id="cantidad" v-model="itemEdicion!.cantidad" :min="0" class="w-full" :invalid="!itemEdicion?.cantidad || itemEdicion.cantidad <= 0 || (itemEdicion.tipo == 'EGRESO' && cajaDelProductoSeleccionada != null && itemEdicion.cantidad > cajaDelProductoSeleccionada?.cantidad)" />
           <label for="cantidad">Cantidad</label>
-          <Message v-if="itemEdicion != null && cajaDelProductoSeleccionada != null && !itemEdicion.esIngreso && itemEdicion.cantidad > cajaDelProductoSeleccionada.cantidad" severity="error" size="small" variant="simple">La cantidad no puede ser mayor al contenido de la caja</Message>
+          <Message v-if="itemEdicion != null && cajaDelProductoSeleccionada != null && itemEdicion.tipo == 'EGRESO' && itemEdicion.cantidad > cajaDelProductoSeleccionada.cantidad" severity="error" size="small" class="mt-1">La cantidad no puede ser mayor al contenido de la caja</Message>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Textarea id="justificacion" v-model="itemEdicion!.justificacion" class="w-full" maxlength="100" :rows="2" auto-resize />
+          <Textarea id="justificacion" v-model="itemEdicion!.justificacion" class="w-full" maxlength="100" :rows="3" auto-resize :invalid="itemEdicion == null || itemEdicion.justificacion == null || itemEdicion.justificacion.trim().length < 20" />
           <label for="justificacion">Justificación</label>
+          <p class="text-sm text-muted-color">Mínimo: 20 caracteres.{{ itemEdicion!.justificacion!.trim().length < 20 ? ` Faltan ${20 - (itemEdicion?.justificacion?.trim().length ?? 0)}.` : '' }}</p>
         </FloatLabel>
       </div>
     </div>

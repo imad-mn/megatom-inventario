@@ -59,7 +59,7 @@ export type Movimientos = ConFechaCreacion & {
   cantidad: number;
   almacenistaId: string;
   justificacion: string | null;
-  esIngreso: boolean;
+  tipo: 'INGRESO' | 'EGRESO';
   creadoPor: string;
   cajaId: string;
 }
