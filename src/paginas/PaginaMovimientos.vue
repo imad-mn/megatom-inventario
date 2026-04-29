@@ -113,7 +113,7 @@ watch(productoSeleccionado, async () => {
 
 function Agregar() {
   dialogVisible.value = true;
-  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: null, tipo: 'INGRESO', creadoPor: Usuario?.user.displayName ?? '', fechaCreacion: new Date(), cajaId: '' };
+  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: '', tipo: 'INGRESO', creadoPor: Usuario?.user.displayName ?? '', fechaCreacion: new Date(), cajaId: '' };
 
   grupoSeleccionado.value = null;
   productoSeleccionado.value = null;
@@ -189,8 +189,7 @@ async function Guardar() {
             <span class="text-surface-500 dark:text-surface-400">Cantidad: <b>{{ item.cantidad }}</b></span>
             <span class="text-surface-500 dark:text-surface-400">Almacenista: <b>{{ item.almacenista?.nombre ?? '—' }}</b></span>
           </div>
-          <!-- Justificación (solo si existe) -->
-          <div v-if="item.justificacion" class="text-surface-400 dark:text-surface-500 italic">
+          <div class="text-surface-400 dark:text-surface-500 italic">
             {{ item.justificacion }}
           </div>
         </div>
@@ -205,7 +204,7 @@ async function Guardar() {
     :desabilitarAceptar="itemEdicion?.productoId == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenistaId === null
     || (itemEdicion.tipo == 'INGRESO' && ((cajaIngreso == 'Cualquier Caja' && cajaSeleccionada == null) || (cajaIngreso == 'Caja del Producto' && cajaDelProductoSeleccionada == null)))
     || (itemEdicion.tipo == 'EGRESO' && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))
-    || (itemEdicion.justificacion == null || itemEdicion.justificacion.trim().length < 20)">
+    || itemEdicion.justificacion.trim().length < 20">
     <div class="flex justify-center">
       <SelectButton v-model="itemEdicion!.tipo" :options="['INGRESO', 'EGRESO']" />
     </div>
@@ -267,9 +266,9 @@ async function Guardar() {
           <Message v-if="itemEdicion != null && cajaDelProductoSeleccionada != null && itemEdicion.tipo == 'EGRESO' && itemEdicion.cantidad > cajaDelProductoSeleccionada.cantidad" severity="error" size="small" class="mt-1">La cantidad no puede ser mayor al contenido de la caja</Message>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Textarea id="justificacion" v-model="itemEdicion!.justificacion" class="w-full" maxlength="100" :rows="3" auto-resize :invalid="itemEdicion == null || itemEdicion.justificacion == null || itemEdicion.justificacion.trim().length < 20" />
+          <Textarea id="justificacion" v-model="itemEdicion!.justificacion" class="w-full" maxlength="100" :rows="3" auto-resize :invalid="itemEdicion == null || itemEdicion.justificacion.trim().length < 20" />
           <label for="justificacion">Justificación</label>
-          <p class="text-sm text-muted-color">Mínimo: 20 caracteres.{{ itemEdicion!.justificacion!.trim().length < 20 ? ` Faltan ${20 - (itemEdicion?.justificacion?.trim().length ?? 0)}.` : '' }}</p>
+          <p class="text-sm text-muted-color">Mínimo: 20 caracteres.{{ itemEdicion != null && itemEdicion.justificacion.trim().length < 20 ? ` Faltan ${20 - itemEdicion.justificacion.trim().length}.` : '' }}</p>
         </FloatLabel>
       </div>
     </div>
