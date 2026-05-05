@@ -1,8 +1,9 @@
 import { collection, getDocs, query, where, type QueryConstraint } from "firebase/firestore";
 import { useAuthStore } from "./authStore";
 import { Coleccion, CrearConFecha, createConverterConFecha, ObtenerConFiltroFecha } from "./TablesDbService";
-import type { Historial } from "./modelos";
+import type { Historial, Producto } from "./modelos";
 import { db } from "./firebase";
+import { useGlobalStore } from "./globalStore";
 
 export async function RegistrarHistorial(idElemento: string, accion: string, anterior: string | null = null, actual: string | null = null): Promise<void> {
   const { Usuario } = useAuthStore();
@@ -32,4 +33,9 @@ export async function ObtenerHistorialPorElemento(idElemento: string): Promise<H
   const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
   const respuesta = await getDocs(query(collRef, where('idElemento', '==', idElemento)));
   return respuesta.docs.map(d => d.data());
+}
+
+export function Stringify(item: Producto): string {
+  const globalStore = useGlobalStore();
+  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : ''} | Fabricante: ${item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : ''} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
 }

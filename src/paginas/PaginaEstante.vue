@@ -9,7 +9,7 @@ import EditarQuitar from '../componentes/EditarQuitar.vue';
 import BotonesCompacto from '@/componentes/BotonesCompacto.vue';
 import { useGlobalStore } from '@/servicios/globalStore';
 import { useAuthStore } from '@/servicios/authStore';
-import { RegistrarHistorial } from '@/servicios/historialService';
+import { RegistrarHistorial, Stringify } from '@/servicios/historialService';
 import type { FileUploadSelectEvent } from 'primevue';
 import { Subir } from '@/servicios/StorageService';
 
@@ -296,9 +296,9 @@ async function GuardarEdicionProducto(cantidadProducto: CantidadesConProducto) {
         archivoFoto = undefined;
       }
 
-      const anteriorJson = JSON.stringify(anterior);
+      const anteriorJson = Stringify(anterior);
       await TablesDbService.Actualizar(TablesDbService.Coleccion.Productos, productoEditando.value);
-      const posteriorJson = JSON.stringify(productoEditando.value);
+      const posteriorJson = Stringify(productoEditando.value);
       await RegistrarHistorial(productoEditando.value.id, '[Producto] Modificado', anteriorJson, posteriorJson);
       const indice = globalStore.Productos.indexOf(anterior);
       globalStore.Productos[indice] = { ...productoEditando.value };

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Caja, Cantidades, Estante, Galpon, Lista, Nivel, Producto, Seccion, TipoLista } from '@/servicios/modelos.ts';
+import type { Caja, Cantidades, Estante, Galpon, Lista, Nivel, Producto, ProductoConCantidad, Seccion, TipoLista } from '@/servicios/modelos.ts';
 import { computed, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
@@ -10,7 +10,7 @@ import * as StorageService from '@/servicios/StorageService.ts';
 import { Importar, Exportar } from '@/servicios/ImportarExportar';
 import { useGlobalStore } from '@/servicios/globalStore';
 import { useAuthStore } from '@/servicios/authStore';
-import { RegistrarHistorial } from '@/servicios/historialService';
+import { RegistrarHistorial, Stringify } from '@/servicios/historialService';
 
 const confirm = useConfirm();
 
@@ -46,7 +46,7 @@ const deshabilitarBotonImportar = ref(true);
 const permitirCerrarDialogoImportar = ref(true);
 
  const productosFiltrados = computed(() => {
-  const filtrados = globalStore.Productos.filter(p => {
+  const filtrados = globalStore.ObtenerProductosConCantidad().filter(p => {
     return (filtroTexto.value.trim() === ''
         || p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase())
         || p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase())
@@ -212,10 +212,6 @@ function VerUbicacion(productoId: string) {
   ubicacionDict.value[productoId] = ubicaciones;
 }
 
-function Stringify(item: Producto): string {
-  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : ''} | Fabricante: ${item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : ''} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
-}
-
 function onHistorialClick(item: Producto) {
   globalStore.dialogoHistorial.mostrar = true;
   globalStore.dialogoHistorial.idElemento = item.id;
@@ -268,7 +264,7 @@ async function GuardarLista() {
   <DataView :value="productosFiltrados">
     <template #list="slotProps">
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Card v-for="item in slotProps.items as Producto[]" :key="item.id" style="overflow: hidden">
+        <Card v-for="item in slotProps.items as ProductoConCantidad[]" :key="item.id" style="overflow: hidden">
           <template #header>
             <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" />
           </template>
@@ -281,6 +277,7 @@ async function GuardarLista() {
             <div><b>Fabricante:&nbsp;</b>{{ item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : '' }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
             <div><b>Estado:&nbsp;</b>{{ item.estadoId ? globalStore.ListasMap[item.estadoId] || '' : '' }}</div>
+            <div><b>Cantidad:&nbsp;</b>{{ item.cantidad }}</div>
             <Button v-if="!ubicacionDict[item.id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.id)" />
             <div v-else>
               <div><b>Ubicación:</b></div>

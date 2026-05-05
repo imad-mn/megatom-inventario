@@ -1,4 +1,4 @@
-import type { Cantidades, CantidadesConProducto, Estante, Galpon, IdNombre, Lista, Producto } from './modelos';
+import type { Cantidades, CantidadesConProducto, Estante, Galpon, IdNombre, Lista, Producto, ProductoConCantidad } from './modelos';
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia'
 import { Coleccion, ObtenerTodos } from './TablesDbService';
@@ -48,6 +48,13 @@ export const useGlobalStore = defineStore('global', () => {
     return Cantidades.value.map(cantidad => ({
       ...cantidad,
       producto: productosMap.get(cantidad.productoId)!
+    }));
+  }
+
+  function ObtenerProductosConCantidad(): ProductoConCantidad[] {
+    return Productos.value.map(p => ({
+      ...p,
+      cantidad: Cantidades.value.filter(c => c.productoId == p.id).reduce((acc, c) => acc + c.cantidad, 0)
     }));
   }
 
@@ -114,6 +121,7 @@ export const useGlobalStore = defineStore('global', () => {
     ObtenerLista,
     ObtenerCantidadesPorProducto,
     ObtenerCantidadesConProductos,
+    ObtenerProductosConCantidad,
     ObtenerUbicaciones,
     ObtenerGruposEnEstanteSeleccionado
   };

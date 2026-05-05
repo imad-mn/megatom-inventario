@@ -50,6 +50,10 @@ export type CantidadesConProducto = Cantidades & {
   producto: Producto;
 }
 
+export type ProductoConCantidad = Producto & {
+  cantidad: number;
+}
+
 export type ConFechaCreacion = ModeloBase & {
   fechaCreacion: Date;
 }
