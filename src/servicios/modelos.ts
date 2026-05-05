@@ -86,3 +86,14 @@ export type Historial = ConFechaCreacion & {
   anterior: string | null;
   actual: string | null;
 }
+
+export type ProductoCantidadSimple = {
+    productoId: string;
+    cantidad: number;
+}
+export type Solicitud = ConFechaCreacion & {
+  solicitante: string;
+  direccion: string;
+  procesada: boolean;
+  productosCantidad: ProductoCantidadSimple[]
+}

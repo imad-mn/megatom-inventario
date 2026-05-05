@@ -1,4 +1,4 @@
-import type { Cantidades, CantidadesConProducto, Estante, Galpon, IdNombre, Lista, Producto, ProductoConCantidad } from './modelos';
+import type { Cantidades, CantidadesConProducto, Estante, Galpon, IdNombre, Lista, Producto, ProductoConCantidad, Solicitud } from './modelos';
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia'
 import { Coleccion, ObtenerTodos } from './TablesDbService';
@@ -16,6 +16,7 @@ export const useGlobalStore = defineStore('global', () => {
   const listaSeleccionada = ref<IdNombre | null>(null);
 
   const dialogoHistorial = ref({ mostrar: false, idElemento: '', nombreElemento: '' });
+  const solicitudActual = ref<Solicitud>({ id: '', fechaCreacion: new Date(), solicitante: '', direccion: '', procesada: false, productosCantidad: [] });
 
   async function CargarTodo() {
     Promise.all([
@@ -116,6 +117,7 @@ export const useGlobalStore = defineStore('global', () => {
     ProductosEnCaja,
     dialogoHistorial,
     listaSeleccionada,
+    solicitudActual,
 
     CargarTodo,
     ObtenerLista,

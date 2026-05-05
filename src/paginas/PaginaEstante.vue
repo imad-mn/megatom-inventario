@@ -468,7 +468,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
           </div>
           <div class="flex items-center gap-2">
             <b>Estado: </b>
-            <span v-if="productoEditando != item.producto">{{ item.producto.estadoId ? globalStore.ListasMap[item.producto.estadoId] : '' }}</span>
+            <span v-if="productoEditando != item.producto">{{ item.producto.estadoId ? globalStore.ListasMap[item.producto.estadoId]?.substring(3) : '' }}</span>
             <Select v-else v-model="productoEditando!.estadoId" :options="estados" optionValue="id" optionLabel="nombre" class="flex-1" />
           </div>
         </div>

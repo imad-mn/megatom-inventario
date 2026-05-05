@@ -4,7 +4,7 @@ import type { Caja, Cantidades, Estante, Galpon, Lista, Nivel, Producto, Product
 import { computed, ref } from 'vue';
 import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { useConfirm } from "primevue/useconfirm";
-import type { FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
+import type { Fieldset, FileUploadMethods, FileUploadSelectEvent, FileUploadUploaderEvent } from 'primevue';
 import FileUpload from 'primevue/fileupload';
 import * as StorageService from '@/servicios/StorageService.ts';
 import { Importar, Exportar } from '@/servicios/ImportarExportar';
@@ -70,6 +70,10 @@ const cantidadInicial = ref<number>(1);
 
 const listaEdicion = ref<Lista>({ id: '', nombre: '', tipo: 'grupos' });
 const agregandoLista = ref(false);
+
+const mostrarDialogoSolicitud = ref(false);
+const productoSolicitud = ref<Producto>();
+const cantidadSolicitud = ref<number>(0);
 
 function Agregar() {
   esNuevo.value = true;
@@ -245,6 +249,20 @@ async function GuardarLista() {
 
   agregandoLista.value = false;
 }
+
+function SolicitarProducto(p: Producto) {
+  productoSolicitud.value = p;
+  cantidadSolicitud.value = 0;
+  mostrarDialogoSolicitud.value = true;
+}
+function GuardarProductoSolicitud(): Promise<void> {
+  if (!productoSolicitud.value)
+    return Promise.resolve();
+
+  globalStore.solicitudActual.productosCantidad.push({ productoId: productoSolicitud.value?.id, cantidad: cantidadSolicitud.value  });
+  mostrarDialogoSolicitud.value = false;
+  return Promise.resolve();
+}
 </script>
 
 <template>
@@ -285,6 +303,7 @@ async function GuardarLista() {
                 <li v-for="(ubic, index) in ubicacionDict[item.id]" :key="index">{{ ubic }}</li>
               </ul>
             </div>
+            <Button v-if="!Usuario" label="SOLICITAR" icon="pi pi-file-plus" severity="success" size="small" variant="outlined" class="w-full mt-1" @click="SolicitarProducto(item)" />
           </template>
           <template #footer v-if="Usuario">
             <div class="flex gap-2">
@@ -409,8 +428,23 @@ async function GuardarLista() {
   <DialogoEdicion v-model:mostrar="agregandoLista" :esAgregar="true" :clickAceptar="GuardarLista" :nombre-objeto="listaEdicion.tipo"
     :desabilitarAceptar="listaEdicion.nombre.trim() === ''">
     <FloatLabel variant="on" class="w-full mt-1">
+      <InputText id="nombre" v-model="listaEdicion.nombre" autofocus class="w-full" :invalid="!listaEdicion?.nombre"  @keyup.enter="GuardarLista" />
       <label for="nombre">Nombre</label>
-      <InputText id="nombre" v-model="listaEdicion.nombre" autofocus class="w-full" :invalid="!listaEdicion?.nombre"  @keyup.enter="Guardar" />
+    </FloatLabel>
+  </DialogoEdicion>
+
+  <!-- Diálogo para solicitar cantidad de un producto -->
+  <DialogoEdicion v-model:mostrar="mostrarDialogoSolicitud" :clickAceptar="GuardarProductoSolicitud" encabezado="Solicitar Producto" :desabilitarAceptar="cantidadSolicitud <= 0">
+    <Fieldset legend="Producto">
+      <div><b>Código:&nbsp;</b>{{ productoSolicitud?.codigo }}</div>
+      <div><b>Grupo:&nbsp;</b>{{ productoSolicitud?.grupoId ? globalStore.ListasMap[productoSolicitud.grupoId] || '' : '' }}</div>
+      <div><b>Fabricante:&nbsp;</b>{{ productoSolicitud?.fabricanteId ? globalStore.ListasMap[productoSolicitud?.fabricanteId] || '' : '' }}</div>
+      <div><b>Peso Unitario:&nbsp;</b>{{ productoSolicitud?.pesoUnitario?.toFixed(2) }} Kg</div>
+      <div><b>Estado:&nbsp;</b>{{ productoSolicitud?.estadoId ? globalStore.ListasMap[productoSolicitud?.estadoId] || '' : '' }}</div>
+    </Fieldset>
+    <FloatLabel variant="on" class="mt-4">
+      <InputNumber v-model="cantidadSolicitud" :minFractionDigits="0" :maxFractionDigits="0" :min="1" autofocus class="w-full" :invalid="cantidadSolicitud <= 0"  @keyup.enter="Guardar" />
+      <label>Cantidad</label>
     </FloatLabel>
   </DialogoEdicion>
 </template>

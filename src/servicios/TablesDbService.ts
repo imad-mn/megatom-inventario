@@ -10,6 +10,7 @@ export enum Coleccion {
   Movimientos = 'movimientos',
   Historial = 'historial',
   Listas = 'listas',
+  Solicitudes = 'solicitudes',
 }
 
 /**

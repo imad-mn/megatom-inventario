@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router';
 import type { MenuItem } from 'primevue/menuitem';
 import { PrimeIcons } from '@primevue/core/api';
 import { useAuthStore } from '@/servicios/authStore';
+import { useGlobalStore } from '@/servicios/globalStore';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const globalStore = useGlobalStore();
 
 const menuItems = ref<MenuItem[]>([
   {
@@ -23,6 +25,12 @@ const menuItems = ref<MenuItem[]>([
     label: 'MOVIMIENTOS',
     icon: PrimeIcons.ARROW_RIGHT_ARROW_LEFT,
     command: () => router.push('/movimientos')
+  },
+  {
+    label: 'SOLICITUDES',
+    icon: PrimeIcons.INBOX,
+    isAdmin: true,
+    command: () => router.push('/solicitudes')
   },
   {
     label: 'HISTORIAL',
@@ -69,14 +77,17 @@ async function cerrarSesion() {
           v-tooltip.bottom="'Cerrar sesión'"
         />
       </div>
-      <Button
-        v-if="!authStore.Usuario"
-        label="Admin"
-        icon="pi pi-key"
-        variant="text"
-        severity="secondary"
-        @click="router.push('/login')"
-      />
+      <div v-else>
+        <Button icon="pi pi-inbox" severity="secondary" variant="text" badge-severity="danger" v-tooltip.bottom="'Ver Solicitud'" @click="router.push('/solicitud')"
+          :badge="globalStore.solicitudActual.productosCantidad.length > 0 ? globalStore.solicitudActual.productosCantidad.length.toString() : undefined" />
+        <Button
+          label="Admin"
+          icon="pi pi-key"
+          variant="text"
+          severity="secondary"
+          @click="router.push('/login')"
+        />
+      </div>
     </template>
   </Menubar>
 </template>
