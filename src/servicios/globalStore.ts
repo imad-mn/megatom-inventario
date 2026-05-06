@@ -15,6 +15,7 @@ export const useGlobalStore = defineStore('global', () => {
   const ProductosEnCaja = ref<CantidadesConProducto[]>([]);
   const listaSeleccionada = ref<IdNombre | null>(null);
 
+
   const dialogoHistorial = ref({ mostrar: false, idElemento: '', nombreElemento: '' });
   const solicitudActual = ref<Solicitud>({ id: '', fechaCreacion: new Date(), solicitante: '', direccion: '', telefono: '', procesada: false, productosCantidad: [] });
 

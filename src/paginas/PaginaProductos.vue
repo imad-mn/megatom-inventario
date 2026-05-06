@@ -294,16 +294,18 @@ function GuardarProductoSolicitud(): Promise<void> {
             <div>{{ item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : '' }}</div>
             <div><b>Fabricante:&nbsp;</b>{{ item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : '' }}</div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
-            <div><b>Estado:&nbsp;</b>{{ item.estadoId ? globalStore.ListasMap[item.estadoId] || '' : '' }}</div>
+            <div><b>Estado:&nbsp;</b>{{ item.estadoId ? globalStore.ListasMap[item.estadoId]?.substring(3) || '' : '' }}</div>
             <div><b>Cantidad:&nbsp;</b>{{ item.cantidad }}</div>
-            <Button v-if="!ubicacionDict[item.id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.id)" />
-            <div v-else>
-              <div><b>Ubicación:</b></div>
-              <ul class="list-disc list-inside">
-                <li v-for="(ubic, index) in ubicacionDict[item.id]" :key="index">{{ ubic }}</li>
-              </ul>
+            <div v-if="Usuario">
+              <Button v-if="!ubicacionDict[item.id]" label="Ver Ubicación" icon="pi pi-server" severity="primary" size="small" variant="outlined" class="w-full mt-1" @click="VerUbicacion(item.id)" />
+              <div v-else>
+                <div><b>Ubicación:</b></div>
+                <ul class="list-disc list-inside">
+                  <li v-for="(ubic, index) in ubicacionDict[item.id]" :key="index">{{ ubic }}</li>
+                </ul>
+              </div>
             </div>
-            <Button v-if="!Usuario" label="SOLICITAR" icon="pi pi-file-plus" severity="success" size="small" variant="outlined" class="w-full mt-1" @click="SolicitarProducto(item)" />
+            <Button v-else label="SOLICITAR" icon="pi pi-file-plus" severity="success" size="small" variant="outlined" class="w-full mt-1" @click="SolicitarProducto(item)" />
           </template>
           <template #footer v-if="Usuario">
             <div class="flex gap-2">
@@ -445,8 +447,9 @@ function GuardarProductoSolicitud(): Promise<void> {
       <div><b>Cantidad:&nbsp;</b>{{ productoSolicitud?.cantidad }}</div>
     </Fieldset>
     <FloatLabel variant="on" class="mt-4">
-      <InputNumber v-model="cantidadSolicitud" :minFractionDigits="0" :maxFractionDigits="0" :min="1" :max="productoSolicitud?.cantidad ?? 0" autofocus class="w-full" @keyup.enter="Guardar" />
+      <InputNumber v-model="cantidadSolicitud" :minFractionDigits="0" :maxFractionDigits="0" :min="1" :invalid="cantidadSolicitud > (productoSolicitud?.cantidad ?? 0)" autofocus class="w-full" @keyup.enter="Guardar" />
       <label>Cantidad</label>
     </FloatLabel>
+    <Message v-if="cantidadSolicitud > (productoSolicitud?.cantidad ?? 0)" severity="error" size="small" variant="simple">La cantidad solicitada es mayor a la existencia.</Message>
   </DialogoEdicion>
 </template>

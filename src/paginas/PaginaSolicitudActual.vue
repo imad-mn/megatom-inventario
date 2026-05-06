@@ -11,6 +11,7 @@ const confirm = useConfirm();
 
 const enviando = ref(false);
 const enviada = ref(false);
+const mensajeError = ref(false);
 const productoVer = ref<string>();
 const mostrarProducto = ref(false);
 
@@ -59,6 +60,9 @@ async function EnviarSolicitud() {
     await CrearConFecha(Coleccion.Solicitudes, { ...solicitud });
     enviada.value = true;
     globalStore.solicitudActual = { id: '', fechaCreacion: new Date(), solicitante: '', direccion: '', telefono: '', procesada: false, productosCantidad: [] }
+  } catch (error) {
+    console.error(error);
+    mensajeError.value = true;
   } finally {
     enviando.value = false;
   }
@@ -68,9 +72,6 @@ async function EnviarSolicitud() {
 <template>
   <div class="max-w-xl mx-auto">
     <div class="text-2xl text-center font-semibold mb-4">SOLICITUD DE PRODUCTOS</div>
-
-    <!-- Mensaje de éxito -->
-    <Message v-if="enviada" severity="success" class="mb-4">Solicitud enviada exitosamente</Message>
 
     <!-- Datos del solicitante -->
     <div class="flex flex-col gap-4 mb-6">
@@ -169,7 +170,12 @@ async function EnviarSolicitud() {
     </div>
 
     <!-- Botón enviar -->
-    <div class="flex justify-end mb-4">
+    <div class="flex justify-between gap-2 mb-4">
+      <div class="flex-1">
+        <Message v-if="enviada" severity="success">Solicitud enviada exitosamente!</Message>
+        <Message v-if="mensajeError" severity="danger">Error al enviar la solicitud</Message>
+      </div>
+
       <Button
         label="Enviar Solicitud"
         icon="pi pi-send"

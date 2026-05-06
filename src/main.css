@@ -46,7 +46,14 @@ label {
 }
 /* No imprimir */
 @media print{
+  .texto-negro {
+    color: black;
+  }
   .noprint {
       display:none !important;
+  }
+  body {
+    -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
+    print-color-adjust: exact;         /* Firefox y navegadores modernos */
   }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useGlobalStore } from '@/servicios/globalStore';
 import { useRouter } from 'vue-router';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const globalStore = useGlobalStore();
 const router = useRouter();
@@ -9,6 +9,13 @@ const router = useRouter();
 const imprimir = () =>  window.print();
 const opciones = ['Todo', 'Título', 'Ficha Técnica'];
 const selectedOption = ref('Todo');
+
+const productosMap = computed(() => new Map(globalStore.Productos.map(p => [p.id, p])));
+
+function Ubicaciones(productoId: string): string[] {
+  const cantidades = globalStore.ObtenerCantidadesPorProducto(productoId);
+  return globalStore.ObtenerUbicaciones(cantidades);
+}
 </script>
 
 <template>
@@ -21,7 +28,7 @@ const selectedOption = ref('Todo');
     </div>
   </div>
 
-  <div v-if="$route.params.tipo == 'caja'">
+  <div v-if="$route.params.tipo == 'caja'" class="texto-negro">
     <div v-for="item in globalStore.ProductosEnCaja" :key="item.id">
       <div v-if="['Todo', 'Título'].includes(selectedOption)" class="min-h-screen flex items-center justify-center">
         <div class="text-center text-8xl text-wrap font-bold">
@@ -55,7 +62,49 @@ const selectedOption = ref('Todo');
     </div>
   </div>
 
-  <div v-else class="flex justify-center text-center items-center min-h-screen font-bold">
+  <div v-if="$route.params.tipo == 'solicitud'" class="max-w-xl mx-auto texto-negro">
+    <div class="text-2xl text-center mb-4">SOLICITUD DE PRODUCTOS</div>
+
+    <!-- Datos del solicitante -->
+    <div class="border border-2 rounded-lg mb-4 px-4 py-2 bg-gray-100">
+      <p><b>Solicitante:</b> {{ globalStore.solicitudActual.solicitante }}</p>
+      <p class="mt-1"><b>Teléfono:</b> {{ globalStore.solicitudActual.telefono }}</p>
+      <p class="mt-1"><b>Dirección:</b> {{ globalStore.solicitudActual.direccion }}</p>
+      <p class="mt-1"><b>Fecha de Solicitud:</b> {{ globalStore.solicitudActual.fechaCreacion.toLocaleDateString('es-VE') }}</p>
+    </div>
+
+    <!-- Tabla de productos -->
+    <table class="w-full border-collapse text-sm mb-4">
+      <thead>
+        <tr class="border bg-gray-100">
+          <th class="border px-2 py-1 text-left">#</th>
+          <th class="border px-2 py-1 text-left">Nombre</th>
+          <th class="border px-2 py-1 text-left">Código</th>
+          <th class="border px-2 py-1 text-center">Cantidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template v-for="(item, index) in globalStore.solicitudActual.productosCantidad" :key="item.productoId">
+          <tr class="border">
+            <td class="border px-2 py-1 text-center bg-gray-100" rowspan="2">{{ index + 1 }}</td>
+            <td class="border px-2 py-1">{{ productosMap.get(item.productoId)?.nombre ?? item.productoId }}</td>
+            <td class="border px-2 py-1">{{ productosMap.get(item.productoId)?.codigo ?? '' }}</td>
+            <td class="border px-2 py-1 text-center">{{ item.cantidad }}</td>
+          </tr>
+          <tr>
+            <td class="border px-2 py-1" colspan="3">
+              <div><b>Ubicación:</b></div>
+              <ul class="list-disc list-inside">
+                <li v-for="(ubic, index) in Ubicaciones(item.productoId)" :key="index">{{ ubic }}</li>
+              </ul>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <div v-else class="flex justify-center text-center items-center min-h-screen font-bold texto-negro">
     <div v-if="$route.params.tipo == 'galpon'" class="text-[11rem]">
       <div class="underline">GALPÓN {{ globalStore.GalponSeleccionado!.nombre }}</div>
       <div>{{ globalStore.GalponSeleccionado?.descripcion }}</div>

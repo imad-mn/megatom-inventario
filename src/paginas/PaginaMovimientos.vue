@@ -160,45 +160,47 @@ async function Guardar() {
 </script>
 
 <template>
-  <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-3">
-    <div class="text-xl mr-5">MOVIMIENTOS</div>
-    <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
-    <Button v-if="Usuario" label="GESTIONES" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
-  </div>
+  <div class="mx-auto max-w-xl">
+    <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-3">
+      <div class="text-xl mr-5">MOVIMIENTOS</div>
+      <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
+      <Button v-if="Usuario" label="GESTIONES" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
+    </div>
 
-  <DataView :value="movimientos" data-key="id" paginator :rows="10" :rows-per-page-options="[10, 20, 50]" :loading="cargando">
-    <template #list="{ items }">
-      <div class="flex flex-col gap-2">
-        <div
-          v-for="(item, index) in (items as MovimientosExtendido[])"
-          :key="item.id"
-          :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
-        >
-          <!-- Fila superior: fecha, tipo, creado por -->
-          <div class="flex flex-wrap items-center gap-2 mb-2">
-            <span class="text-sm text-surface-500 dark:text-surface-400">
-              {{ new Date(item.fechaCreacion).toLocaleString() }}
-            </span>
-            <Tag :value="item.tipo" :severity="item.tipo == 'INGRESO' ? 'success' : 'danger'" />
-            <span class="font-semibold text-surface-700 dark:text-surface-200 break-words">{{ item.producto?.nombre ?? '—' }}</span>
-            <span class="text-surface-400 dark:text-surface-500 ml-auto">{{ item.creadoPor }}</span>
-          </div>
-          <!-- Fila del producto -->
-          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm mb-1">
-            <span class="text-surface-500 dark:text-surface-400">Caja: <b>{{ item.caja?.nombre ?? '—' }}</b></span>
-            <span class="text-surface-500 dark:text-surface-400">Cantidad: <b>{{ item.cantidad }}</b></span>
-            <span class="text-surface-500 dark:text-surface-400">Almacenista: <b>{{ item.almacenista?.nombre ?? '—' }}</b></span>
-          </div>
-          <div class="text-surface-400 dark:text-surface-500 italic">
-            {{ item.justificacion }}
+    <DataView :value="movimientos" data-key="id" paginator :rows="5" :rows-per-page-options="[5, 10, 20]" :loading="cargando">
+      <template #list="{ items }">
+        <div class="flex flex-col gap-2">
+          <div
+            v-for="(item, index) in (items as MovimientosExtendido[])"
+            :key="item.id"
+            :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
+          >
+            <!-- Fila superior: fecha, tipo, creado por -->
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="text-sm text-surface-500 dark:text-surface-400">
+                {{ new Date(item.fechaCreacion).toLocaleString() }}
+              </span>
+              <Tag :value="item.tipo" :severity="item.tipo == 'INGRESO' ? 'success' : 'danger'" />
+              <span class="text-surface-400 dark:text-surface-500 ml-auto">{{ item.creadoPor }}</span>
+            </div>
+            <div class="font-semibold text-surface-700 dark:text-surface-200 break-words mb-2">{{ item.producto?.nombre ?? '—' }}</div>
+            <!-- Fila del producto -->
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm mb-1">
+              <span class="text-surface-500 dark:text-surface-400">Caja: <b>{{ item.caja?.nombre ?? '—' }}</b></span>
+              <span class="text-surface-500 dark:text-surface-400">Cantidad: <b>{{ item.cantidad }}</b></span>
+              <span class="text-surface-500 dark:text-surface-400">Almacenista: <b>{{ item.almacenista?.nombre ?? '—' }}</b></span>
+            </div>
+            <div class="italic">
+              {{ item.justificacion }}
+            </div>
           </div>
         </div>
-      </div>
-    </template>
-    <template #empty>
-      <p class="text-center text-surface-400 py-6">No se encontraron movimientos para el rango de fechas seleccionado.</p>
-    </template>
-  </DataView>
+      </template>
+      <template #empty>
+        <p class="text-center text-surface-400 py-6">No se encontraron movimientos para el rango de fechas seleccionado.</p>
+      </template>
+    </DataView>
+  </div>
 
   <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="GESTIONES" :clickAceptar="Guardar" class="w-2xl"
     :desabilitarAceptar="itemEdicion?.productoId == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenistaId === null
