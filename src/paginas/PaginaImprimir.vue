@@ -63,7 +63,7 @@ function Ubicaciones(productoId: string): string[] {
   </div>
 
   <div v-if="$route.params.tipo == 'solicitud'" class="max-w-xl mx-auto texto-negro">
-    <div class="text-2xl text-center mb-4">SOLICITUD DE PRODUCTOS</div>
+    <div class="text-3xl text-center mb-8 font-semibold">SOLICITUD DE PRODUCTOS</div>
 
     <!-- Datos del solicitante -->
     <div class="border border-2 rounded-lg mb-4 px-4 py-2 bg-gray-100">
@@ -76,17 +76,17 @@ function Ubicaciones(productoId: string): string[] {
     <!-- Tabla de productos -->
     <table class="w-full border-collapse text-sm mb-4">
       <thead>
-        <tr class="border bg-gray-100">
-          <th class="border px-2 py-1 text-left">#</th>
-          <th class="border px-2 py-1 text-left">Nombre</th>
-          <th class="border px-2 py-1 text-left">Código</th>
-          <th class="border px-2 py-1 text-center">Cantidad</th>
+        <tr class="border bg-gray-100 text-center">
+          <th class="border px-2 py-1">#</th>
+          <th class="border px-2 py-1">NOMBRE</th>
+          <th class="border px-2 py-1">CÓDIGO</th>
+          <th class="border px-2 py-1">CANTIDAD</th>
         </tr>
       </thead>
       <tbody>
         <template v-for="(item, index) in globalStore.solicitudActual.productosCantidad" :key="item.productoId">
-          <tr class="border">
-            <td class="border px-2 py-1 text-center bg-gray-100" rowspan="2">{{ index + 1 }}</td>
+          <tr class="border text-center">
+            <td class="border px-2 py-1 bg-gray-100 font-bold" rowspan="2">{{ index + 1 }}</td>
             <td class="border px-2 py-1">{{ productosMap.get(item.productoId)?.nombre ?? item.productoId }}</td>
             <td class="border px-2 py-1">{{ productosMap.get(item.productoId)?.codigo ?? '' }}</td>
             <td class="border px-2 py-1 text-center">{{ item.cantidad }}</td>
