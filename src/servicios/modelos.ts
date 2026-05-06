@@ -94,6 +94,7 @@ export type ProductoCantidadSimple = {
 export type Solicitud = ConFechaCreacion & {
   solicitante: string;
   direccion: string;
+  telefono: string;
   procesada: boolean;
   productosCantidad: ProductoCantidadSimple[]
 }

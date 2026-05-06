@@ -72,8 +72,8 @@ const listaEdicion = ref<Lista>({ id: '', nombre: '', tipo: 'grupos' });
 const agregandoLista = ref(false);
 
 const mostrarDialogoSolicitud = ref(false);
-const productoSolicitud = ref<Producto>();
-const cantidadSolicitud = ref<number>(0);
+const productoSolicitud = ref<ProductoConCantidad>();
+const cantidadSolicitud = ref<number>(1);
 
 function Agregar() {
   esNuevo.value = true;
@@ -250,7 +250,7 @@ async function GuardarLista() {
   agregandoLista.value = false;
 }
 
-function SolicitarProducto(p: Producto) {
+function SolicitarProducto(p: ProductoConCantidad) {
   productoSolicitud.value = p;
   cantidadSolicitud.value = 0;
   mostrarDialogoSolicitud.value = true;
@@ -434,16 +434,18 @@ function GuardarProductoSolicitud(): Promise<void> {
   </DialogoEdicion>
 
   <!-- Diálogo para solicitar cantidad de un producto -->
-  <DialogoEdicion v-model:mostrar="mostrarDialogoSolicitud" :clickAceptar="GuardarProductoSolicitud" encabezado="Solicitar Producto" :desabilitarAceptar="cantidadSolicitud <= 0">
+  <DialogoEdicion v-model:mostrar="mostrarDialogoSolicitud" :clickAceptar="GuardarProductoSolicitud" encabezado="Solicitar Producto"
+    :desabilitarAceptar="cantidadSolicitud <= 0 || cantidadSolicitud > (productoSolicitud?.cantidad ?? 0)">
     <Fieldset legend="Producto">
       <div><b>Código:&nbsp;</b>{{ productoSolicitud?.codigo }}</div>
       <div><b>Grupo:&nbsp;</b>{{ productoSolicitud?.grupoId ? globalStore.ListasMap[productoSolicitud.grupoId] || '' : '' }}</div>
       <div><b>Fabricante:&nbsp;</b>{{ productoSolicitud?.fabricanteId ? globalStore.ListasMap[productoSolicitud?.fabricanteId] || '' : '' }}</div>
       <div><b>Peso Unitario:&nbsp;</b>{{ productoSolicitud?.pesoUnitario?.toFixed(2) }} Kg</div>
-      <div><b>Estado:&nbsp;</b>{{ productoSolicitud?.estadoId ? globalStore.ListasMap[productoSolicitud?.estadoId] || '' : '' }}</div>
+      <div><b>Estado:&nbsp;</b>{{ productoSolicitud?.estadoId ? globalStore.ListasMap[productoSolicitud?.estadoId]?.substring(3) || '' : '' }}</div>
+      <div><b>Cantidad:&nbsp;</b>{{ productoSolicitud?.cantidad }}</div>
     </Fieldset>
     <FloatLabel variant="on" class="mt-4">
-      <InputNumber v-model="cantidadSolicitud" :minFractionDigits="0" :maxFractionDigits="0" :min="1" autofocus class="w-full" :invalid="cantidadSolicitud <= 0"  @keyup.enter="Guardar" />
+      <InputNumber v-model="cantidadSolicitud" :minFractionDigits="0" :maxFractionDigits="0" :min="1" :max="productoSolicitud?.cantidad ?? 0" autofocus class="w-full" @keyup.enter="Guardar" />
       <label>Cantidad</label>
     </FloatLabel>
   </DialogoEdicion>

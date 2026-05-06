@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import type { Solicitud } from '@/servicios/modelos';
+import type { ProductoConCantidad, Solicitud } from '@/servicios/modelos';
 import { Coleccion, ObtenerConFiltroFecha } from '@/servicios/TablesDbService';
 import { useGlobalStore } from '@/servicios/globalStore';
 import { where } from 'firebase/firestore';
+import DialogoVerProducto from '@/componentes/DialogoVerProducto.vue';
 
 const globalStore = useGlobalStore();
 
@@ -14,8 +15,16 @@ const rangoFechas = ref<(Date | null)[]>([
 ]);
 const solicitudes = ref<Solicitud[]>([]);
 const cargando = ref(false);
+const productosMap = computed(() => new Map(globalStore.ObtenerProductosConCantidad().map(p => [p.id, p])));
 
-const productosMap = computed(() => new Map(globalStore.Productos.map(p => [p.id, p])));
+const mostrarProducto = ref(false);
+const productoDetalle = ref<ProductoConCantidad | null>(null);
+
+const formatter = new Intl.DateTimeFormat('es-VE', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+});
 
 async function cargar() {
   if (!rangoFechas.value[0] || !rangoFechas.value[1]) return;
@@ -41,19 +50,25 @@ watch(rangoFechas, async () => {
   rangoFechas.value[1]?.setHours(23, 59);
   await cargar();
 });
+
+
+function VerProducto(productoId: string) {
+  mostrarProducto.value = true;
+  productoDetalle.value = productosMap.value.get(productoId) ?? null;
+}
 </script>
 
 <template>
   <div>
     <!-- Encabezado -->
     <div class="flex flex-wrap items-center gap-3 mb-4">
-      <div class="text-xl mr-3">SOLICITUDES</div>
+      <div class="text-xl mr-5">SOLICITUDES</div>
       <SelectButton v-model="filtro" :options="['No procesadas', 'Procesadas']" />
       <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
     </div>
 
     <!-- Lista -->
-    <DataView :value="solicitudes" data-key="id" paginator :rows="10" :rows-per-page-options="[10, 20, 50]" :loading="cargando">
+    <DataView :value="solicitudes" data-key="id" paginator :rows="5" :rows-per-page-options="[5, 10, 20]" :loading="cargando">
       <template #list="{ items }">
         <div class="flex flex-col gap-2">
           <div
@@ -64,24 +79,23 @@ watch(rangoFechas, async () => {
             <!-- Fila superior: fecha, estado, solicitante -->
             <div class="flex flex-wrap items-center gap-2 mb-2">
               <span class="text-sm text-surface-500 dark:text-surface-400">
-                {{ new Date(item.fechaCreacion).toLocaleString() }}
+                {{ item.fechaCreacion.toLocaleDateString() }} ({{ formatter.format(item.fechaCreacion) }})
               </span>
               <span class="font-semibold text-surface-700 dark:text-surface-200">{{ item.solicitante }}</span>
               <span class="text-surface-500 dark:text-surface-400 text-sm ml-auto">{{ item.direccion }}</span>
             </div>
 
             <!-- Productos -->
-            <div class="flex flex-col gap-1 mt-1">
-              <div
-                v-for="pc in item.productosCantidad"
-                :key="pc.productoId"
-                class="flex items-center gap-3 text-sm px-2 py-1 rounded bg-surface-100 dark:bg-surface-700"
-              >
-                <span class="font-medium truncate">{{ productosMap.get(pc.productoId)?.nombre ?? pc.productoId }}</span>
-                <span class="text-surface-400 dark:text-surface-500 shrink-0">{{ productosMap.get(pc.productoId)?.codigo ?? '—' }}</span>
-                <Tag :value="`${pc.cantidad} unidades`" severity="secondary" />
-              </div>
-            </div>
+            <ul>
+              <li v-for="pc in item.productosCantidad" :key="pc.productoId" class="text-sm list-disc ml-5 pt-1">
+                <div class="flex flex-wrap items-center gap-3">
+                  <span class="font-medium">{{ productosMap.get(pc.productoId)?.nombre ?? pc.productoId }}</span>
+                  <span class="text-surface-500 dark:text-surface-400">| Cód: {{ productosMap.get(pc.productoId)?.codigo ?? '—' }} |</span>
+                  <span>Cantidad: {{ pc.cantidad }}</span>
+                  <Button icon="pi pi-eye" severity="info" variant="text" size="small" rounded @click="VerProducto(pc.productoId)" />
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
       </template>
@@ -90,4 +104,5 @@ watch(rangoFechas, async () => {
       </template>
     </DataView>
   </div>
+  <DialogoVerProducto v-model:mostrar="mostrarProducto" :producto="productoDetalle" mostrarUbicacion />
 </template>

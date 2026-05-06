@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useGlobalStore } from '@/servicios/globalStore';
 import { Coleccion, CrearConFecha } from '@/servicios/TablesDbService';
 import { useConfirm } from 'primevue/useconfirm';
+import DialogoVerProducto from '@/componentes/DialogoVerProducto.vue';
 
 const globalStore = useGlobalStore();
 const solicitud = globalStore.solicitudActual;
@@ -13,7 +14,7 @@ const enviada = ref(false);
 const productoVer = ref<string>();
 const mostrarProducto = ref(false);
 
-const productosMap = computed(() => new Map(globalStore.Productos.map(p => [p.id, p])));
+const productosMap = computed(() => new Map(globalStore.ObtenerProductosConCantidad().map(p => [p.id, p])));
 const productoDetalle = computed(() => productoVer.value ? productosMap.value.get(productoVer.value) ?? null : null);
 
 const totalUnidades = computed(() =>
@@ -22,6 +23,7 @@ const totalUnidades = computed(() =>
 
 const formularioValido = computed(() =>
   solicitud.solicitante.trim().length > 0 &&
+  solicitud.telefono.trim().length > 0 &&
   solicitud.direccion.trim().length > 0 &&
   solicitud.productosCantidad.length > 0 &&
   solicitud.productosCantidad.every(p => p.cantidad > 0)
@@ -56,7 +58,7 @@ async function EnviarSolicitud() {
     solicitud.procesada = false;
     await CrearConFecha(Coleccion.Solicitudes, { ...solicitud });
     enviada.value = true;
-    globalStore.solicitudActual = { id: '', fechaCreacion: new Date(), solicitante: '', direccion: '', procesada: false, productosCantidad: [] }
+    globalStore.solicitudActual = { id: '', fechaCreacion: new Date(), solicitante: '', direccion: '', telefono: '', procesada: false, productosCantidad: [] }
   } finally {
     enviando.value = false;
   }
@@ -84,6 +86,18 @@ async function EnviarSolicitud() {
       </FloatLabel>
 
       <FloatLabel variant="on">
+        <InputMask
+          id="telefono"
+          v-model="solicitud.telefono"
+          mask="(9999) 999-9999"
+          class="w-full"
+          :disabled="enviada"
+          :invalid="!enviada && solicitud.telefono.trim().length === 0"
+        />
+        <label for="telefono">Teléfono</label>
+      </FloatLabel>
+
+      <FloatLabel variant="on">
         <InputText
           id="direccion"
           v-model="solicitud.direccion"
@@ -91,7 +105,7 @@ async function EnviarSolicitud() {
           :disabled="enviada"
           :invalid="!enviada && solicitud.direccion.trim().length === 0"
         />
-        <label for="direccion">Dirección a la que será enviado</label>
+        <label for="direccion">Dirección a la que se enviará</label>
       </FloatLabel>
     </div>
 
@@ -122,6 +136,7 @@ async function EnviarSolicitud() {
             showButtons
             buttonLayout="horizontal"
             :disabled="enviada"
+            :max="productosMap.get(item.productoId)?.cantidad ?? 0"
             inputClass="text-center w-12"
             incrementIcon="pi pi-plus"
             decrementIcon="pi pi-minus"
@@ -154,7 +169,7 @@ async function EnviarSolicitud() {
     </div>
 
     <!-- Botón enviar -->
-    <div class="flex justify-end">
+    <div class="flex justify-end mb-4">
       <Button
         label="Enviar Solicitud"
         icon="pi pi-send"
@@ -166,31 +181,5 @@ async function EnviarSolicitud() {
     </div>
   </div>
 
-  <!-- Diálogo detalle de producto -->
-  <Dialog v-model:visible="mostrarProducto" header="Detalles del Producto" modal class="w-full max-w-xl">
-    <div v-if="productoDetalle" class="flex flex-wrap gap-5">
-      <!-- Foto -->
-      <div class="flex items-start justify-center w-full sm:w-auto">
-        <img
-          v-if="productoDetalle.imagenUrl"
-          :src="productoDetalle.imagenUrl"
-          :alt="productoDetalle.nombre"
-          class="rounded-lg object-contain max-h-52 w-full sm:w-52"
-        />
-        <div v-else class="flex items-center justify-center rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-400 dark:text-surface-500 w-full sm:w-48 h-48">
-          <i class="pi pi-image text-4xl" />
-        </div>
-      </div>
-      <!-- Atributos -->
-      <div class="flex-1 min-w-0 flex flex-col gap-1">
-        <div><span class="font-semibold">Nombre:&nbsp;</span>{{ productoDetalle.nombre ?? '—' }}</div>
-        <div><span class="font-semibold">Código:&nbsp;</span>{{ productoDetalle.codigo ?? '—' }}</div>
-        <div><span class="font-semibold">Fabricante:&nbsp;</span>{{ productoDetalle.fabricanteId ? globalStore.ListasMap[productoDetalle.fabricanteId] : '—' }}</div>
-        <div><span class="font-semibold">Grupo:&nbsp;</span>{{ productoDetalle.grupoId ? globalStore.ListasMap[productoDetalle.grupoId] : '—' }}</div>
-        <div><span class="font-semibold">Peso unitario:&nbsp;</span>{{ productoDetalle.pesoUnitario?.toFixed(2) }} kg</div>
-        <div><span class="font-semibold">Estado:&nbsp;</span>{{ productoDetalle.estadoId ? globalStore.ListasMap[productoDetalle.estadoId]?.substring(3) : '—' }}</div>
-      </div>
-    </div>
-    <div class="mt-2"><span class="font-semibold">Descripción:&nbsp;</span>{{ productoDetalle?.descripcion ?? '—' }}</div>
-  </Dialog>
+  <DialogoVerProducto v-model:mostrar="mostrarProducto" :producto="productoDetalle" />
 </template>

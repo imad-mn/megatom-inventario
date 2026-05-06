@@ -40,6 +40,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 import Menu from 'primevue/menu';
 import Tag from 'primevue/tag';
 import SelectButton from 'primevue/selectbutton';
+import InputMask from 'primevue/inputmask';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -105,5 +106,6 @@ app.component('ProgressSpinner', ProgressSpinner);
 app.component('Menu', Menu);
 app.component('Tag', Tag);
 app.component('SelectButton', SelectButton);
+app.component('InputMask', InputMask);
 
 app.mount('#app')
