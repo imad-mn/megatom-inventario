@@ -63,15 +63,19 @@ export type Movimientos = ConFechaCreacion & {
   cantidad: number;
   almacenistaId: string;
   justificacion: string;
-  tipo: 'INGRESO' | 'EGRESO';
+  tipo: 'INGRESO' | 'EGRESO' | 'TRASLADO';
   creadoPor: string;
   cajaId: string;
+  cajaIdDestino: string;
 }
 
 export type MovimientosExtendido = Movimientos & {
   producto: IdNombre | null;
-  caja: IdNombre | null;
+  caja: string | null;
+  cajaDestino: string | null;
   almacenista: IdNombre | null;
+  seccionOrigen: string | null;
+  seccionDestino: string | null;
 }
 
 export type TipoLista = 'fabricantes' | 'grupos' | 'almacenistas' | 'estados';
