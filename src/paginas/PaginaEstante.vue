@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Caja, CantidadesConProducto, ItemOrdenable, Lista, Nivel, Producto, Seccion } from '@/servicios/modelos.ts';
+import type { Caja, CantidadesConProducto, IdNombre, ItemOrdenable, Lista, Nivel, Producto, Seccion } from '@/servicios/modelos.ts';
 import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
@@ -140,7 +140,7 @@ async function Guardar() {
   dialogVisible.value = false;
 }
 
-function Quitar(item: { id: string; nombre: string }, tipo: TipoEdicion, nivel?: Nivel, seccion?: Seccion): void {
+function Quitar(item: IdNombre, tipo: TipoEdicion, nivel?: Nivel, seccion?: Seccion): void {
   confirm.require({
     header: 'Eliminar',
     message: `¿Estás seguro de eliminar ${tipo}: "${item.nombre}" y sus descendientes?`,
@@ -158,6 +158,17 @@ function Quitar(item: { id: string; nombre: string }, tipo: TipoEdicion, nivel?:
         seccion.cajas = seccion.cajas.filter(c => c.id !== item.id);
       }
       await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
+
+      // Eliminar movimientos y cantidades si es una caja
+      if (tipo == 'Caja') {
+        await TablesDbService.EliminarConFiltro(TablesDbService.Coleccion.Movimientos, 'cajaId', item.id);
+        await TablesDbService.EliminarConFiltro(TablesDbService.Coleccion.Cantidades, 'cajaId', item.id);
+        const cantidadesExistentes = globalStore.Cantidades.filter(c => c.cajaId == item.id);
+        cantidadesExistentes.forEach(c => {
+          const indice = globalStore.Cantidades.indexOf(c);
+          globalStore.Cantidades.splice(indice, 1);
+        });
+      }
     }
   });
 }
@@ -370,9 +381,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
           <template #icons v-if="Usuario">
             <BotonesCompacto @agregarClick="Agregar('Caja', undefined, seccion)" @moverClick="MostrarDialogoMover(seccion, 'Seccion')" @editarClick="Editar(seccion, 'Seccion')" @quitarClick="Quitar(seccion, 'Seccion', nivel)" :id-elemento="seccion.id" :nombre-elemento="'Sección ' + seccion.nombre" button-severity="secondary" queAgregar="Caja" />
           </template>
-          <div v-if="seccion.cajas.length === 0" class="italic text-muted-color m-1">
-            No hay cajas en esta Sección.
-          </div>
+          <div v-if="seccion.cajas.length === 0" class="italic text-muted-color m-1">No hay cajas.</div>
           <div v-else class="flex">
             <div v-for="caja in seccion.cajas" :key="caja.id"
                 class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" :class="{ 'px-2': Usuario == null }">

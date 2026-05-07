@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import type { Historial } from '@/servicios/modelos';
 import { ObtenerHistorialPorElemento } from '@/servicios/historialService';
+import { FormatoFechaHora } from '@/servicios/sharedFunctions';
 
 const props = defineProps<{ id: string, nombre: string }>();
 const mostrar = defineModel<boolean>('mostrar');
@@ -29,7 +30,7 @@ watch(
             <!-- Fecha, usuario y acción -->
             <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
               <span class="text-sm text-surface-500 dark:text-surface-400">
-                {{ new Date(item.fechaCreacion).toLocaleString() }}
+                {{ FormatoFechaHora(item.fechaCreacion) }}
               </span>
               <div class="flex items-center gap-2">
                 <Tag :value="item.usuario" severity="primary" />

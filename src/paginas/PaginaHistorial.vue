@@ -4,6 +4,7 @@ import { onMounted, ref, watch } from 'vue';
 import { ExportarHistorial } from '@/servicios/ImportarExportar';
 import { ObtenerHistorial } from '@/servicios/historialService';
 import { useAuthStore } from '@/servicios/authStore';
+import { FormatoFechaHora } from '@/servicios/sharedFunctions';
 
 const authStore = useAuthStore();
 const { Usuario } = authStore;
@@ -55,7 +56,7 @@ async function DescargarHistorial() {
       <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
       <div>
         <label for="usuario" class="mr-2">Usuario</label>
-        <Select id="usuario" v-model="usuario" :options="['Imad', 'Giovanni']" show-clear class="min-w-35 w-auto" />
+        <Select id="usuario" v-model="usuario" :options="['Imad', 'Giovanni', 'Angel Perez']" show-clear class="min-w-35 w-auto" />
       </div>
       <Button v-if="Usuario != null && Usuario.user.displayName != null && ['Imad', 'Giovanni'].includes(Usuario.user.displayName)" label="Exportar" icon="pi pi-file-export" severity="success" variant="outlined" @click="DescargarHistorial" v-tooltip.bottom="'Exportar historial a un archivo CSV'" />
     </div>
@@ -71,7 +72,7 @@ async function DescargarHistorial() {
             <!-- Fecha, usuario y acción -->
             <div class="flex flex-wrap items-center gap-2 mb-2">
               <span class="text-sm text-surface-500 dark:text-surface-400">
-                {{ new Date((item as Historial).fechaCreacion).toLocaleString() }}
+                {{ FormatoFechaHora(item.fechaCreacion) }}
               </span>
               <Tag :value="(item as Historial).usuario" severity="primary" />
               <Tag :value="(item as Historial).accion" severity="info" />

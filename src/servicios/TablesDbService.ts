@@ -1,5 +1,5 @@
 import { db } from './firebase.ts';
-import { collection, addDoc, doc, query, where, getDocs, setDoc, deleteDoc, type DocumentData, QueryConstraint, type FirestoreDataConverter, orderBy, QueryDocumentSnapshot, type WithFieldValue, type SnapshotOptions, Timestamp } from "firebase/firestore";
+import { collection, addDoc, doc, query, where, getDocs, setDoc, deleteDoc, type DocumentData, QueryConstraint, type FirestoreDataConverter, orderBy, QueryDocumentSnapshot, type WithFieldValue, type SnapshotOptions, Timestamp, writeBatch } from "firebase/firestore";
 import type { ModeloBase, ConFechaCreacion } from './modelos.ts';
 
 /** Nombres de las colecciones de Firestore */
@@ -57,30 +57,44 @@ export function createConverterConFecha<T extends ConFechaCreacion>(): Firestore
   };
 }
 
-export async function Crear<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
+export async function Crear<T extends ModeloBase>(collectionName: Coleccion, item: T): Promise<void> {
   const collRef = collection(db, collectionName).withConverter(createConverter<T>());
   const docRef = await addDoc(collRef, item);
   item.id = docRef.id;
 }
 
-export async function Actualizar<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
+export async function CrearConFecha<T extends ConFechaCreacion>(collectionName: Coleccion, item: T): Promise<void> {
+  const collRef = collection(db, collectionName).withConverter(createConverterConFecha<T>());
+  await addDoc(collRef, item);
+}
+
+export async function Actualizar<T extends ModeloBase>(collectionName: Coleccion, item: T): Promise<void> {
   const collRef = collection(db, collectionName).withConverter(createConverter<T>());
   const docRef = doc(collRef, item.id);
   await setDoc(docRef, item);
 }
 
-export async function Eliminar<T extends ModeloBase>(collectionName: string, item: T): Promise<void> {
+export async function Eliminar<T extends ModeloBase>(collectionName: Coleccion, item: T): Promise<void> {
   const collRef = collection(db, collectionName).withConverter(createConverter<T>());
   const docRef = doc(collRef, item.id);
   await deleteDoc(docRef);
 }
 
-export async function CrearConFecha<T extends ConFechaCreacion>(collectionName: string, item: T): Promise<void> {
-  const collRef = collection(db, collectionName).withConverter(createConverterConFecha<T>());
-  await addDoc(collRef, item);
+export async function EliminarConFiltro(coleccion: Coleccion, campo: string, valor: string): Promise<void> {
+  const q = query(collection(db, coleccion), where(campo, '==', valor));
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) {
+    console.log(`No se encontraron registros en '${coleccion}' que cumplan con el criterio: ${campo}=='${valor}'.`);
+    return;
+  }
+
+  const batch = writeBatch(db);
+  querySnapshot.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
 }
 
-export async function ObtenerTodos<T extends ModeloBase>(collectionName: string): Promise<T[]> {
+export async function ObtenerTodos<T extends ModeloBase>(collectionName: Coleccion): Promise<T[]> {
   const collRef = collection(db, collectionName).withConverter(createConverter<T>());
   const respuesta = await getDocs(collRef);
   return respuesta.docs.map(doc => doc.data());

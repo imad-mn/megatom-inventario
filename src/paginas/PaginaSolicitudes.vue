@@ -7,6 +7,7 @@ import { where } from 'firebase/firestore';
 import DialogoVerProducto from '@/componentes/DialogoVerProducto.vue';
 import { useConfirm } from 'primevue';
 import { useRouter } from 'vue-router';
+import { FormatoFechaHora } from '@/servicios/sharedFunctions';
 
 const globalStore = useGlobalStore();
 const confirm = useConfirm();
@@ -22,12 +23,6 @@ const productosMap = computed(() => new Map(globalStore.ObtenerProductosConCanti
 
 const mostrarProducto = ref(false);
 const productoDetalle = ref<ProductoConCantidad | null>(null);
-
-const formatter = new Intl.DateTimeFormat('es-VE', {
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true
-});
 
 async function cargar() {
   if (!rangoFechas.value[0] || !rangoFechas.value[1]) return;
@@ -112,7 +107,7 @@ function ImprimirSolicitud(solicitud: Solicitud) {
             <div class="flex justify-between items-center">
               <div class="flex flex-wrap gap-2">
                 <span class="text-sm text-surface-500 dark:text-surface-400">
-                  {{ item.fechaCreacion.toLocaleDateString() }} ({{ formatter.format(item.fechaCreacion) }})
+                  {{ FormatoFechaHora(item.fechaCreacion) }}
                 </span>
                 <span class="font-semibold text-surface-700 dark:text-surface-200">{{ item.solicitante }}</span>
               </div>

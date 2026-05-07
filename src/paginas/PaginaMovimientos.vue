@@ -6,6 +6,7 @@ import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
 import { Fieldset, FloatLabel } from 'primevue';
 import { useGlobalStore } from '@/servicios/globalStore';
 import { useAuthStore } from '@/servicios/authStore';
+import { FormatoFechaHora } from '@/servicios/sharedFunctions';
 
 const globalStore = useGlobalStore();
 const authStore = useAuthStore();
@@ -160,14 +161,14 @@ async function Guardar() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-xl">
-    <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-3">
-      <div class="text-xl mr-5">MOVIMIENTOS</div>
+  <div class="mx-auto max-w-lg mb-4">
+    <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-2">
+      <div class="text-xl mr-1">MOVIMIENTOS</div>
+      <Button v-if="Usuario" label="GESTIONES" severity="primary" variant="outlined" @click="Agregar" />
       <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
-      <Button v-if="Usuario" label="GESTIONES" icon="pi pi-arrow-right-arrow-left" severity="primary" variant="outlined" @click="Agregar" />
     </div>
 
-    <DataView :value="movimientos" data-key="id" paginator :rows="5" :rows-per-page-options="[5, 10, 20]" :loading="cargando">
+    <DataView :value="movimientos" data-key="id" :loading="cargando">
       <template #list="{ items }">
         <div class="flex flex-col gap-2">
           <div
@@ -176,19 +177,18 @@ async function Guardar() {
             :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
           >
             <!-- Fila superior: fecha, tipo, creado por -->
-            <div class="flex flex-wrap items-center gap-2 mb-1">
+            <div class="flex justify-between items-center mb-1">
               <span class="text-sm text-surface-500 dark:text-surface-400">
-                {{ new Date(item.fechaCreacion).toLocaleString() }}
+                {{ FormatoFechaHora(item.fechaCreacion) }}
               </span>
               <Tag :value="item.tipo" :severity="item.tipo == 'INGRESO' ? 'success' : 'danger'" />
-              <span class="text-surface-400 dark:text-surface-500 ml-auto">{{ item.creadoPor }}</span>
+              <span class="text-surface-400 dark:text-surface-500">{{ item.creadoPor }}</span>
             </div>
             <div class="font-semibold text-surface-700 dark:text-surface-200 break-words mb-2">{{ item.producto?.nombre ?? '—' }}</div>
             <!-- Fila del producto -->
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm mb-1">
               <span class="text-surface-500 dark:text-surface-400">Caja: <b>{{ item.caja?.nombre ?? '—' }}</b></span>
               <span class="text-surface-500 dark:text-surface-400">Cantidad: <b>{{ item.cantidad }}</b></span>
-              <span class="text-surface-500 dark:text-surface-400">Almacenista: <b>{{ item.almacenista?.nombre ?? '—' }}</b></span>
             </div>
             <div class="italic">
               {{ item.justificacion }}

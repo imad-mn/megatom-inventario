@@ -148,6 +148,18 @@ function Quitar(item: Producto): void {
     acceptIcon: 'pi pi-trash',
     rejectClass: 'p-button-secondary p-button-outlined',
     accept: async () => {
+      // Quitar cantidades primero
+      await TablesDbService.EliminarConFiltro(TablesDbService.Coleccion.Cantidades, 'productoId', item.id);
+      const cantidadesExistentes = globalStore.Cantidades.filter(c => c.productoId == item.id);
+      cantidadesExistentes.forEach(c => {
+        const indice = globalStore.Cantidades.indexOf(c);
+        globalStore.Cantidades.splice(indice, 1);
+      });
+
+      // Luego Movimientos
+      await TablesDbService.EliminarConFiltro(TablesDbService.Coleccion.Movimientos, 'productoId', item.id);
+
+      // Luego el producto
       const anterior = globalStore.Productos.find(x => x.id === item.id);
       if (anterior) {
         await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
@@ -284,7 +296,7 @@ function GuardarProductoSolicitud(): Promise<void> {
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <Card v-for="item in slotProps.items as ProductoConCantidad[]" :key="item.id" style="overflow: hidden">
           <template #header>
-            <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" />
+            <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" class="h-60 w-full" />
           </template>
           <template #title>{{ item.nombre }}</template>
           <template #subtitle>{{ item.descripcion }}</template>

@@ -47,10 +47,12 @@ export const useGlobalStore = defineStore('global', () => {
   function ObtenerCantidadesConProductos(): CantidadesConProducto[] {
     const productosMap = new Map(Productos.value.map(p => [p.id, p]));
 
-    return Cantidades.value.map(cantidad => ({
+    const resultado = Cantidades.value.map(cantidad => ({
       ...cantidad,
       producto: productosMap.get(cantidad.productoId)!
     }));
+
+    return resultado.filter(r => r.producto !== undefined);
   }
 
   function ObtenerProductosConCantidad(): ProductoConCantidad[] {
