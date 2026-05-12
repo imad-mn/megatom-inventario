@@ -79,7 +79,7 @@ const mostrarPedidoAgregado = ref(false);
 function Agregar() {
   esNuevo.value = true;
   imagenEdicion.value = undefined;
-  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenUrl: null, estadoId: null };
+  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenUrl: null, fileUrl: null, estadoId: null };
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
   galponSeleccionado.value = null;
@@ -96,7 +96,14 @@ async function Guardar() {
       return;
 
     if (archivoFoto) {
-      itemEdicion.value.imagenUrl = await StorageService.Subir(archivoFoto);
+      // Elimina la imagen anterior
+      if (itemEdicion.value.fileUrl)
+        await StorageService.Eliminar(itemEdicion.value.fileUrl);
+
+      const [fileUrl, imagenUrl] = await StorageService.Subir(archivoFoto);
+      itemEdicion.value.fileUrl = fileUrl;
+      itemEdicion.value.imagenUrl = imagenUrl;
+
       archivoFoto = undefined;
     }
 
@@ -160,13 +167,18 @@ function Quitar(item: Producto): void {
       await TablesDbService.EliminarConFiltro(TablesDbService.Coleccion.Movimientos, 'productoId', item.id);
 
       // Luego el producto
+      await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
+
+      // Elimina la imagen del producto si la tiene
+      if (item.fileUrl)
+        await StorageService.Eliminar(item.fileUrl);
+
+      // Lo borra de la memoria y registra el Historial
       const anterior = globalStore.Productos.find(x => x.id === item.id);
       if (anterior) {
-        await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
         await RegistrarHistorial(item.id, '[Producto] Eliminado', Stringify(anterior) + '. También sus Cantidades y Movimientos', null);
         const indice = globalStore.Productos.indexOf(anterior);
         globalStore.Productos.splice(indice, 1);
-        await StorageService.Eliminar(item.id);
       }
     }
   });

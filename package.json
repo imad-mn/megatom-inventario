@@ -17,6 +17,7 @@
   "dependencies": {
     "@primeuix/themes": "^1.2.5",
     "@tailwindcss/vite": "^4.1.18",
+    "compressorjs": "^1.3.0",
     "firebase": "^12.11.0",
     "papaparse": "^5.5.3",
     "pinia": "^3.0.4",
