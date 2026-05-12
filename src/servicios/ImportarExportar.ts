@@ -128,7 +128,7 @@ async function obtenerOCrearGalpon(nombre: string): Promise<Galpon> {
     const galpon: Galpon = { id: '', nombre, descripcion: '', ordenDescendente: false, estantes: [] };
     await Crear(Coleccion.Galpones, galpon);
     globalStore.Galpones.push(galpon);
-    await RegistrarHistorial(galpon.id, '[Galpon] Creado', null, nombre);
+    await RegistrarHistorial(galpon.id, 'IMPORTACION [Galpon] Creado', null, nombre);
     return galpon;
   } catch (error) {
     const mensaje = `Error al obtener o crear el galpón ${nombre}:`;
@@ -137,13 +137,14 @@ async function obtenerOCrearGalpon(nombre: string): Promise<Galpon> {
   }
 }
 
-function obtenerOCrearEstante(ctx: ContextoImportacion, galpon: Galpon, nombre: string): Estante {
+async function obtenerOCrearEstante(ctx: ContextoImportacion, galpon: Galpon, nombre: string): Promise<Estante> {
   try {
     const existente = galpon.estantes.find(e => e.nombre === nombre);
     if (existente) return existente;
 
     const estante: Estante = { id: crypto.randomUUID(), nombre, ordenDescendente: false, niveles: [] };
     galpon.estantes.push(estante);
+    await RegistrarHistorial(estante.id, 'IMPORTACION [Estante] Creado', null, nombre);
     ctx.galponesModificados.add(galpon.id);
     return estante;
   } catch (error) {
@@ -153,13 +154,14 @@ function obtenerOCrearEstante(ctx: ContextoImportacion, galpon: Galpon, nombre: 
   }
 }
 
-function obtenerOCrearNivel(ctx: ContextoImportacion, galpon: Galpon, estante: Estante, nombre: string): Nivel {
+async function obtenerOCrearNivel(ctx: ContextoImportacion, galpon: Galpon, estante: Estante, nombre: string): Promise<Nivel> {
   try {
     const existente = estante.niveles.find(n => n.nombre === nombre);
     if (existente) return existente;
 
     const nivel: Nivel = { id: crypto.randomUUID(), nombre, ordenDescendente: false, secciones: [] };
     estante.niveles.push(nivel);
+    await RegistrarHistorial(nivel.id, 'IMPORTACION [Nivel] Creado', null, nombre);
     ctx.galponesModificados.add(galpon.id);
     return nivel;
   } catch (error) {
@@ -169,13 +171,14 @@ function obtenerOCrearNivel(ctx: ContextoImportacion, galpon: Galpon, estante: E
   }
 }
 
-function obtenerOCrearSeccion(ctx: ContextoImportacion, galpon: Galpon, nivel: Nivel, nombre: string): Seccion {
+async function obtenerOCrearSeccion(ctx: ContextoImportacion, galpon: Galpon, nivel: Nivel, nombre: string): Promise<Seccion> {
   try {
     const existente = nivel.secciones.find(s => s.nombre === nombre);
     if (existente) return existente;
 
     const seccion: Seccion = { id: crypto.randomUUID(), nombre, cajas: [] };
     nivel.secciones.push(seccion);
+    await RegistrarHistorial(seccion.id, 'IMPORTACION [Sección] Creada', null, nombre);
     ctx.galponesModificados.add(galpon.id);
     return seccion;
   } catch (error) {
@@ -185,13 +188,14 @@ function obtenerOCrearSeccion(ctx: ContextoImportacion, galpon: Galpon, nivel: N
   }
 }
 
-function obtenerOCrearCaja(ctx: ContextoImportacion, galpon: Galpon, seccion: Seccion, nombre: string): IdNombre {
+async function obtenerOCrearCaja(ctx: ContextoImportacion, galpon: Galpon, seccion: Seccion, nombre: string): Promise<IdNombre> {
   try {
     const existente = seccion.cajas.find(c => c.nombre === nombre);
     if (existente) return existente;
 
     const caja: IdNombre = { id: crypto.randomUUID(), nombre };
     seccion.cajas.push(caja);
+    await RegistrarHistorial(caja.id, 'IMPORTACION [Caja] Creada', null, `Caja ${nombre} (Sección: ${seccion.nombre})`);
     ctx.galponesModificados.add(galpon.id);
     return caja;
   } catch (error) {
@@ -204,10 +208,10 @@ function obtenerOCrearCaja(ctx: ContextoImportacion, galpon: Galpon, seccion: Se
 async function ProcesarFila(fila: Fila, ctx: ContextoImportacion): Promise<void> {
   const globalStore = useGlobalStore();
   const galpon = await obtenerOCrearGalpon(fila.galpon);
-  const estante = obtenerOCrearEstante(ctx, galpon, fila.estante);
-  const nivel = obtenerOCrearNivel(ctx, galpon, estante, fila.nivel);
-  const seccion = obtenerOCrearSeccion(ctx, galpon, nivel, fila.seccion);
-  const cajon = obtenerOCrearCaja(ctx, galpon, seccion, fila.cajon);
+  const estante = await obtenerOCrearEstante(ctx, galpon, fila.estante);
+  const nivel = await obtenerOCrearNivel(ctx, galpon, estante, fila.nivel);
+  const seccion = await obtenerOCrearSeccion(ctx, galpon, nivel, fila.seccion);
+  const cajon = await obtenerOCrearCaja(ctx, galpon, seccion, fila.cajon);
 
   const grupo = fila.grupo ? await obtenerOCrearLista(ctx.grupos, 'grupos', fila.grupo) : null;
   const fabricante = fila.fabricante ? await obtenerOCrearLista(ctx.fabricantes, 'fabricantes', fila.fabricante) : null;
@@ -236,12 +240,12 @@ async function crearOActualizarCantidades(cantidadFila: string, cajon: IdNombre,
       };
       await Crear(Coleccion.Cantidades, itemCantidad);
       globalStore.Cantidades.push(itemCantidad);
-      await RegistrarHistorial(producto.id, `[Importación] '${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`, null, `${cantidad} unidades`);
+      await RegistrarHistorial(producto.id, 'IMPORTACION [Cantidad] Creada', null, `'${producto.nombre}' agregado a caja: ${cajon.nombre} (${cantidad} unidades)`);
     } else {
       const cantidadAnterior = itemCantidad.cantidad;
       itemCantidad.cantidad = cantidad;
       await Actualizar(Coleccion.Cantidades, itemCantidad);
-      await RegistrarHistorial(producto.id, `[Importación] Cantidad actualizada en caja ${cajon.nombre}`, String(cantidadAnterior), String(cantidad));
+      await RegistrarHistorial(producto.id, 'IMPORTACION [Cantidad] Actualizada', `'${producto.nombre}' en Caja: ${cajon.nombre} (${cantidadAnterior} unidades)`, `A ${cantidad} unidades`);
     }
   } catch (error) {
     const mensaje = `Error al crear o actualizar las cantidades para el producto ${producto.nombre} en la caja ${cajon.nombre}:`;
@@ -266,7 +270,7 @@ async function obtenerOCrearLista(
     globalStore.Listas.push(item);
     lista.push(item);
     const etiqueta = tipo === 'grupos' ? 'Grupo' : tipo === 'fabricantes' ? 'Fabricante' : 'Almacenista';
-    await RegistrarHistorial(item.id, `[${etiqueta}] Creado`, null, nombre);
+    await RegistrarHistorial(item.id, `IMPORTACION [${etiqueta}] Creado`, null, nombre);
     return item;
   } catch (error) {
     const mensaje = `Error al obtener o crear la lista de tipo ${tipo}, nombre ${nombre}:`;
@@ -302,7 +306,7 @@ async function obtenerOCrearProducto(
   await Crear(Coleccion.Productos, producto);
   productos.push(producto);
   const productoDesc = `Nombre: ${producto.nombre} | Código: ${producto.codigo} | Grupo: ${fila.grupo} | Fabricante: ${fila.fabricante} | Descripción: ${producto.descripcion} | Peso Unitario: ${producto.pesoUnitario} Kg`;
-  await RegistrarHistorial(producto.id, '[Producto] Creado', null, productoDesc);
+  await RegistrarHistorial(producto.id, 'IMPORTACION [Producto] Creado', null, productoDesc);
   return producto;
   } catch (error) {
     const mensaje = `Error al obtener o crear el producto ${fila.nombre} con código ${fila.codigo}:`;

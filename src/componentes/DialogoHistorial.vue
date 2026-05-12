@@ -25,28 +25,26 @@ watch(
           <div
             v-for="(item, index) in items"
             :key="item.id"
-            :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
+            :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700 text-sm', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
           >
             <!-- Fecha, usuario y acción -->
-            <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
-              <span class="text-sm text-surface-500 dark:text-surface-400">
-                {{ FormatoFechaHora(item.fechaCreacion) }}
-              </span>
-              <div class="flex items-center gap-2">
-                <Tag :value="item.usuario" severity="primary" />
-                <Tag :value="item.accion" severity="info" />
-              </div>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span>{{ FormatoFechaHora(item.fechaCreacion) }}</span>
+              <Tag :value="item.usuario" severity="primary" />
+              <Tag :value="item.accion" severity="info" />
             </div>
             <!-- Anterior → Actual -->
-            <div class="flex flex-wrap items-center gap-2 text-sm">
+            <div v-if="item.anterior && !item.actual">{{ item.anterior }}</div>
+            <div v-else-if="!item.anterior && item.actual">{{ item.actual }}</div>
+            <div v-else class="flex items-center gap-2">
               <div class="flex-1 min-w-0">
                 <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Anterior</span>
-                <span class="text-surface-700 dark:text-surface-200 break-words">{{ item.anterior ?? '—' }}</span>
+                <span class="break-words">{{ item.anterior }}</span>
               </div>
-              <i class="pi pi-arrow-right text-surface-400 shrink-0" />
+              <i class="pi pi-arrow-right text-surface-400" />
               <div class="flex-1 min-w-0">
                 <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Actual</span>
-                <span class="text-surface-700 dark:text-surface-200 break-words">{{ item.actual ?? '—' }}</span>
+                <span class="break-words">{{ item.actual }}</span>
               </div>
             </div>
           </div>

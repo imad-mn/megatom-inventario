@@ -10,7 +10,7 @@ import * as StorageService from '@/servicios/StorageService.ts';
 import { Importar, Exportar } from '@/servicios/ImportarExportar';
 import { useGlobalStore } from '@/servicios/globalStore';
 import { useAuthStore } from '@/servicios/authStore';
-import { RegistrarHistorial, Stringify } from '@/servicios/historialService';
+import { RegistrarCambioProducto, RegistrarHistorial, Stringify } from '@/servicios/historialService';
 
 const confirm = useConfirm();
 
@@ -74,6 +74,7 @@ const agregandoLista = ref(false);
 const mostrarDialogoSolicitud = ref(false);
 const productoSolicitud = ref<ProductoConCantidad>();
 const cantidadSolicitud = ref<number>(1);
+const mostrarPedidoAgregado = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
@@ -113,15 +114,14 @@ async function Guardar() {
           cajaId: cajaSeleccionada.value.id
         };
         await TablesDbService.Crear(TablesDbService.Coleccion.Cantidades, item);
-        await RegistrarHistorial(itemEdicion.value!.id, `'${itemEdicion.value!.nombre}' agregado a caja: ${cajaSeleccionada.value.nombre} (${cantidadInicial.value} unidades)`);
+        await RegistrarHistorial(itemEdicion.value!.id, '[Cantidad] Creada', null, `'${itemEdicion.value!.nombre}' agregado a caja: ${cajaSeleccionada.value.nombre} (${cantidadInicial.value} unidades)`);
       }
       dialogVisible.value = false;
     } else {
       const anterior = globalStore.Productos.find(x => x.id === itemEdicion.value!.id);
       if (anterior) {
         await TablesDbService.Actualizar(TablesDbService.Coleccion.Productos, itemEdicion.value!);
-        const productoAnterior = Stringify(anterior);
-        await RegistrarHistorial(itemEdicion.value!.id, '[Producto] Modificado', productoAnterior, productoNuevo);
+        await RegistrarCambioProducto(itemEdicion.value!.id, anterior, itemEdicion.value);
         const indice = globalStore.Productos.indexOf(anterior);
         globalStore.Productos[indice] = { ...itemEdicion.value! };
         dialogVisible.value = false;
@@ -163,8 +163,7 @@ function Quitar(item: Producto): void {
       const anterior = globalStore.Productos.find(x => x.id === item.id);
       if (anterior) {
         await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
-        const anteriorJson = Stringify(anterior);
-        await RegistrarHistorial(item.id, '[Producto] Eliminado', anteriorJson, null);
+        await RegistrarHistorial(item.id, '[Producto] Eliminado', Stringify(anterior) + '. También sus Cantidades y Movimientos', null);
         const indice = globalStore.Productos.indexOf(anterior);
         globalStore.Productos.splice(indice, 1);
         await StorageService.Eliminar(item.id);
@@ -267,13 +266,16 @@ function SolicitarProducto(p: ProductoConCantidad) {
   cantidadSolicitud.value = 0;
   mostrarDialogoSolicitud.value = true;
 }
-function GuardarProductoSolicitud(): Promise<void> {
+function GuardarProductoSolicitud(): void {
   if (!productoSolicitud.value)
-    return Promise.resolve();
+    return;
 
   globalStore.solicitudActual.productosCantidad.push({ productoId: productoSolicitud.value?.id, cantidad: cantidadSolicitud.value  });
-  mostrarDialogoSolicitud.value = false;
-  return Promise.resolve();
+  mostrarPedidoAgregado.value = true;
+  setTimeout(() => {
+    mostrarPedidoAgregado.value = false;
+    mostrarDialogoSolicitud.value = false;
+  }, 3000);
 }
 </script>
 
@@ -294,7 +296,7 @@ function GuardarProductoSolicitud(): Promise<void> {
   <DataView :value="productosFiltrados">
     <template #list="slotProps">
       <div class="grid grid-col-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Card v-for="item in slotProps.items as ProductoConCantidad[]" :key="item.id" style="overflow: hidden">
+        <Card v-for="item in slotProps.items as ProductoConCantidad[]" :key="item.id" style="overflow: hidden" :pt="{ body: 'flex-1', content: 'flex-1' }">
           <template #header>
             <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" class="h-60 w-full" />
           </template>
@@ -317,20 +319,21 @@ function GuardarProductoSolicitud(): Promise<void> {
                 </ul>
               </div>
             </div>
-            <Button v-else label="SOLICITAR" icon="pi pi-file-plus" severity="success" size="small" variant="outlined" class="w-full mt-1" @click="SolicitarProducto(item)" />
           </template>
-          <template #footer v-if="Usuario">
-            <div class="flex gap-2">
+          <template #footer>
+            <div v-if="Usuario" class="flex gap-2">
               <Button icon="pi pi-history" label="Historial" severity="info" size="small" variant="outlined" @click="onHistorialClick(item)" />
               <Button icon="pi pi-pen-to-square" label="Editar" severity="success" size="small" variant="outlined" @click="Editar(item)" />
               <Button icon="pi pi-trash" label="Eliminar" severity="danger" size="small" variant="outlined" @click="Quitar(item)" />
             </div>
+            <Button v-else label="SOLICITAR" icon="pi pi-file-plus" severity="success" size="small" variant="outlined" class="w-full mt-1" @click="SolicitarProducto(item)" />
           </template>
         </Card>
       </div>
     </template>
   </DataView>
 
+  <!-- Dialogo de edición de productos -->
   <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" nombre-objeto="Producto"
     :desabilitarAceptar="itemEdicion?.nombre?.trim() === '' || itemEdicion?.grupoId == undefined || itemEdicion?.fabricanteId === undefined || mostrarAdvertencia">
     <div class="flex flex-col gap-3 pt-1">
@@ -448,8 +451,7 @@ function GuardarProductoSolicitud(): Promise<void> {
   </DialogoEdicion>
 
   <!-- Diálogo para solicitar cantidad de un producto -->
-  <DialogoEdicion v-model:mostrar="mostrarDialogoSolicitud" :clickAceptar="GuardarProductoSolicitud" encabezado="Solicitar Producto"
-    :desabilitarAceptar="cantidadSolicitud <= 0 || cantidadSolicitud > (productoSolicitud?.cantidad ?? 0)">
+  <Dialog v-model:visible="mostrarDialogoSolicitud" header="Solicitar Producto" :modal="true" class="w-xs md:w-sm">
     <Fieldset legend="Producto">
       <div><b>Código:&nbsp;</b>{{ productoSolicitud?.codigo }}</div>
       <div><b>Grupo:&nbsp;</b>{{ productoSolicitud?.grupoId ? globalStore.ListasMap[productoSolicitud.grupoId] || '' : '' }}</div>
@@ -463,5 +465,11 @@ function GuardarProductoSolicitud(): Promise<void> {
       <label>Cantidad</label>
     </FloatLabel>
     <Message v-if="cantidadSolicitud > (productoSolicitud?.cantidad ?? 0)" severity="error" size="small" variant="simple">La cantidad solicitada es mayor a la existencia.</Message>
-  </DialogoEdicion>
+    <Message v-if="mostrarPedidoAgregado" severity="success" class="mt-2" icon="pi pi-check">Pedido agregado a solicitudes</Message>
+    <template #footer>
+      <Button label="Cancelar" icon="pi pi-times" @click="mostrarDialogoSolicitud = false" severity="secondary" variant="outlined" :disabled="mostrarPedidoAgregado" />
+      <Button label="Aceptar" icon="pi pi-check" @click="GuardarProductoSolicitud" variant="outlined"
+        :disabled="cantidadSolicitud <= 0 || cantidadSolicitud > (productoSolicitud?.cantidad ?? 0) || mostrarPedidoAgregado" />
+    </template>
+  </Dialog>
 </template>

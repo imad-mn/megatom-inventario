@@ -4,10 +4,12 @@ import { useGlobalStore } from '@/servicios/globalStore';
 import { Coleccion, CrearConFecha } from '@/servicios/TablesDbService';
 import { useConfirm } from 'primevue/useconfirm';
 import DialogoVerProducto from '@/componentes/DialogoVerProducto.vue';
+import { useRouter } from 'vue-router';
 
 const globalStore = useGlobalStore();
 const solicitud = globalStore.solicitudActual;
 const confirm = useConfirm();
+const router = useRouter();
 
 const enviando = ref(false);
 const enviada = ref(false);
@@ -70,9 +72,15 @@ async function EnviarSolicitud() {
 </script>
 
 <template>
-  <div class="max-w-xl mx-auto">
-    <div class="text-2xl text-center font-semibold mb-4">SOLICITUD DE PRODUCTOS</div>
+  <div id="encabezado" class="grid grid-cols-3 items-center mb-4">
+    <Button class="justify-self-start" severity="secondary" variant="outlined" @click="() => router.push('/productos')">
+      <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
+      <span class="p-button-label hidden md:inline">Productos</span>
+    </Button>
+    <div class="justify-self-center text-2xl font-semibold">SOLICITUD DE PRODUCTOS</div>
+  </div>
 
+  <div class="max-w-xl mx-auto">
     <!-- Datos del solicitante -->
     <div class="flex flex-col gap-4 mb-6">
       <FloatLabel variant="on">

@@ -108,6 +108,11 @@ export const useGlobalStore = defineStore('global', () => {
     return Array.from(gruposSet).map(grupoId => ListasMap.value[grupoId] || 'Grupo Desconocido');
   }
 
+  function ObtenerNombreProducto(productoId: string): string {
+    const producto = Productos.value.find(p => p.id === productoId);
+    return producto?.nombre || '';
+  }
+
   return {
     Listas,
     ListasMap,
@@ -128,6 +133,7 @@ export const useGlobalStore = defineStore('global', () => {
     ObtenerCantidadesConProductos,
     ObtenerProductosConCantidad,
     ObtenerUbicaciones,
-    ObtenerGruposEnEstanteSeleccionado
+    ObtenerGruposEnEstanteSeleccionado,
+    ObtenerNombreProducto
   };
 });

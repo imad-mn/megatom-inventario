@@ -113,7 +113,7 @@ async function Guardar() {
       seccionParaNuevoItem.value.cajas.push(nuevaCaja);
     }
     await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, galpon);
-    await RegistrarHistorial(itemEdicion.value.id, `[${tipoEdicion.value}] Creado`, null, itemEdicion.value.nombre);
+    await RegistrarHistorial(itemEdicion.value.id, `[${tipoEdicion.value} Creado`, null, tipoEdicion.value == 'Caja' ? `Caja ${itemEdicion.value.nombre} (Sección: ${seccionParaNuevoItem.value?.nombre})` : itemEdicion.value.nombre);
   } else {
     if (tipoEdicion.value === 'Estante') {
       estante.nombre = itemEdicion.value.nombre;
@@ -148,7 +148,7 @@ function Quitar(item: IdNombre, tipo: TipoEdicion, nivel?: Nivel, seccion?: Secc
     rejectClass: 'p-button-secondary p-button-outlined',
     acceptIcon: 'pi pi-trash',
     accept: async () => {
-      await RegistrarHistorial(item.id, `[${tipo}] Eliminado`, item.nombre, null);
+      await RegistrarHistorial(item.id, `[${tipo}] Eliminado`, tipo == 'Caja' ? `Caja ${item.nombre} (Sección: ${seccion?.nombre})` : item.nombre, null);
       const estante = globalStore.EstanteSeleccionado!;
       if (tipo === 'Nivel') {
         estante.niveles = estante.niveles.filter(n => n.id !== item.id);

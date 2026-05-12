@@ -58,6 +58,9 @@ Routes are defined in [src/router.ts](src/router.ts) and map to page components:
 - `/movimientos` → `PaginaMovimientos`
 - `/historial` → `PaginaHistorial` (admin only)
 - `/listas` → `PaginaListas` (admin only)
+- `/imprimir/:tipo` → `PaginaImprimir` — printable views
+- `/solicitud` → `PaginaSolicitudActual` — current order/request
+- `/solicitudes` → `PaginaSolicitudes` — order history
 
 ### Service Layer
 
@@ -71,22 +74,24 @@ All backend interaction goes through [src/servicios/](src/servicios/):
 - **`globalStore.ts`** — Pinia store for global app state: `Listas`, `Galpones`, `Productos`, `Cantidades`, `GalponSeleccionado`, `EstanteSeleccionado`, `dialogoHistorial`. Also exposes helper methods (`ObtenerLista`, `ObtenerUbicaciones`, etc.). Loaded once at app startup via `CargarTodo()` in `App.vue`.
 - **`authStore.ts`** — Pinia store for auth state: `Usuario` (`UserCredential | undefined`), `logIn`, `logOut`.
 - **`historialService.ts`** — Helpers to write and query `Historial` entries in Firestore.
+- **`sharedFunctions.ts`** — Shared utilities; currently exports `FormatoFechaHora(fecha: Date): string` for Spanish/Venezuela locale date formatting.
 
 ### Data Model
 
 Defined in [src/servicios/modelos.ts](src/servicios/modelos.ts):
-- `Producto` — product catalog items
-- `Galpon` → `Estante` → `Nivel` → `Seccion` → `Caja` — nested hierarchical location structure stored as a single Firestore document per `Galpon`
-- `Cantidades` — stock quantity records per caja
-- `Movimientos` — movement transactions with justification
-- `Lista` — lookup/reference lists (fabricantes, grupos, almacenistas, usuario)
-- `Historial` — audit trail entries
+- `Producto` — product catalog items (nombre, codigo, descripcion, pesoUnitario, grupoId, fabricanteId, estadoId, imagenUrl)
+- `Galpon` → `Estante` → `Nivel` → `Seccion` → `Caja` — nested hierarchical location structure. **The entire hierarchy is stored as a single Firestore document per `Galpon`** (not separate subcollections). Mutations to shelves/sections/boxes require updating the whole Galpon document.
+- `Cantidades` — stock quantity records (productoId, cajaId, cantidad)
+- `Movimientos` — movement transactions (tipo: `'INGRESO'|'EGRESO'|'TRASLADO'`, productoId, cantidad, cajaId, cajaIdDestino for transfers, almacenistaId, justificacion, creadoPor)
+- `Lista` — lookup/reference lists (fabricantes, grupos, almacenistas, estados); filtered by `tipo: TipoLista`
+- `Historial` — audit trail entries (idElemento, usuario, accion, anterior, actual, fechaCreacion)
+- `Solicitud` — purchase/transfer requests (solicitante, direccion, telefono, procesada, productosCantidad[])
 
 ### State Management
 
 Uses **Pinia** stores (no Vuex). Two stores:
-- `useGlobalStore()` — app data (galpones, productos, cantidades, listas). Never call at module level; always call inside functions or component setup.
-- `useAuthStore()` — authentication state.
+- `useGlobalStore()` — app data (Galpones, Productos, Cantidades, Listas, GalponSeleccionado, EstanteSeleccionado, CajaSeleccionada, solicitudActual). Never call at module level; always call inside functions or component setup.
+- `useAuthStore()` — authentication state (`Usuario: UserCredential | undefined`).
 
 The same rule applies to any helper file that uses a store (e.g. `ImportarExportar.ts`, `historialService.ts`): call `useXStore()` inside the function body, not at the top of the module, or Pinia will throw `"getActivePinia() was called but there was no active Pinia"`.
 
@@ -102,6 +107,14 @@ The same rule applies to any helper file that uses a store (e.g. `ImportarExport
 - PrimeVue component overrides in `main.css`
 - Tooltips are hidden on mobile via CSS
 - Path alias: `@/` → `src/`
+
+### PrimeVue Components
+
+All PrimeVue components are registered globally in [src/main.ts](src/main.ts) — import is not needed in SFCs. Registered components include: `Menubar`, `Button`, `DataView`, `Panel`, `ConfirmDialog`, `Dialog`, `InputText`, `Select`, `InputNumber`, `Textarea`, `FileUpload`, `FloatLabel`, `Card`, `Message`, `Fieldset`, `Listbox`, `ToggleSwitch`, `ProgressBar`, `Password`, `DatePicker`, `ToggleButton`, `ProgressSpinner`, `Menu`, `Tag`, `SelectButton`, `InputMask`. The UI locale is Spanish (`es.json`).
+
+### Audit Trail Pattern
+
+After any create/update/delete operation, call `RegistrarHistorial(idElemento, accion, anterior?, actual?)` from `historialService.ts`. The `Stringify()` helper converts a `Producto` to a human-readable string for before/after snapshots. This is how the `/historial` page is populated.
 
 ### Firebase Configuration
 

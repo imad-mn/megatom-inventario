@@ -5,9 +5,11 @@ import { ExportarHistorial } from '@/servicios/ImportarExportar';
 import { ObtenerHistorial } from '@/servicios/historialService';
 import { useAuthStore } from '@/servicios/authStore';
 import { FormatoFechaHora } from '@/servicios/sharedFunctions';
+import { useGlobalStore } from '@/servicios/globalStore';
 
 const authStore = useAuthStore();
 const { Usuario } = authStore;
+const globalStore = useGlobalStore();
 
 const historial = ref<Historial[]>([]);
 const rangoFechas = ref<(Date | null)[]>([new Date(new Date().setDate(new Date().getDate() - 7)), new Date(new Date().setHours(23, 59))]);
@@ -67,26 +69,31 @@ async function DescargarHistorial() {
           <div
             v-for="(item, index) in items"
             :key="(item as Historial).id"
-            :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
+            :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700 text-sm', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
           >
             <!-- Fecha, usuario y acción -->
             <div class="flex flex-wrap items-center gap-2 mb-2">
-              <span class="text-sm text-surface-500 dark:text-surface-400">
-                {{ FormatoFechaHora(item.fechaCreacion) }}
-              </span>
-              <Tag :value="(item as Historial).usuario" severity="primary" />
-              <Tag :value="(item as Historial).accion" severity="info" />
+              <span>{{ FormatoFechaHora(item.fechaCreacion) }}</span>
+              <Tag :value="item.usuario" severity="primary" />
+              <Tag :value="item.accion" severity="info" />
             </div>
+            <!-- Si es producto modificado -->
+            <div v-if="item.accion.includes('[Producto]') && item.anterior && item.actual" class="mb-2">
+              <span class="font-semibold">PRODUCTO:&nbsp;</span>{{ globalStore.ObtenerNombreProducto(item.idElemento) }}
+            </div>
+
             <!-- Anterior → Actual -->
-            <div class="flex flex-wrap items-center gap-2 text-sm">
+            <div v-if="item.anterior && !item.actual">{{ item.anterior }}</div>
+            <div v-else-if="!item.anterior && item.actual">{{ item.actual }}</div>
+            <div v-else class="flex items-center gap-2">
               <div class="flex-1 min-w-0">
                 <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Anterior</span>
-                <span class="text-surface-700 dark:text-surface-200 break-words">{{ (item as Historial).anterior ?? '—' }}</span>
+                <span class="break-words">{{ item.anterior }}</span>
               </div>
-              <i class="pi pi-arrow-right text-surface-400 shrink-0" />
+              <i class="pi pi-arrow-right text-surface-400" />
               <div class="flex-1 min-w-0">
-                <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Actual</span>
-                <span class="text-surface-700 dark:text-surface-200 break-words">{{ (item as Historial).actual ?? '—' }}</span>
+                <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Posterior</span>
+                <span class="break-words">{{ item.actual }}</span>
               </div>
             </div>
           </div>

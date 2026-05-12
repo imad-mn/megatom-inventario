@@ -32,10 +32,50 @@ export async function ObtenerHistorial(fechaDesde: Date, fechaHasta: Date, usuar
 export async function ObtenerHistorialPorElemento(idElemento: string): Promise<Historial[]> {
   const collRef = collection(db, Coleccion.Historial).withConverter(createConverterConFecha<Historial>());
   const respuesta = await getDocs(query(collRef, where('idElemento', '==', idElemento)));
-  return respuesta.docs.map(d => d.data());
+  return respuesta.docs.map(d => d.data()).sort((a, b) => b.fechaCreacion.getTime() - a.fechaCreacion.getTime());
 }
 
 export function Stringify(item: Producto): string {
   const globalStore = useGlobalStore();
   return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : ''} | Fabricante: ${item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : ''} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
+}
+
+export async function RegistrarCambioProducto(idProducto: string, anterior: Producto, posterior: Producto): Promise<void> {
+  let cambiosAnterior = '', cambiosPosterior = '';
+  const globalStore = useGlobalStore();
+
+  if (anterior.nombre !== posterior.nombre) {
+    cambiosAnterior += `Nombre: ${anterior.nombre} | `;
+    cambiosPosterior += `Nombre: ${posterior.nombre} | `;
+  }
+  if (anterior.codigo !== posterior.codigo) {
+    cambiosAnterior += `Código: ${anterior.codigo} | `;
+    cambiosPosterior += `Código: ${posterior.codigo} | `;
+  }
+  if (anterior.descripcion !== posterior.descripcion) {
+    cambiosAnterior += `Descripción: ${anterior.descripcion} | `;
+    cambiosPosterior += `Descripción: ${posterior.descripcion} | `;
+  }
+  if (anterior.pesoUnitario !== posterior.pesoUnitario) {
+    cambiosAnterior += `Peso Unitario: ${anterior.pesoUnitario} Kg | `;
+    cambiosPosterior += `Peso Unitario: ${posterior.pesoUnitario} Kg | `;
+  }
+  if (anterior.grupoId !== posterior.grupoId) {
+    cambiosAnterior += `Grupo: ${anterior.grupoId ? globalStore.ListasMap[anterior.grupoId] || '' : ''} | `;
+    cambiosPosterior += `Grupo: ${posterior.grupoId ? globalStore.ListasMap[posterior.grupoId] || '' : ''} | `;
+  }
+  if (anterior.fabricanteId !== posterior.fabricanteId) {
+    cambiosAnterior += `Fabricante: ${anterior.fabricanteId ? globalStore.ListasMap[anterior.fabricanteId] || '' : ''} | `;
+    cambiosPosterior += `Fabricante: ${posterior.fabricanteId ? globalStore.ListasMap[posterior.fabricanteId] || '' : ''} | `;
+  }
+  if (anterior.imagenUrl !== posterior.imagenUrl) {
+    cambiosAnterior += `Imagen URL: ${anterior.imagenUrl} | `;
+    cambiosPosterior += `Imagen URL: ${posterior.imagenUrl} | `;
+  }
+  if (anterior.estadoId !== posterior.estadoId) {
+    cambiosAnterior += `Estado: ${anterior.estadoId ? globalStore.ListasMap[anterior.estadoId] || '' : ''} | `;
+    cambiosPosterior += `Estado: ${posterior.estadoId ? globalStore.ListasMap[posterior.estadoId] || '' : ''} | `;
+  }
+
+  await RegistrarHistorial(idProducto, '[Producto] Modificado', cambiosAnterior, cambiosPosterior);
 }
