@@ -79,7 +79,7 @@ const mostrarPedidoAgregado = ref(false);
 function Agregar() {
   esNuevo.value = true;
   imagenEdicion.value = undefined;
-  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenUrl: null, fileUrl: null, estadoId: null };
+  itemEdicion.value = { id: '', nombre: '', grupoId: '', fabricanteId: '', codigo: '', descripcion: null, pesoUnitario: 0, imagenUrl: null, nombreArchivo: null, estadoId: null };
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
   galponSeleccionado.value = null;
@@ -97,11 +97,11 @@ async function Guardar() {
 
     if (archivoFoto) {
       // Elimina la imagen anterior
-      if (itemEdicion.value.fileUrl)
-        await StorageService.Eliminar(itemEdicion.value.fileUrl);
+      if (itemEdicion.value.nombreArchivo)
+        await StorageService.Eliminar(itemEdicion.value.nombreArchivo);
 
-      const [fileUrl, imagenUrl] = await StorageService.Subir(archivoFoto);
-      itemEdicion.value.fileUrl = fileUrl;
+      const [nombreArchivo, imagenUrl] = await StorageService.Subir(archivoFoto);
+      itemEdicion.value.nombreArchivo = nombreArchivo;
       itemEdicion.value.imagenUrl = imagenUrl;
 
       archivoFoto = undefined;
@@ -170,8 +170,8 @@ function Quitar(item: Producto): void {
       await TablesDbService.Eliminar(TablesDbService.Coleccion.Productos, item)
 
       // Elimina la imagen del producto si la tiene
-      if (item.fileUrl)
-        await StorageService.Eliminar(item.fileUrl);
+      if (item.nombreArchivo)
+        await StorageService.Eliminar(item.nombreArchivo);
 
       // Lo borra de la memoria y registra el Historial
       const anterior = globalStore.Productos.find(x => x.id === item.id);

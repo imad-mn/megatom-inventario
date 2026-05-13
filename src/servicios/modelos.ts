@@ -15,7 +15,7 @@ export type Producto = IdNombre & {
   grupoId: string | null;
   fabricanteId: string | null;
   imagenUrl: string | null;
-  fileUrl: string | null;
+  nombreArchivo: string | null;
   estadoId: string | null;
 }
 

@@ -303,8 +303,8 @@ async function GuardarEdicionProducto(cantidadProducto: CantidadesConProducto) {
     if (anterior) {
 
       if (archivoFoto) {
-        const [fileUrl, imagenUrl] = await Subir(archivoFoto);
-        productoEditando.value.fileUrl = fileUrl;
+        const [nombreArchivo, imagenUrl] = await Subir(archivoFoto);
+        productoEditando.value.nombreArchivo = nombreArchivo;
         productoEditando.value.imagenUrl = imagenUrl;
         archivoFoto = undefined;
       }

@@ -301,7 +301,7 @@ async function obtenerOCrearProducto(
     grupoId: grupoId,
     fabricanteId: fabricanteId,
     imagenUrl: null,
-    fileUrl: null,
+    nombreArchivo: null,
     estadoId: estadoId,
   };
   await Crear(Coleccion.Productos, producto);
