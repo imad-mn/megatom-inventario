@@ -68,9 +68,9 @@ export async function RegistrarCambioProducto(idProducto: string, anterior: Prod
     cambiosAnterior += `Fabricante: ${anterior.fabricanteId ? globalStore.ListasMap[anterior.fabricanteId] || '' : ''} | `;
     cambiosPosterior += `Fabricante: ${posterior.fabricanteId ? globalStore.ListasMap[posterior.fabricanteId] || '' : ''} | `;
   }
-  if (anterior.imagenUrl !== posterior.imagenUrl) {
-    cambiosAnterior += `Imagen URL: ${anterior.imagenUrl} | `;
-    cambiosPosterior += `Imagen URL: ${posterior.imagenUrl} | `;
+  if (anterior.fileUrl !== posterior.fileUrl) {
+    cambiosAnterior += `Imagen: ${anterior.fileUrl} | `;
+    cambiosPosterior += `Imagen: ${posterior.fileUrl} | `;
   }
   if (anterior.estadoId !== posterior.estadoId) {
     cambiosAnterior += `Estado: ${anterior.estadoId ? globalStore.ListasMap[anterior.estadoId] || '' : ''} | `;
