@@ -49,6 +49,11 @@ async function DescargarHistorial() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+function UbicacionProducto(productoId: string): string[] {
+  const cantidades = globalStore.ObtenerCantidadesPorProducto(productoId);
+  return globalStore.ObtenerUbicaciones(cantidades);
+}
 </script>
 
 <template>
@@ -78,8 +83,12 @@ async function DescargarHistorial() {
               <Tag :value="item.accion" severity="info" />
             </div>
             <!-- Si es producto modificado -->
-            <div v-if="item.accion.includes('[Producto]') && item.anterior && item.actual" class="mb-2">
+            <div v-if="item.accion == '[Producto] Modificado'" class="mb-2">
               <span class="font-semibold">PRODUCTO:&nbsp;</span>{{ globalStore.ObtenerNombreProducto(item.idElemento) }}
+              <div class="font-semibold">Ubicación:</div>
+              <ul class="list-disc list-inside">
+                <li v-for="(ubic, index) in UbicacionProducto(item.idElemento)" :key="index">{{ ubic }}</li>
+              </ul>
             </div>
 
             <!-- Anterior → Actual -->

@@ -110,7 +110,7 @@ export const useGlobalStore = defineStore('global', () => {
 
   function ObtenerNombreProducto(productoId: string): string {
     const producto = Productos.value.find(p => p.id === productoId);
-    return producto?.nombre || '';
+    return producto ? `${producto.nombre} (Cód: ${producto.codigo})` : '';
   }
 
   return {
