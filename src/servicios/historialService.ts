@@ -69,6 +69,7 @@ export async function RegistrarCambioProducto(idProducto: string, anterior: Prod
     cambiosPosterior += `Fabricante: ${posterior.fabricanteId ? globalStore.ListasMap[posterior.fabricanteId] || '' : ''} | `;
   }
   if (anterior.nombreArchivo !== posterior.nombreArchivo) {
+    cambiosAnterior += '-';
     cambiosPosterior += 'Cambio de Imagen | ';
   }
   if (anterior.estadoId !== posterior.estadoId) {
