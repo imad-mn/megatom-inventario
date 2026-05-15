@@ -76,6 +76,9 @@ export async function RegistrarCambioProducto(idProducto: string, anterior: Prod
     cambiosAnterior += `Estado: ${anterior.estadoId ? globalStore.ListasMap[anterior.estadoId] || '' : ''} | `;
     cambiosPosterior += `Estado: ${posterior.estadoId ? globalStore.ListasMap[posterior.estadoId] || '' : ''} | `;
   }
+  // Eliminar el último " | "
+  cambiosAnterior = cambiosAnterior ? cambiosAnterior.slice(0, -3) : '';
+  cambiosPosterior = cambiosPosterior ? cambiosPosterior.slice(0, -3) : '';
 
   await RegistrarHistorial(idProducto, '[Producto] Modificado', cambiosAnterior, cambiosPosterior);
 }

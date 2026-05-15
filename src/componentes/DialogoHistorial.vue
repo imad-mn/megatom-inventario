@@ -33,18 +33,19 @@ watch(
               <Tag :value="item.usuario" severity="primary" />
               <Tag :value="item.accion" severity="info" />
             </div>
-            <!-- Anterior → Actual -->
+            <!-- Anterior → Posterior -->
+             <div v-if="!item.anterior || !item.actual" class="font-semibold text-xs underline">CAMBIOS:</div>
             <div v-if="item.anterior && !item.actual">{{ item.anterior }}</div>
             <div v-else-if="!item.anterior && item.actual">{{ item.actual }}</div>
             <div v-else class="flex items-center gap-2">
               <div class="flex-1 min-w-0">
-                <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Anterior</span>
-                <span class="break-words">{{ item.anterior }}</span>
+                <span class="text-xs font-semibold uppercase block mb-0.5 text-center underline">Anterior</span>
+                <span class="break-words block text-center">{{ item.anterior }}</span>
               </div>
-              <i class="pi pi-arrow-right text-surface-400" />
+              <i class="pi pi-arrow-right text-lg mx-2" />
               <div class="flex-1 min-w-0">
-                <span class="text-xs font-semibold uppercase text-surface-400 dark:text-surface-500 block mb-0.5">Actual</span>
-                <span class="break-words">{{ item.actual }}</span>
+                <span class="text-xs font-semibold uppercase block mb-0.5 text-center underline">Posterior</span>
+                <span class="break-words block text-center">{{ item.actual }}</span>
               </div>
             </div>
           </div>
