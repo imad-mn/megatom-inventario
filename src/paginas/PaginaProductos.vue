@@ -405,23 +405,23 @@ function GuardarProductoSolicitud(): void {
       <div v-if="esNuevo" class="flex flex-col gap-3">
         <b>Ubicación</b>
         <FloatLabel variant="on">
-          <Select v-model="galponSeleccionado" :options="globalStore.Galpones" optionLabel="nombre" optionValue="id" showClear class="w-full" />
+          <Select v-model="galponSeleccionado" :options="globalStore.Galpones" optionLabel="nombre" showClear class="w-full" />
           <label>Galpón</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="estanteSeleccionado" :options="galponSeleccionado?.estantes" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!galponSeleccionado" />
+          <Select v-model="estanteSeleccionado" :options="galponSeleccionado?.estantes" optionLabel="nombre" showClear class="w-full" :disabled="!galponSeleccionado" />
           <label>Estante</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="nivelSeleccionado" :options="estanteSeleccionado?.niveles" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!estanteSeleccionado" />
+          <Select v-model="nivelSeleccionado" :options="estanteSeleccionado?.niveles" optionLabel="nombre" showClear class="w-full" :disabled="!estanteSeleccionado" />
           <label>Nivel</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="seccionSeleccionada" :options="nivelSeleccionado?.secciones" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!nivelSeleccionado" />
+          <Select v-model="seccionSeleccionada" :options="nivelSeleccionado?.secciones" optionLabel="nombre" showClear class="w-full" :disabled="!nivelSeleccionado" />
           <label>Sección</label>
         </FloatLabel>
         <FloatLabel variant="on">
-          <Select v-model="cajaSeleccionada" :options="seccionSeleccionada?.cajas" optionLabel="nombre" optionValue="id" showClear class="w-full" :disabled="!seccionSeleccionada" />
+          <Select v-model="cajaSeleccionada" :options="seccionSeleccionada?.cajas" optionLabel="nombre" showClear class="w-full" :disabled="!seccionSeleccionada" />
           <label>Caja</label>
         </FloatLabel>
         <FloatLabel variant="on">
