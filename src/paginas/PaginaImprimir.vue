@@ -40,10 +40,10 @@ function Ubicaciones(productoId: string): string[] {
       </div>
 
       <div v-if="['Todo', 'Ficha Técnica'].includes(selectedOption)" class="min-h-screen flex items-center">
-        <div class="p-3 border-3 rounded-2xl border-gray-500 w-full">
-          <div class="text-center text-4xl font-semibold underline mb-10">CAJÓN #{{ globalStore.CajaSeleccionada?.nombre }}</div>
-          <div class="flex items-center">
-            <p class="text-nowrap text-2xl/8 grow">
+        <div class="flex items-stretch w-full">
+          <div class="p-3 border-3 rounded-2xl border-gray-500 grow">
+            <div class="text-center text-4xl font-semibold underline mb-8">CAJÓN #{{ globalStore.CajaSeleccionada?.nombre }}</div>
+            <p class="text-nowrap text-2xl/8">
               <b>NOMBRE: </b>{{ item.producto.nombre }} <br />
               <b>GRUPO: </b>{{ item.producto.grupoId ? globalStore.ListasMap[item.producto.grupoId] : ''}} <br />
               <b>FABRICANTE: </b>{{ item.producto.fabricanteId ? globalStore.ListasMap[item.producto.fabricanteId] : '' }} <br />
@@ -55,10 +55,10 @@ function Ubicaciones(productoId: string): string[] {
               <b>ESTADO: </b>{{ item.producto.estadoId ? globalStore.ListasMap[item.producto.estadoId] : '' }}<br />
               <b>DETALLE: </b>{{ item.producto.descripcion }}
             </p>
-            <img :hidden="!item.producto.imagenUrl"
-              :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined"
-              alt="Foto" class="ml-2 rounded-2xl min-w-0 h-80 max-w-80 grow" />
           </div>
+          <img :hidden="!item.producto.imagenUrl"
+            :src="item.producto.imagenUrl ? item.producto.imagenUrl : undefined"
+            alt="Foto" class="ml-2 rounded-2xl max-w-105 grow" />
         </div>
       </div>
     </div>
