@@ -315,7 +315,7 @@ async function Guardar() {
               />
               <span class="text-surface-400 dark:text-surface-500">{{ item.creadoPor }}</span>
             </div>
-            <div class="font-semibold text-surface-700 dark:text-surface-200 break-words mb-2">
+            <div class="font-semibold text-surface-700 dark:text-surface-200 wrap-break-word mb-2">
               {{ item.producto?.nombre ?? "—" }}
             </div>
             <!-- Fila del producto -->

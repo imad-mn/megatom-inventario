@@ -2,7 +2,7 @@
 @import "tailwindcss-primeui";
 
 :root {
-  --azul-megatom: rgb(38,44,83);
+  --azul-megatom: rgb(38, 44, 83);
 
   --p-card-title-font-size: 1rem;
   --p-card-body-padding: 0.75rem;
@@ -30,11 +30,6 @@
   }
 }
 
-/* Todas las etiquetas en negrita*/
-label {
-  font-weight:600;
-}
-
 .megatom-color {
   color: var(--azul-megatom);
 }
@@ -45,15 +40,15 @@ label {
   }
 }
 /* No imprimir */
-@media print{
+@media print {
   .texto-negro {
     color: black;
   }
   .noprint {
-      display:none !important;
+    display: none !important;
   }
   body {
     -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
-    print-color-adjust: exact;         /* Firefox y navegadores modernos */
+    print-color-adjust: exact; /* Firefox y navegadores modernos */
   }
 }

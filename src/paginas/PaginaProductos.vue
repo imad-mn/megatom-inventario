@@ -70,25 +70,26 @@ const permitirCerrarDialogoImportar = ref(true);
 const productosFiltrados = computed(() => {
   const filtrados = globalStore.ObtenerProductosConCantidad().filter((p) => {
     return (
-      filtroTexto.value.trim() === "" ||
-      p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase()) ||
-      p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase()) ||
-      (p.codigo !== null && p.codigo.toLowerCase().includes(filtroTexto.value.toLowerCase())) ||
-      (p.grupoId &&
-        globalStore.ListasMap[p.grupoId]
-          ?.toLowerCase()
-          .includes(filtroTexto.value.toLowerCase())) ||
-      (p.fabricanteId &&
-        globalStore.ListasMap[p.fabricanteId]
-          ?.toLowerCase()
-          .includes(filtroTexto.value.toLowerCase())) ||
-      (p.estadoId &&
-        globalStore.ListasMap[p.estadoId]
-          ?.toLowerCase()
-          .includes(filtroTexto.value.toLowerCase())) ||
-      (p.pesoUnitario.toString().includes(filtroTexto.value) &&
-        (filtroGrupo.value === null || p.grupoId === filtroGrupo.value.id) &&
-        (filtroFabricante.value === null || p.fabricanteId === filtroFabricante.value.id))
+      (filtroTexto.value.trim() === "" ||
+        p.nombre.toLowerCase().includes(filtroTexto.value.toLowerCase()) ||
+        p.descripcion?.toLowerCase().includes(filtroTexto.value.toLowerCase()) ||
+        (p.codigo !== null && p.codigo.toLowerCase().includes(filtroTexto.value.toLowerCase())) ||
+        (p.grupoId &&
+          globalStore.ListasMap[p.grupoId]
+            ?.toLowerCase()
+            .includes(filtroTexto.value.toLowerCase())) ||
+        (p.fabricanteId &&
+          globalStore.ListasMap[p.fabricanteId]
+            ?.toLowerCase()
+            .includes(filtroTexto.value.toLowerCase())) ||
+        (p.estadoId &&
+          globalStore.ListasMap[p.estadoId]
+            ?.toLowerCase()
+            .includes(filtroTexto.value.toLowerCase())) ||
+        p.pesoUnitario.toString().includes(filtroTexto.value)) &&
+      (filtroGrupo.value === null || p.grupoId === filtroGrupo.value.id) &&
+      (filtroFabricante.value === null || p.fabricanteId === filtroFabricante.value.id) &&
+      (!globalStore.esTomasCapasso || p.deTomasCapasso)
     );
   });
   return [...filtrados].sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -123,6 +124,7 @@ function Agregar() {
     imagenUrl: null,
     nombreArchivo: null,
     estadoId: null,
+    deTomasCapasso: false,
   };
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
@@ -425,7 +427,10 @@ function GuardarProductoSolicitud(): void {
           <template #header>
             <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" class="h-60 w-full" />
           </template>
-          <template #title>{{ item.nombre }}</template>
+          <template #title
+            ><span v-if="item.deTomasCapasso" class="text-blue-600 font-bold">TC</span>
+            {{ item.nombre }}</template
+          >
           <template #subtitle>{{ item.descripcion }}</template>
           <template #content>
             <div><b>Código:&nbsp;</b>{{ item.codigo }}</div>
@@ -488,7 +493,7 @@ function GuardarProductoSolicitud(): void {
               />
             </div>
             <Button
-              v-else
+              v-else-if="!globalStore.esTomasCapasso"
               label="SOLICITAR"
               icon="pi pi-file-plus"
               severity="success"
@@ -610,6 +615,10 @@ function GuardarProductoSolicitud(): void {
         <Textarea id="descripcion" v-model="itemEdicion!.descripcion" class="w-full" rows="2" />
         <label for="descripcion">Descripción</label>
       </FloatLabel>
+      <div class="flex gap-2 items-center">
+        <ToggleSwitch id="deTomasCapasso" v-model="itemEdicion!.deTomasCapasso" />
+        <label for="deTomasCapasso">De Tomás Capasso</label>
+      </div>
       <FileUpload
         mode="basic"
         accept="image/*"

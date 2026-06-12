@@ -16,11 +16,13 @@ const globalStore = useGlobalStore();
 const Usuario = useAuthStore().Usuario;
 
 const estantes = computed(() =>
-  [...globalStore.GalponSeleccionado!.estantes].sort((a, b) =>
-    globalStore.GalponSeleccionado!.ordenDescendente
-      ? b.nombre.localeCompare(a.nombre)
-      : a.nombre.localeCompare(b.nombre),
-  ),
+  globalStore.GalponSeleccionado
+    ? [...globalStore.GalponSeleccionado!.estantes].sort((a, b) =>
+        globalStore.GalponSeleccionado!.ordenDescendente
+          ? b.nombre.localeCompare(a.nombre)
+          : a.nombre.localeCompare(b.nombre),
+      )
+    : [],
 );
 
 const dialogVisible = ref(false);
@@ -100,7 +102,7 @@ async function Guardar() {
 
 function Ver(item: Estante) {
   globalStore.EstanteSeleccionado = item;
-  router.push("/estante");
+  router.push(globalStore.esTomasCapasso ? "/tomascapasso/estante" : "/estante");
 }
 
 function Editar(item: ConDescripcion, editandoGalpon = false) {
@@ -143,16 +145,19 @@ function ImprimirEstante(item: Estante) {
 
 <template>
   <div class="flex justify-between md:grid md:grid-cols-3 items-center mb-10">
-    <Button
-      class="justify-self-start"
-      severity="secondary"
-      variant="outlined"
-      @click="() => router.push('/galpones')"
-    >
-      <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
-      <span class="p-button-label hidden md:inline">Áreas</span>
-    </Button>
-    <div class="justify-self-center text-xl">
+    <div>
+      <Button
+        v-show="!globalStore.esTomasCapasso"
+        class="justify-self-start"
+        severity="secondary"
+        variant="outlined"
+        @click="() => router.push('/galpones')"
+      >
+        <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
+        <span class="p-button-label hidden md:inline">Áreas</span>
+      </Button>
+    </div>
+    <div class="justify-self-center text-xl" v-if="globalStore.GalponSeleccionado">
       {{ globalStore.GalponSeleccionado!.nombre }} -
       {{ globalStore.GalponSeleccionado!.descripcion }}
     </div>

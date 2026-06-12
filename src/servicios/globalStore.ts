@@ -24,6 +24,7 @@ export const useGlobalStore = defineStore("global", () => {
   const CajaSeleccionada = ref<IdNombre | null>(null);
   const ProductosEnCaja = ref<CantidadesConProducto[]>([]);
   const listaSeleccionada = ref<IdNombre | null>(null);
+  const esTomasCapasso = ref(false);
 
   const dialogoHistorial = ref({ mostrar: false, idElemento: "", nombreElemento: "" });
   const solicitudActual = ref<Solicitud>({
@@ -47,6 +48,10 @@ export const useGlobalStore = defineStore("global", () => {
       Galpones.value = galpones.sort((a, b) => a.nombre.localeCompare(b.nombre));
       Listas.value = listas;
       Cantidades.value = cantidades;
+
+      if (esTomasCapasso.value)
+        GalponSeleccionado.value =
+          Galpones.value.find((g) => g.id === "x2VLLu5QZOucQLK1kT7c") || null;
     });
   }
 
@@ -148,6 +153,7 @@ export const useGlobalStore = defineStore("global", () => {
     dialogoHistorial,
     listaSeleccionada,
     solicitudActual,
+    esTomasCapasso,
 
     CargarTodo,
     ObtenerLista,

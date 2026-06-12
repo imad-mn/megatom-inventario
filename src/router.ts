@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useGlobalStore } from "./servicios/globalStore";
 
 import PaginaListas from "./paginas/PaginaListas.vue";
 import PaginaGalpones from "./paginas/PaginaGalpones.vue";
@@ -28,8 +29,17 @@ const router = createRouter({
     { path: "/solicitud", component: PaginaSolicitudActual, name: "Solicitud" },
     { path: "/solicitudes", component: PaginaSolicitudes, name: "Solicitudes" },
     { path: "/", component: PaginaHome, name: "Home" },
+    { path: "/tomascapasso", component: PaginaHome, name: "tomascapasso" },
+    { path: "/tomascapasso/galpon", component: PaginaGalpon, name: "tomascapasso-anexo" },
+    { path: "/tomascapasso/estante", component: PaginaEstante, name: "tomascapasso-estante" },
+    { path: "/tomascapasso/productos", component: PaginaProductos, name: "tomascapasso-productos" },
   ],
   strict: true,
+});
+
+router.beforeEach((to) => {
+  const globalStore = useGlobalStore();
+  globalStore.esTomasCapasso = to.path.startsWith("/tomascapasso");
 });
 
 export default router;

@@ -432,16 +432,15 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
   };
   reader.readAsDataURL(archivoFoto);
 }
+
+function irAtras() {
+  router.push(globalStore.esTomasCapasso ? "/tomascapasso/galpon" : "/galpon");
+}
 </script>
 
 <template>
   <div id="encabezado" class="flex justify-between md:grid md:grid-cols-3 items-center mb-3">
-    <Button
-      class="justify-self-start"
-      severity="secondary"
-      variant="outlined"
-      @click="() => router.push('/galpon')"
-    >
+    <Button class="justify-self-start" severity="secondary" variant="outlined" @click="irAtras">
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
       <span class="p-button-label hidden md:inline">{{
         globalStore.GalponSeleccionado!.nombre
@@ -559,7 +558,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
             <div
               v-for="caja in seccion.cajas"
               :key="caja.id"
-              class="flex justify-center py-1 border-1 border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800"
+              class="flex justify-center py-1 border border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800"
               :class="{ 'px-2': Usuario == null }"
             >
               <Button

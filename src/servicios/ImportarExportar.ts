@@ -378,6 +378,7 @@ async function obtenerOCrearProducto(
       imagenUrl: null,
       nombreArchivo: null,
       estadoId: estadoId,
+      deTomasCapasso: false,
     };
     await Crear(Coleccion.Productos, producto);
     productos.push(producto);

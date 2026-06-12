@@ -112,7 +112,7 @@ function Ubicaciones(productoId: string): string[] {
     <div class="text-3xl text-center mb-8 font-semibold">SOLICITUD DE PRODUCTOS</div>
 
     <!-- Datos del solicitante -->
-    <div class="border border-2 rounded-lg mb-4 px-4 py-2 bg-gray-100">
+    <div class="border-2 rounded-lg mb-4 px-4 py-2 bg-gray-100">
       <p><b>Solicitante:</b> {{ globalStore.solicitudActual.solicitante }}</p>
       <p class="mt-1"><b>Teléfono:</b> {{ globalStore.solicitudActual.telefono }}</p>
       <p class="mt-1"><b>Dirección:</b> {{ globalStore.solicitudActual.direccion }}</p>

@@ -22,6 +22,18 @@ const menuItems = ref<MenuItem[]>([
     command: () => router.push("/productos"),
   },
   {
+    label: "ANEXO",
+    icon: PrimeIcons.WAREHOUSE,
+    paraTomasCappasso: true,
+    command: () => router.push("/tomascapasso/galpon"),
+  },
+  {
+    label: "PRODUCTOS",
+    icon: PrimeIcons.HAMMER,
+    paraTomasCappasso: true,
+    command: () => router.push("/tomascapasso/productos"),
+  },
+  {
     label: "MOVIMIENTOS",
     icon: PrimeIcons.ARROW_RIGHT_ARROW_LEFT,
     command: () => router.push("/movimientos"),
@@ -47,8 +59,11 @@ const menuItems = ref<MenuItem[]>([
 ]);
 
 const menuItemsVisibles = computed(() =>
-  menuItems.value.filter(
-    (item) => !(item as MenuItem & { isAdmin?: boolean }).isAdmin || authStore.Usuario,
+  menuItems.value.filter((item) =>
+    globalStore.esTomasCapasso
+      ? (item as { paraTomasCappasso?: boolean }).paraTomasCappasso
+      : (!(item as { isAdmin?: boolean }).isAdmin || authStore.Usuario) &&
+        !(item as { paraTomasCappasso?: boolean }).paraTomasCappasso,
   ),
 );
 
@@ -61,7 +76,7 @@ async function cerrarSesion() {
 <template>
   <Menubar :model="menuItemsVisibles" class="noprint mb-3!" breakpoint="768px">
     <template #start>
-      <RouterLink to="/">
+      <RouterLink :to="globalStore.esTomasCapasso ? '/tomascapasso' : '/'">
         <div class="flex items-center">
           <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8" />
           <div class="text-md hidden md:block mr-5 ml-2">INVENTARIO</div>
@@ -69,37 +84,39 @@ async function cerrarSesion() {
       </RouterLink>
     </template>
     <template #end>
-      <div v-if="authStore.Usuario">
-        <span><i class="pi pi-user" />&nbsp;{{ authStore.Usuario.user.displayName }}</span>
-        <Button
-          icon="pi pi-sign-out"
-          variant="text"
-          @click="cerrarSesion"
-          severity="secondary"
-          v-tooltip.bottom="'Cerrar sesión'"
-        />
-      </div>
-      <div v-else>
-        <Button
-          icon="pi pi-inbox"
-          severity="secondary"
-          variant="text"
-          badge-severity="danger"
-          v-tooltip.bottom="'Ver Solicitud'"
-          @click="router.push('/solicitud')"
-          :badge="
-            globalStore.solicitudActual.productosCantidad.length > 0
-              ? globalStore.solicitudActual.productosCantidad.length.toString()
-              : undefined
-          "
-        />
-        <Button
-          label="Admin"
-          icon="pi pi-key"
-          variant="text"
-          severity="secondary"
-          @click="router.push('/login')"
-        />
+      <div v-if="!globalStore.esTomasCapasso">
+        <div v-if="authStore.Usuario">
+          <span><i class="pi pi-user" />&nbsp;{{ authStore.Usuario.user.displayName }}</span>
+          <Button
+            icon="pi pi-sign-out"
+            variant="text"
+            @click="cerrarSesion"
+            severity="secondary"
+            v-tooltip.bottom="'Cerrar sesión'"
+          />
+        </div>
+        <div v-else>
+          <Button
+            icon="pi pi-inbox"
+            severity="secondary"
+            variant="text"
+            badge-severity="danger"
+            v-tooltip.bottom="'Ver Solicitud'"
+            @click="router.push('/solicitud')"
+            :badge="
+              globalStore.solicitudActual.productosCantidad.length > 0
+                ? globalStore.solicitudActual.productosCantidad.length.toString()
+                : undefined
+            "
+          />
+          <Button
+            label="Admin"
+            icon="pi pi-key"
+            variant="text"
+            severity="secondary"
+            @click="router.push('/login')"
+          />
+        </div>
       </div>
     </template>
   </Menubar>

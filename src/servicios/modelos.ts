@@ -17,6 +17,7 @@ export type Producto = IdNombre & {
   imagenUrl: string | null;
   nombreArchivo: string | null;
   estadoId: string | null;
+  deTomasCapasso: boolean;
 };
 
 export type ItemOrdenable = IdNombre & {
