@@ -428,7 +428,9 @@ function GuardarProductoSolicitud(): void {
             <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" class="h-60 w-full" />
           </template>
           <template #title
-            ><span v-if="item.deTomasCapasso" class="text-blue-600 font-bold">TC</span>
+            ><span v-if="item.deTomasCapasso" class="text-white font-bold bg-blue-900 px-1"
+              >TC</span
+            >
             {{ item.nombre }}</template
           >
           <template #subtitle>{{ item.descripcion }}</template>
