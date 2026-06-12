@@ -434,7 +434,7 @@ function SeleccionarFoto(e: FileUploadSelectEvent) {
 }
 
 function irAtras() {
-  router.push(globalStore.esTomasCapasso ? "/tomascapasso/galpon" : "/galpon");
+  router.push(globalStore.esTomasCapasso ? "/tomas/galpon" : "/galpon");
 }
 </script>
 

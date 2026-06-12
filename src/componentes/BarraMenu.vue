@@ -25,13 +25,13 @@ const menuItems = ref<MenuItem[]>([
     label: "ANEXO",
     icon: PrimeIcons.WAREHOUSE,
     paraTomasCappasso: true,
-    command: () => router.push("/tomascapasso/galpon"),
+    command: () => router.push("/tomas/galpon"),
   },
   {
     label: "PRODUCTOS",
     icon: PrimeIcons.HAMMER,
     paraTomasCappasso: true,
-    command: () => router.push("/tomascapasso/productos"),
+    command: () => router.push("/tomas/productos"),
   },
   {
     label: "MOVIMIENTOS",
@@ -76,7 +76,7 @@ async function cerrarSesion() {
 <template>
   <Menubar :model="menuItemsVisibles" class="noprint mb-3!" breakpoint="768px">
     <template #start>
-      <RouterLink :to="globalStore.esTomasCapasso ? '/tomascapasso' : '/'">
+      <RouterLink :to="globalStore.esTomasCapasso ? '/tomas' : '/'">
         <div class="flex items-center">
           <img src="/Megatom-Icono.png" alt="Megatom Logo" class="h-8" />
           <div class="text-md hidden md:block mr-5 ml-2">INVENTARIO</div>

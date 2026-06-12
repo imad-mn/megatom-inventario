@@ -29,17 +29,17 @@ const router = createRouter({
     { path: "/solicitud", component: PaginaSolicitudActual, name: "Solicitud" },
     { path: "/solicitudes", component: PaginaSolicitudes, name: "Solicitudes" },
     { path: "/", component: PaginaHome, name: "Home" },
-    { path: "/tomascapasso", component: PaginaHome, name: "tomascapasso" },
-    { path: "/tomascapasso/galpon", component: PaginaGalpon, name: "tomascapasso-anexo" },
-    { path: "/tomascapasso/estante", component: PaginaEstante, name: "tomascapasso-estante" },
-    { path: "/tomascapasso/productos", component: PaginaProductos, name: "tomascapasso-productos" },
+    { path: "/tomas", component: PaginaHome, name: "tomascapasso" },
+    { path: "/tomas/galpon", component: PaginaGalpon, name: "tomascapasso-anexo" },
+    { path: "/tomas/estante", component: PaginaEstante, name: "tomascapasso-estante" },
+    { path: "/tomas/productos", component: PaginaProductos, name: "tomascapasso-productos" },
   ],
   strict: true,
 });
 
 router.beforeEach((to) => {
   const globalStore = useGlobalStore();
-  globalStore.esTomasCapasso = to.path.startsWith("/tomascapasso");
+  globalStore.esTomasCapasso = to.path.startsWith("/tomas");
 });
 
 export default router;

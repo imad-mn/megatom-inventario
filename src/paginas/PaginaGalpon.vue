@@ -102,7 +102,7 @@ async function Guardar() {
 
 function Ver(item: Estante) {
   globalStore.EstanteSeleccionado = item;
-  router.push(globalStore.esTomasCapasso ? "/tomascapasso/estante" : "/estante");
+  router.push(globalStore.esTomasCapasso ? "/tomas/estante" : "/estante");
 }
 
 function Editar(item: ConDescripcion, editandoGalpon = false) {
