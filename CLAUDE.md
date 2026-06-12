@@ -68,7 +68,7 @@ All backend interaction goes through [src/servicios/](src/servicios/):
 
 - **`firebase.ts`** — Firebase app initialization; exports `auth`, `db` (Firestore), and `storage`
 - **`TablesDbService.ts`** — All Firestore CRUD via generic typed functions (`Crear`, `Actualizar`, `Eliminar`, `ObtenerTodos`, `EliminarConFiltro` for batch-delete by field, etc.). Uses `FirestoreDataConverter` to map `id` to/from Firestore document ID. Two converter variants: plain (`createConverter`) and date-aware (`createConverterConFecha`) for models with `fechaCreacion`. The `Coleccion` enum and all functions are named exports — import them directly, not as a namespace.
-- **`StorageService.ts`** — Product image upload/download via Firebase Storage
+- **`StorageService.ts`** — Product image upload/download via Firebase Storage; images are compressed client-side with `compressorjs` before upload
 - **`ImportarExportar.ts`** — CSV import/export logic using PapaParse
 - **`modelos.ts`** — All TypeScript type definitions
 - **`globalStore.ts`** — Pinia store for global app state: `Listas`, `Galpones`, `Productos`, `Cantidades`, `GalponSeleccionado`, `EstanteSeleccionado`, `CajaSeleccionada`, `ProductosEnCaja`, `listaSeleccionada`, `solicitudActual`, `dialogoHistorial`. Helper methods: `ObtenerLista`, `ObtenerUbicaciones`, `ObtenerCantidadesPorProducto`, `ObtenerCantidadesConProductos`, `ObtenerProductosConCantidad`, `ObtenerGruposEnEstanteSeleccionado`, `ObtenerNombreProducto`. Loaded once at app startup via `CargarTodo()` in `App.vue`.

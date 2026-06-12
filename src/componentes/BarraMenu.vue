@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import type { MenuItem } from 'primevue/menuitem';
-import { PrimeIcons } from '@primevue/core/api';
-import { useAuthStore } from '@/servicios/authStore';
-import { useGlobalStore } from '@/servicios/globalStore';
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import type { MenuItem } from "primevue/menuitem";
+import { PrimeIcons } from "@primevue/core/api";
+import { useAuthStore } from "@/servicios/authStore";
+import { useGlobalStore } from "@/servicios/globalStore";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -12,52 +12,54 @@ const globalStore = useGlobalStore();
 
 const menuItems = ref<MenuItem[]>([
   {
-    label: 'GALPONES',
+    label: "AREAS",
     icon: PrimeIcons.WAREHOUSE,
-    command: () => router.push('/galpones')
+    command: () => router.push("/galpones"),
   },
   {
-    label: 'PRODUCTOS',
+    label: "PRODUCTOS",
     icon: PrimeIcons.HAMMER,
-    command: () => router.push('/productos')
+    command: () => router.push("/productos"),
   },
   {
-    label: 'MOVIMIENTOS',
+    label: "MOVIMIENTOS",
     icon: PrimeIcons.ARROW_RIGHT_ARROW_LEFT,
-    command: () => router.push('/movimientos')
+    command: () => router.push("/movimientos"),
   },
   {
-    label: 'SOLICITUDES',
+    label: "SOLICITUDES",
     icon: PrimeIcons.INBOX,
     isAdmin: true,
-    command: () => router.push('/solicitudes')
+    command: () => router.push("/solicitudes"),
   },
   {
-    label: 'HISTORIAL',
+    label: "HISTORIAL",
     icon: PrimeIcons.HISTORY,
     isAdmin: true,
-    command: () => router.push('/historial')
+    command: () => router.push("/historial"),
   },
   {
-    label: 'DATA',
+    label: "DATA",
     icon: PrimeIcons.LIST,
     isAdmin: true,
-    command: () => router.push('/listas')
+    command: () => router.push("/listas"),
   },
 ]);
 
 const menuItemsVisibles = computed(() =>
-  menuItems.value.filter(item => !(item as MenuItem & { isAdmin?: boolean }).isAdmin || authStore.Usuario)
+  menuItems.value.filter(
+    (item) => !(item as MenuItem & { isAdmin?: boolean }).isAdmin || authStore.Usuario,
+  ),
 );
 
 async function cerrarSesion() {
   await authStore.logOut();
-  router.push('/');
+  router.push("/");
 }
 </script>
 
 <template>
-    <Menubar :model="menuItemsVisibles" class="noprint mb-3!" breakpoint="768px">
+  <Menubar :model="menuItemsVisibles" class="noprint mb-3!" breakpoint="768px">
     <template #start>
       <RouterLink to="/">
         <div class="flex items-center">
@@ -78,8 +80,19 @@ async function cerrarSesion() {
         />
       </div>
       <div v-else>
-        <Button icon="pi pi-inbox" severity="secondary" variant="text" badge-severity="danger" v-tooltip.bottom="'Ver Solicitud'" @click="router.push('/solicitud')"
-          :badge="globalStore.solicitudActual.productosCantidad.length > 0 ? globalStore.solicitudActual.productosCantidad.length.toString() : undefined" />
+        <Button
+          icon="pi pi-inbox"
+          severity="secondary"
+          variant="text"
+          badge-severity="danger"
+          v-tooltip.bottom="'Ver Solicitud'"
+          @click="router.push('/solicitud')"
+          :badge="
+            globalStore.solicitudActual.productosCantidad.length > 0
+              ? globalStore.solicitudActual.productosCantidad.length.toString()
+              : undefined
+          "
+        />
         <Button
           label="Admin"
           icon="pi pi-key"

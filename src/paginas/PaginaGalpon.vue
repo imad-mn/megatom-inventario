@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import * as TablesDbService from '@/servicios/TablesDbService';
-import type { Estante, ItemOrdenable } from '@/servicios/modelos.ts';
-import { computed, ref } from 'vue';
-import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
+import * as TablesDbService from "@/servicios/TablesDbService";
+import type { ConDescripcion, Estante } from "@/servicios/modelos.ts";
+import { computed, ref } from "vue";
+import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
 import { useConfirm } from "primevue/useconfirm";
-import { useRouter } from 'vue-router';
-import EditarQuitar from '../componentes/EditarQuitar.vue';
-import { RegistrarHistorial } from '@/servicios/historialService';
-import { useGlobalStore } from '@/servicios/globalStore';
-import { useAuthStore } from '@/servicios/authStore';
+import { useRouter } from "vue-router";
+import EditarQuitar from "../componentes/EditarQuitar.vue";
+import { RegistrarHistorial } from "@/servicios/historialService";
+import { useGlobalStore } from "@/servicios/globalStore";
+import { useAuthStore } from "@/servicios/authStore";
 
 const confirm = useConfirm();
 const router = useRouter();
@@ -19,19 +19,29 @@ const estantes = computed(() =>
   [...globalStore.GalponSeleccionado!.estantes].sort((a, b) =>
     globalStore.GalponSeleccionado!.ordenDescendente
       ? b.nombre.localeCompare(a.nombre)
-      : a.nombre.localeCompare(b.nombre)
-  )
+      : a.nombre.localeCompare(b.nombre),
+  ),
 );
 
 const dialogVisible = ref(false);
-const itemEdicion = ref<ItemOrdenable>({ id: '', nombre: '', ordenDescendente: false });
+const itemEdicion = ref<ConDescripcion>({
+  id: "",
+  nombre: "",
+  descripcion: "",
+  ordenDescendente: false,
+});
 const esNuevo = ref(false);
 const esEditandoGalpon = ref(false);
 
 function Agregar() {
   esNuevo.value = true;
   esEditandoGalpon.value = false;
-  itemEdicion.value = { id: crypto.randomUUID(), nombre: '', ordenDescendente: false };
+  itemEdicion.value = {
+    id: crypto.randomUUID(),
+    nombre: "",
+    descripcion: "",
+    ordenDescendente: false,
+  };
   dialogVisible.value = true;
 }
 
@@ -39,22 +49,50 @@ async function Guardar() {
   if (esNuevo.value) {
     const nuevoEstante: Estante = { ...itemEdicion.value, niveles: [] };
     globalStore.GalponSeleccionado!.estantes.push(nuevoEstante);
-    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
-    await RegistrarHistorial(itemEdicion.value.id, '[Estante] Creado', null, itemEdicion.value.nombre);
+    await TablesDbService.Actualizar(
+      TablesDbService.Coleccion.Galpones,
+      globalStore.GalponSeleccionado!,
+    );
+    await RegistrarHistorial(
+      itemEdicion.value.id,
+      "[Estante] Creado",
+      null,
+      itemEdicion.value.nombre,
+    );
   } else if (esEditandoGalpon.value) {
     const nombreAnterior = globalStore.GalponSeleccionado!.nombre;
     globalStore.GalponSeleccionado!.nombre = itemEdicion.value.nombre;
+    globalStore.GalponSeleccionado!.descripcion = itemEdicion.value.descripcion;
     globalStore.GalponSeleccionado!.ordenDescendente = itemEdicion.value.ordenDescendente;
-    await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
-    await RegistrarHistorial(globalStore.GalponSeleccionado!.id, '[Galpón] Modificado', nombreAnterior, itemEdicion.value.nombre);
+    await TablesDbService.Actualizar(
+      TablesDbService.Coleccion.Galpones,
+      globalStore.GalponSeleccionado!,
+    );
+    await RegistrarHistorial(
+      globalStore.GalponSeleccionado!.id,
+      "[Área] Modificado",
+      nombreAnterior,
+      itemEdicion.value.nombre,
+    );
   } else {
-    const estante = globalStore.GalponSeleccionado!.estantes.find(e => e.id === itemEdicion.value.id);
+    const estante = globalStore.GalponSeleccionado!.estantes.find(
+      (e) => e.id === itemEdicion.value.id,
+    );
     if (estante) {
       const nombreAnterior = estante.nombre;
       estante.nombre = itemEdicion.value.nombre;
+      estante.descripcion = itemEdicion.value.descripcion;
       estante.ordenDescendente = itemEdicion.value.ordenDescendente;
-      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
-      await RegistrarHistorial(itemEdicion.value.id, '[Estante] Modificado', nombreAnterior, itemEdicion.value.nombre);
+      await TablesDbService.Actualizar(
+        TablesDbService.Coleccion.Galpones,
+        globalStore.GalponSeleccionado!,
+      );
+      await RegistrarHistorial(
+        itemEdicion.value.id,
+        "[Estante] Modificado",
+        nombreAnterior,
+        itemEdicion.value.nombre,
+      );
     }
   }
   dialogVisible.value = false;
@@ -62,76 +100,147 @@ async function Guardar() {
 
 function Ver(item: Estante) {
   globalStore.EstanteSeleccionado = item;
-  router.push('/estante');
+  router.push("/estante");
 }
 
-function Editar(item: ItemOrdenable, editandoGalpon = false) {
+function Editar(item: ConDescripcion, editandoGalpon = false) {
   esNuevo.value = false;
   esEditandoGalpon.value = editandoGalpon;
-  itemEdicion.value = { id: item.id, nombre: item.nombre, ordenDescendente: item.ordenDescendente };
+  itemEdicion.value = {
+    id: item.id,
+    nombre: item.nombre,
+    descripcion: item.descripcion,
+    ordenDescendente: item.ordenDescendente,
+  };
   dialogVisible.value = true;
 }
 
 function Quitar(item: Estante): void {
   confirm.require({
-    header: 'Eliminar',
+    header: "Eliminar",
     message: `¿Estás seguro de eliminar el Estante: "${item.nombre}" y sus descendientes?`,
-    acceptClass: 'p-button-danger p-button-outlined',
-    rejectClass: 'p-button-secondary p-button-outlined',
-    acceptIcon: 'pi pi-trash',
+    acceptClass: "p-button-danger p-button-outlined",
+    rejectClass: "p-button-secondary p-button-outlined",
+    acceptIcon: "pi pi-trash",
     accept: async () => {
-      await RegistrarHistorial(item.id, '[Estante] Eliminado', item.nombre, null);
-      globalStore.GalponSeleccionado!.estantes = globalStore.GalponSeleccionado!.estantes.filter(e => e.id !== item.id);
-      await TablesDbService.Actualizar(TablesDbService.Coleccion.Galpones, globalStore.GalponSeleccionado!);
-    }
+      await RegistrarHistorial(item.id, "[Estante] Eliminado", item.nombre, null);
+      globalStore.GalponSeleccionado!.estantes = globalStore.GalponSeleccionado!.estantes.filter(
+        (e) => e.id !== item.id,
+      );
+      await TablesDbService.Actualizar(
+        TablesDbService.Coleccion.Galpones,
+        globalStore.GalponSeleccionado!,
+      );
+    },
   });
 }
 
 function ImprimirEstante(item: Estante) {
   globalStore.EstanteSeleccionado = item;
-  router.push('/imprimir/estante');
+  router.push("/imprimir/estante");
 }
 </script>
 
 <template>
   <div class="flex justify-between md:grid md:grid-cols-3 items-center mb-10">
-    <Button class="justify-self-start" severity="secondary" variant="outlined" @click="() => router.push('/galpones')">
+    <Button
+      class="justify-self-start"
+      severity="secondary"
+      variant="outlined"
+      @click="() => router.push('/galpones')"
+    >
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
-      <span class="p-button-label hidden md:inline">Galpones</span>
+      <span class="p-button-label hidden md:inline">Áreas</span>
     </Button>
-    <div class="justify-self-center text-xl">GALPÓN {{globalStore.GalponSeleccionado!.nombre}} - {{ globalStore.GalponSeleccionado!.descripcion }}</div>
+    <div class="justify-self-center text-xl">
+      {{ globalStore.GalponSeleccionado!.nombre }} -
+      {{ globalStore.GalponSeleccionado!.descripcion }}
+    </div>
     <div class="justify-self-end">
-      <Button v-if="Usuario" severity="success" variant="outlined" class="mr-2" @click="Editar(globalStore.GalponSeleccionado!, true)" v-tooltip.bottom="'Editar Galpón'">
+      <Button
+        v-if="Usuario"
+        severity="success"
+        variant="outlined"
+        class="mr-2"
+        @click="Editar(globalStore.GalponSeleccionado!, true)"
+        v-tooltip.bottom="'Editar Área'"
+      >
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
-        <span class="p-button-label hidden md:inline">Galpón</span>
+        <span class="p-button-label hidden md:inline">Área</span>
       </Button>
-      <Button v-if="Usuario" severity="info" variant="outlined" @click="Agregar" v-tooltip.bottom="'Agregar Estante'">
+      <Button
+        v-if="Usuario"
+        severity="info"
+        variant="outlined"
+        @click="Agregar"
+        v-tooltip.bottom="'Agregar Estante'"
+      >
         <span class="p-button-icon p-button-icon-left pi pi-plus" />
         <span class="p-button-label hidden md:inline">Estante</span>
       </Button>
     </div>
   </div>
 
-  <div v-if="estantes.length === 0" class="italic text-muted-color">No hay estantes en este Galpón</div>
+  <div v-if="estantes.length === 0" class="italic text-muted-color">
+    No hay estantes en este Galpón
+  </div>
   <div class="flex flex-wrap gap-10 justify-center">
-    <div v-for="item in estantes" :key="item.id"
-      class="flex justify-between border-1 rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2">
-      <Button variant="text" @click="Ver(item)" v-tooltip.bottom="'Ver Estante'">
-        <div>
-          <i class="pi pi-server text-6xl mb-4"></i>
-          <div class="text-muted-color">{{ 'Estante ' + item.nombre }}</div>
-        </div>
+    <div
+      v-for="item in estantes"
+      :key="item.id"
+      class="flex justify-between border rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2"
+    >
+      <Button
+        variant="text"
+        @click="Ver(item)"
+        v-tooltip.bottom="'Ver Estante'"
+        class="flex flex-col justify-start"
+      >
+        <i class="pi pi-server text-6xl mb-4"></i>
+        <div class="text-muted-color">{{ "Estante " + item.nombre }}</div>
+        <div class="text-muted-color text-wrap">{{ item.descripcion }}</div>
       </Button>
-      <EditarQuitar @editar-click="Editar(item)" @quitar-click="Quitar(item)" :boton-imprimir="true" @imprimir-click="ImprimirEstante(item)" :vertical="true" :id-elemento="item.id" :nombre-elemento="'Estante ' + item.nombre" />
+      <EditarQuitar
+        @editar-click="Editar(item)"
+        @quitar-click="Quitar(item)"
+        :boton-imprimir="true"
+        @imprimir-click="ImprimirEstante(item)"
+        :vertical="true"
+        :id-elemento="item.id"
+        :nombre-elemento="'Estante ' + item.nombre"
+      />
     </div>
   </div>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" :esAgregar="esNuevo" :clickAceptar="Guardar" :nombre-objeto="esEditandoGalpon ? 'Galpón' : 'Estante'"
-    :desabilitarAceptar="itemEdicion.nombre.trim() === ''">
+  <DialogoEdicion
+    v-model:mostrar="dialogVisible"
+    :esAgregar="esNuevo"
+    :clickAceptar="Guardar"
+    :nombre-objeto="esEditandoGalpon ? 'Área' : 'Estante'"
+    :desabilitarAceptar="itemEdicion.nombre.trim() === ''"
+  >
     <div class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on" class="w-full">
-        <InputText id="nombre" v-model="itemEdicion.nombre" autofocus class="w-full" :invalid="!itemEdicion?.nombre" aria-autocomplete="none"  @keyup.enter="Guardar" />
-        <label for="nombre">{{ esEditandoGalpon ? 'Galpón' : 'Estante' }}</label>
+        <InputText
+          id="nombre"
+          v-model="itemEdicion.nombre"
+          autofocus
+          class="w-full"
+          :invalid="!itemEdicion?.nombre"
+          aria-autocomplete="none"
+          @keyup.enter="Guardar"
+        />
+        <label for="nombre">Nombre</label>
+      </FloatLabel>
+      <FloatLabel variant="on" class="w-full mt-1">
+        <label for="descripcion">Descripción</label>
+        <InputText
+          id="descripcion"
+          v-model="itemEdicion.descripcion"
+          class="w-full"
+          aria-autocomplete="none"
+          @keyup.enter="Guardar"
+        />
       </FloatLabel>
       <div class="flex gap-2 items-center">
         <ToggleSwitch id="ordenDescendente" v-model="itemEdicion.ordenDescendente" />

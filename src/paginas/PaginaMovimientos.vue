@@ -1,27 +1,48 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
-import type { Caja, Cantidades, Estante, Galpon, Lista, Movimientos, MovimientosExtendido, Nivel, Producto, Seccion } from '@/servicios/modelos';
-import { Actualizar, Coleccion, Crear, CrearConFecha, Eliminar, ObtenerConFiltroFecha } from '@/servicios/TablesDbService';
-import DialogoEdicion from '@/componentes/DialogoEdicion.vue';
-import { Fieldset, FloatLabel } from 'primevue';
-import { useGlobalStore } from '@/servicios/globalStore';
-import { useAuthStore } from '@/servicios/authStore';
-import { FormatoFechaHora } from '@/servicios/sharedFunctions';
+import { onMounted, ref, watch } from "vue";
+import type {
+  Caja,
+  Cantidades,
+  Estante,
+  Galpon,
+  Lista,
+  Movimientos,
+  MovimientosExtendido,
+  Nivel,
+  Producto,
+  Seccion,
+} from "@/servicios/modelos";
+import {
+  Actualizar,
+  Coleccion,
+  Crear,
+  CrearConFecha,
+  Eliminar,
+  ObtenerConFiltroFecha,
+} from "@/servicios/TablesDbService";
+import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
+import { Fieldset, FloatLabel } from "primevue";
+import { useGlobalStore } from "@/servicios/globalStore";
+import { useAuthStore } from "@/servicios/authStore";
+import { FormatoFechaHora } from "@/servicios/sharedFunctions";
 
 const globalStore = useGlobalStore();
 const authStore = useAuthStore();
 const { Usuario } = authStore;
 
 interface CajaSimple {
-  id: string,
-  nombre: string,
-  cantidad: number
+  id: string;
+  nombre: string;
+  cantidad: number;
 }
 
 const dialogVisible = ref(false);
 const itemEdicion = ref<Movimientos | null>(null);
 const movimientos = ref<MovimientosExtendido[]>([]);
-const rangoFechas = ref<(Date | null)[]>([new Date(new Date().setDate(new Date().getDate() - 7)), new Date(new Date().setHours(23,59))]);
+const rangoFechas = ref<(Date | null)[]>([
+  new Date(new Date().setDate(new Date().getDate() - 7)),
+  new Date(new Date().setHours(23, 59)),
+]);
 const cargando = ref<boolean>(false);
 
 const almacenistas = ref<Lista[]>([]);
@@ -43,18 +64,18 @@ const estanteSeleccionado = ref<Estante | null>(null);
 const nivelSeleccionado = ref<Nivel | null>(null);
 const seccionSeleccionada = ref<Seccion | null>(null);
 const cajaSeleccionada = ref<Caja | null>(null);
-let cajasMap: Map<string, { seccion: string, caja: string }>;
-const cajaIngreso = ref<'Caja del Producto' | 'Cualquier Caja'>('Caja del Producto');
+let cajasMap: Map<string, { seccion: string; caja: string }>;
+const cajaIngreso = ref<"Caja del Producto" | "Cualquier Caja">("Caja del Producto");
 
 onMounted(async () => {
   cargando.value = true;
 
-  almacenistas.value = globalStore.ObtenerLista('almacenistas');
-  almacenistasMap = new Map(almacenistas.value.map(a => [a.id, a]));
+  almacenistas.value = globalStore.ObtenerLista("almacenistas");
+  almacenistasMap = new Map(almacenistas.value.map((a) => [a.id, a]));
 
-  grupos.value = globalStore.ObtenerLista('grupos');
+  grupos.value = globalStore.ObtenerLista("grupos");
 
-  productosMap = new Map(globalStore.Productos.map(p => [p.id, p]));
+  productosMap = new Map(globalStore.Productos.map((p) => [p.id, p]));
 
   cajasMap = new Map();
   for (const galpon of globalStore.Galpones) {
@@ -74,50 +95,78 @@ onMounted(async () => {
 });
 
 async function ObtenerMovimientos(): Promise<void> {
-  if (!rangoFechas.value[0] || !rangoFechas.value[1])
-    return;
+  if (!rangoFechas.value[0] || !rangoFechas.value[1]) return;
   cargando.value = true;
-  const movimientosDB = await ObtenerConFiltroFecha<Movimientos>(Coleccion.Movimientos, rangoFechas.value[0], rangoFechas.value[1], []);
+  const movimientosDB = await ObtenerConFiltroFecha<Movimientos>(
+    Coleccion.Movimientos,
+    rangoFechas.value[0],
+    rangoFechas.value[1],
+    [],
+  );
   cargando.value = false;
-  movimientos.value = movimientosDB.map(movimiento => ({
+  movimientos.value = movimientosDB.map((movimiento) => ({
     ...movimiento,
     producto: movimiento.productoId ? productosMap.get(movimiento.productoId) || null : null,
     caja: movimiento.cajaId ? cajasMap.get(movimiento.cajaId)?.caja || null : null,
-    cajaDestino: movimiento.cajaIdDestino ? cajasMap.get(movimiento.cajaIdDestino)?.caja || null : null,
-    almacenista: movimiento.almacenistaId ? almacenistasMap.get(movimiento.almacenistaId) || null : null,
+    cajaDestino: movimiento.cajaIdDestino
+      ? cajasMap.get(movimiento.cajaIdDestino)?.caja || null
+      : null,
+    almacenista: movimiento.almacenistaId
+      ? almacenistasMap.get(movimiento.almacenistaId) || null
+      : null,
     seccionOrigen: movimiento.cajaId ? cajasMap.get(movimiento.cajaId)?.seccion || null : null,
-    seccionDestino: movimiento.cajaIdDestino ? cajasMap.get(movimiento.cajaIdDestino)?.seccion || null : null,
+    seccionDestino: movimiento.cajaIdDestino
+      ? cajasMap.get(movimiento.cajaIdDestino)?.seccion || null
+      : null,
   }));
 }
 
 watch(rangoFechas, async () => {
-  rangoFechas.value[0]?.setHours(0,0);
-  rangoFechas.value[1]?.setHours(23,59);
+  rangoFechas.value[0]?.setHours(0, 0);
+  rangoFechas.value[1]?.setHours(23, 59);
   await ObtenerMovimientos();
 });
 
 watch(grupoSeleccionado, async () => {
   if (grupoSeleccionado.value)
-    productosDelGrupo.value = globalStore.Productos.filter(p => p.grupoId === grupoSeleccionado.value);
+    productosDelGrupo.value = globalStore.Productos.filter(
+      (p) => p.grupoId === grupoSeleccionado.value,
+    );
 });
 
 watch(productoSeleccionado, async () => {
-  if (!productoSeleccionado.value || !itemEdicion.value)
-    return;
+  if (!productoSeleccionado.value || !itemEdicion.value) return;
 
   itemEdicion.value.productoId = productoSeleccionado.value.id;
   cantidadesDelProducto = globalStore.ObtenerCantidadesPorProducto(productoSeleccionado.value?.id);
   ubicacionesDelProducto.value = globalStore.ObtenerUbicaciones(cantidadesDelProducto);
-  cajasDelProducto.value = cantidadesDelProducto.map(c => ({
+  cajasDelProducto.value = cantidadesDelProducto.map((c) => ({
     id: c.cajaId,
-    nombre:`Caja ${globalStore.Galpones.flatMap(g => g.estantes).flatMap(e => e.niveles).flatMap(n => n.secciones).flatMap(s => s.cajas).find(x => x.id == c.cajaId)?.nombre ?? ''} (${c.cantidad} unidades)`,
-    cantidad: c.cantidad
+    nombre: `Caja ${
+      globalStore.Galpones.flatMap((g) => g.estantes)
+        .flatMap((e) => e.niveles)
+        .flatMap((n) => n.secciones)
+        .flatMap((s) => s.cajas)
+        .find((x) => x.id == c.cajaId)?.nombre ?? ""
+    } (${c.cantidad} unidades)`,
+    cantidad: c.cantidad,
   }));
 });
 
 function Agregar() {
   dialogVisible.value = true;
-  itemEdicion.value = { id: '', productoId: '', cantidad: 0, almacenistaId: '', justificacion: '', tipo: 'INGRESO', creadoPor: Usuario?.user.displayName ?? '', fechaCreacion: new Date(), cajaId: '', cajaIdDestino: '' };
+  itemEdicion.value = {
+    id: "",
+    productoId: "",
+    cantidad: 0,
+    almacenistaId: "",
+    justificacion: "",
+    tipo: "INGRESO",
+    creadoPor: Usuario?.user.displayName ?? "",
+    fechaCreacion: new Date(),
+    cajaId: "",
+    cajaIdDestino: "",
+  };
 
   grupoSeleccionado.value = null;
   productoSeleccionado.value = null;
@@ -134,52 +183,81 @@ function Agregar() {
 
 async function Guardar() {
   // Validaciones
-  if (itemEdicion.value == null || productoSeleccionado.value == null
-    || (itemEdicion.value.tipo == 'EGRESO' && (cajaDelProductoSeleccionada.value == null || cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad))
-    || (itemEdicion.value.tipo == 'INGRESO' && ((cajaIngreso.value == 'Cualquier Caja' && cajaSeleccionada.value == null) || (cajaIngreso.value == 'Caja del Producto' && cajaDelProductoSeleccionada.value == null)))
-    || (itemEdicion.value.tipo == 'TRASLADO' && (cajaDelProductoSeleccionada.value == null || cajaSeleccionada.value == null || cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad)))
+  if (
+    itemEdicion.value == null ||
+    productoSeleccionado.value == null ||
+    (itemEdicion.value.tipo == "EGRESO" &&
+      (cajaDelProductoSeleccionada.value == null ||
+        cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad)) ||
+    (itemEdicion.value.tipo == "INGRESO" &&
+      ((cajaIngreso.value == "Cualquier Caja" && cajaSeleccionada.value == null) ||
+        (cajaIngreso.value == "Caja del Producto" && cajaDelProductoSeleccionada.value == null))) ||
+    (itemEdicion.value.tipo == "TRASLADO" &&
+      (cajaDelProductoSeleccionada.value == null ||
+        cajaSeleccionada.value == null ||
+        cajaDelProductoSeleccionada.value.cantidad < itemEdicion.value.cantidad))
+  )
     return;
 
-  if (itemEdicion.value.tipo == 'TRASLADO') {
+  if (itemEdicion.value.tipo == "TRASLADO") {
     const cajaOrigenId = cajaDelProductoSeleccionada.value!.id;
     const cajaDestinoId = cajaSeleccionada.value!.id;
 
     // Guarda el registro del traslado con origen y destino
-    await CrearConFecha(Coleccion.Movimientos, { ...itemEdicion.value, productoId: productoSeleccionado.value.id, cajaId: cajaOrigenId, cajaIdDestino: cajaDestinoId });
+    await CrearConFecha(Coleccion.Movimientos, {
+      ...itemEdicion.value,
+      productoId: productoSeleccionado.value.id,
+      cajaId: cajaOrigenId,
+      cajaIdDestino: cajaDestinoId,
+    });
 
     // Resta en la caja origen
-    const cantidadOrigen = cantidadesDelProducto.find(x => x.cajaId == cajaOrigenId);
+    const cantidadOrigen = cantidadesDelProducto.find((x) => x.cajaId == cajaOrigenId);
     if (cantidadOrigen) {
       cantidadOrigen.cantidad -= itemEdicion.value.cantidad;
-      if (cantidadOrigen.cantidad == 0)
-        await Eliminar(Coleccion.Cantidades, cantidadOrigen);
-      else
-        await Actualizar(Coleccion.Cantidades, cantidadOrigen);
+      if (cantidadOrigen.cantidad == 0) await Eliminar(Coleccion.Cantidades, cantidadOrigen);
+      else await Actualizar(Coleccion.Cantidades, cantidadOrigen);
     }
 
     // Suma en la caja destino
-    const cantidadDestino = cantidadesDelProducto.find(x => x.cajaId == cajaDestinoId);
+    const cantidadDestino = cantidadesDelProducto.find((x) => x.cajaId == cajaDestinoId);
     if (cantidadDestino) {
       cantidadDestino.cantidad += itemEdicion.value.cantidad;
       await Actualizar(Coleccion.Cantidades, cantidadDestino);
     } else {
-      await Crear(Coleccion.Cantidades, { id: '', productoId: productoSeleccionado.value.id, cantidad: itemEdicion.value.cantidad, cajaId: cajaDestinoId });
+      await Crear(Coleccion.Cantidades, {
+        id: "",
+        productoId: productoSeleccionado.value.id,
+        cantidad: itemEdicion.value.cantidad,
+        cajaId: cajaDestinoId,
+      });
     }
   } else {
-    const cajaId = itemEdicion.value.tipo == 'INGRESO' && cajaIngreso.value == 'Cualquier Caja' ? cajaSeleccionada.value?.id : cajaDelProductoSeleccionada.value?.id;
+    const cajaId =
+      itemEdicion.value.tipo == "INGRESO" && cajaIngreso.value == "Cualquier Caja"
+        ? cajaSeleccionada.value?.id
+        : cajaDelProductoSeleccionada.value?.id;
 
     // Guarda el registro del movimiento
-    await CrearConFecha(Coleccion.Movimientos, { ...itemEdicion.value, productoId: productoSeleccionado.value?.id, cajaId: cajaId });
+    await CrearConFecha(Coleccion.Movimientos, {
+      ...itemEdicion.value,
+      productoId: productoSeleccionado.value?.id,
+      cajaId: cajaId,
+    });
 
     // Actualiza la cantidad en cantidad existente o agrega a una caja
-    let cantidadAModificar = cantidadesDelProducto.find(x => x.cajaId == cajaId);
-    if (itemEdicion.value.tipo == 'INGRESO') {
+    let cantidadAModificar = cantidadesDelProducto.find((x) => x.cajaId == cajaId);
+    if (itemEdicion.value.tipo == "INGRESO") {
       if (cantidadAModificar) {
         cantidadAModificar.cantidad += itemEdicion.value.cantidad;
         await Actualizar(Coleccion.Cantidades, cantidadAModificar);
-      }
-      else {
-        cantidadAModificar = { id: '', productoId: productoSeleccionado.value.id, cantidad: itemEdicion.value.cantidad, cajaId: cajaId || ''};
+      } else {
+        cantidadAModificar = {
+          id: "",
+          productoId: productoSeleccionado.value.id,
+          cantidad: itemEdicion.value.cantidad,
+          cajaId: cajaId || "",
+        };
         await Crear(Coleccion.Cantidades, cantidadAModificar);
       }
     } else {
@@ -187,8 +265,7 @@ async function Guardar() {
         cantidadAModificar.cantidad -= itemEdicion.value.cantidad;
         if (cantidadAModificar.cantidad == 0)
           await Eliminar(Coleccion.Cantidades, cantidadAModificar);
-        else
-          await Actualizar(Coleccion.Cantidades, cantidadAModificar);
+        else await Actualizar(Coleccion.Cantidades, cantidadAModificar);
       }
     }
   }
@@ -202,7 +279,13 @@ async function Guardar() {
   <div class="mx-auto max-w-lg mb-4">
     <div id="encabezado" class="flex flex-wrap items-center mb-4 gap-2">
       <div class="text-xl mr-1">MOVIMIENTOS</div>
-      <Button v-if="Usuario" label="GESTIONES" severity="primary" variant="outlined" @click="Agregar" />
+      <Button
+        v-if="Usuario"
+        label="GESTIONES"
+        severity="primary"
+        variant="outlined"
+        @click="Agregar"
+      />
       <DatePicker v-model="rangoFechas" dateFormat="dd/mm/yy" show-icon selection-mode="range" />
     </div>
 
@@ -210,24 +293,43 @@ async function Guardar() {
       <template #list="{ items }">
         <div class="flex flex-col gap-2">
           <div
-            v-for="(item, index) in (items as MovimientosExtendido[])"
+            v-for="(item, index) in items as MovimientosExtendido[]"
             :key="item.id"
-            :class="['p-3 rounded-lg border border-surface-200 dark:border-surface-700', (index as number) % 2 === 0 ? 'bg-surface-50 dark:bg-surface-800' : 'bg-white dark:bg-surface-900']"
+            :class="[
+              'p-3 rounded-lg border border-surface-200 dark:border-surface-700',
+              (index as number) % 2 === 0
+                ? 'bg-surface-50 dark:bg-surface-800'
+                : 'bg-white dark:bg-surface-900',
+            ]"
           >
             <!-- Fila superior: fecha, tipo, creado por -->
             <div class="flex justify-between items-center mb-1">
               <span class="text-sm text-surface-500 dark:text-surface-400">
                 {{ FormatoFechaHora(item.fechaCreacion) }}
               </span>
-              <Tag :value="item.tipo" :severity="item.tipo == 'INGRESO' ? 'success' : item.tipo == 'TRASLADO' ? 'info' : 'danger'" />
+              <Tag
+                :value="item.tipo"
+                :severity="
+                  item.tipo == 'INGRESO' ? 'success' : item.tipo == 'TRASLADO' ? 'info' : 'danger'
+                "
+              />
               <span class="text-surface-400 dark:text-surface-500">{{ item.creadoPor }}</span>
             </div>
-            <div class="font-semibold text-surface-700 dark:text-surface-200 break-words mb-2">{{ item.producto?.nombre ?? '—' }}</div>
+            <div class="font-semibold text-surface-700 dark:text-surface-200 break-words mb-2">
+              {{ item.producto?.nombre ?? "—" }}
+            </div>
             <!-- Fila del producto -->
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm mb-1">
-              <span class="text-surface-500 dark:text-surface-400">{{ item.tipo == 'INGRESO' ? 'Caja Destino' : 'Caja Origen' }}: <b>{{ item.seccionOrigen}}-{{ item.caja }}</b></span>
-              <span class="text-surface-500 dark:text-surface-400" v-if="item.cajaDestino">Caja Destino: <b>{{ item.seccionDestino }}-{{ item.cajaDestino }}</b></span>
-              <span class="text-surface-500 dark:text-surface-400">Cantidad: <b>{{ item.cantidad }}</b></span>
+              <span class="text-surface-500 dark:text-surface-400"
+                >{{ item.tipo == "INGRESO" ? "Caja Destino" : "Caja Origen" }}:
+                <b>{{ item.seccionOrigen }}-{{ item.caja }}</b></span
+              >
+              <span class="text-surface-500 dark:text-surface-400" v-if="item.cajaDestino"
+                >Caja Destino: <b>{{ item.seccionDestino }}-{{ item.cajaDestino }}</b></span
+              >
+              <span class="text-surface-500 dark:text-surface-400"
+                >Cantidad: <b>{{ item.cantidad }}</b></span
+              >
             </div>
             <div class="italic">
               {{ item.justificacion }}
@@ -236,35 +338,86 @@ async function Guardar() {
         </div>
       </template>
       <template #empty>
-        <p class="text-center text-surface-400 py-6">No se encontraron movimientos para el rango de fechas seleccionado.</p>
+        <p class="text-center text-surface-400 py-6">
+          No se encontraron movimientos para el rango de fechas seleccionado.
+        </p>
       </template>
     </DataView>
   </div>
 
-  <DialogoEdicion v-model:mostrar="dialogVisible" encabezado="GESTIONES" :clickAceptar="Guardar" class="w-2xl"
-    :desabilitarAceptar="itemEdicion?.productoId == null || itemEdicion?.cantidad === undefined || itemEdicion?.cantidad <= 0 || itemEdicion?.almacenistaId === null
-    || (itemEdicion.tipo == 'INGRESO' && ((cajaIngreso == 'Cualquier Caja' && cajaSeleccionada == null) || (cajaIngreso == 'Caja del Producto' && cajaDelProductoSeleccionada == null)))
-    || (itemEdicion.tipo == 'EGRESO' && (cajaDelProductoSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))
-    || (itemEdicion.tipo == 'TRASLADO' && (cajaDelProductoSeleccionada == null || cajaSeleccionada == null || cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad))
-    || itemEdicion.justificacion.trim().length < 20">
+  <DialogoEdicion
+    v-model:mostrar="dialogVisible"
+    encabezado="GESTIONES"
+    :clickAceptar="Guardar"
+    class="w-2xl"
+    :desabilitarAceptar="
+      itemEdicion?.productoId == null ||
+      itemEdicion?.cantidad === undefined ||
+      itemEdicion?.cantidad <= 0 ||
+      itemEdicion?.almacenistaId === null ||
+      (itemEdicion.tipo == 'INGRESO' &&
+        ((cajaIngreso == 'Cualquier Caja' && cajaSeleccionada == null) ||
+          (cajaIngreso == 'Caja del Producto' && cajaDelProductoSeleccionada == null))) ||
+      (itemEdicion.tipo == 'EGRESO' &&
+        (cajaDelProductoSeleccionada == null ||
+          cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad)) ||
+      (itemEdicion.tipo == 'TRASLADO' &&
+        (cajaDelProductoSeleccionada == null ||
+          cajaSeleccionada == null ||
+          cajaDelProductoSeleccionada.cantidad < itemEdicion.cantidad)) ||
+      itemEdicion.justificacion.trim().length < 20
+    "
+  >
     <div class="flex justify-center">
       <SelectButton v-model="itemEdicion!.tipo" :options="['INGRESO', 'EGRESO', 'TRASLADO']" />
     </div>
     <div class="flex gap-3">
-      <Fieldset :legend="itemEdicion?.tipo == 'INGRESO' ? 'Agregar Producto' : itemEdicion?.tipo == 'TRASLADO' ? 'Producto a Trasladar' : 'Extraer Producto'" class="w-3/5 p-3" :pt="{ contentWrapper: 'min-w-0' }">
+      <Fieldset
+        :legend="
+          itemEdicion?.tipo == 'INGRESO'
+            ? 'Agregar Producto'
+            : itemEdicion?.tipo == 'TRASLADO'
+              ? 'Producto a Trasladar'
+              : 'Extraer Producto'
+        "
+        class="w-3/5 p-3"
+        :pt="{ contentWrapper: 'min-w-0' }"
+      >
         <FloatLabel variant="on" class="mb-3">
-          <Select id="grupo" v-model="grupoSeleccionado" :options="grupos" optionValue="id" optionLabel="nombre" class="w-full" />
+          <Select
+            id="grupo"
+            v-model="grupoSeleccionado"
+            :options="grupos"
+            optionValue="id"
+            optionLabel="nombre"
+            class="w-full"
+          />
           <label for="grupo">Grupo</label>
         </FloatLabel>
         <FloatLabel variant="on" class="mb-2">
-          <Select id="producto" v-model="productoSeleccionado" :options="productosDelGrupo" optionLabel="nombre" class="w-full" />
+          <Select
+            id="producto"
+            v-model="productoSeleccionado"
+            :options="productosDelGrupo"
+            optionLabel="nombre"
+            class="w-full"
+          />
           <label for="producto">Producto</label>
         </FloatLabel>
         <div v-if="productoSeleccionado">
           <div><b>Código:&nbsp;</b>{{ productoSeleccionado?.codigo }}</div>
           <div><b>Descripción:&nbsp;</b>{{ productoSeleccionado?.descripcion }}</div>
-          <div><b>Fabricante:&nbsp;</b>{{ productoSeleccionado?.fabricanteId ? globalStore.ListasMap[productoSeleccionado?.fabricanteId] : ''}}</div>
-          <div><b>Peso Unitario:&nbsp;</b>{{ productoSeleccionado?.pesoUnitario?.toFixed(2) }} Kg</div>
+          <div>
+            <b>Fabricante:&nbsp;</b
+            >{{
+              productoSeleccionado?.fabricanteId
+                ? globalStore.ListasMap[productoSeleccionado?.fabricanteId]
+                : ""
+            }}
+          </div>
+          <div>
+            <b>Peso Unitario:&nbsp;</b>{{ productoSeleccionado?.pesoUnitario?.toFixed(2) }} Kg
+          </div>
           <ul class="list-disc list-inside">
             <li v-for="ubic in ubicacionesDelProducto" :key="ubic">{{ ubic }}</li>
           </ul>
@@ -272,59 +425,165 @@ async function Guardar() {
       </Fieldset>
       <div class="w-2/5 flex flex-col gap-3 mt-5">
         <FloatLabel variant="on">
-          <Select id="almacenista" v-model="itemEdicion!.almacenistaId" :options="almacenistas" optionValue="id" optionLabel="nombre" class="w-full" :invalid="!itemEdicion?.almacenistaId" />
+          <Select
+            id="almacenista"
+            v-model="itemEdicion!.almacenistaId"
+            :options="almacenistas"
+            optionValue="id"
+            optionLabel="nombre"
+            class="w-full"
+            :invalid="!itemEdicion?.almacenistaId"
+          />
           <label for="almacenista">Almacenista</label>
         </FloatLabel>
-        <SelectButton v-if="itemEdicion!.tipo == 'INGRESO'" v-model="cajaIngreso" :options="['Caja del Producto', 'Cualquier Caja']" />
+        <SelectButton
+          v-if="itemEdicion!.tipo == 'INGRESO'"
+          v-model="cajaIngreso"
+          :options="['Caja del Producto', 'Cualquier Caja']"
+        />
 
         <!-- Caja origen para TRASLADO (estilo "Caja del Producto") -->
         <template v-if="itemEdicion!.tipo == 'TRASLADO'">
           <FloatLabel variant="on">
-            <Select id="cajas-origen" v-model="cajaDelProductoSeleccionada" :options="cajasDelProducto" optionLabel="nombre" class="w-full" :invalid="cajaDelProductoSeleccionada == null" />
+            <Select
+              id="cajas-origen"
+              v-model="cajaDelProductoSeleccionada"
+              :options="cajasDelProducto"
+              optionLabel="nombre"
+              class="w-full"
+              :invalid="cajaDelProductoSeleccionada == null"
+            />
             <label for="cajas-origen">Caja Origen</label>
           </FloatLabel>
-          <div class="text-sm font-semibold text-surface-500 dark:text-surface-400 mt-1">Caja Destino</div>
+          <div class="text-sm font-semibold text-surface-500 dark:text-surface-400 mt-1">
+            Caja Destino
+          </div>
         </template>
 
         <!-- Caja libre: TRASLADO destino o INGRESO "Cualquier Caja" -->
-        <div v-if="itemEdicion!.tipo == 'TRASLADO' || (itemEdicion!.tipo == 'INGRESO' && cajaIngreso == 'Cualquier Caja')" class="flex flex-col gap-3">
+        <div
+          v-if="
+            itemEdicion!.tipo == 'TRASLADO' ||
+            (itemEdicion!.tipo == 'INGRESO' && cajaIngreso == 'Cualquier Caja')
+          "
+          class="flex flex-col gap-3"
+        >
           <FloatLabel variant="on">
-            <Select v-model="galponSeleccionado" :options="globalStore.Galpones" :optionLabel="(data: Galpon) => `${data.nombre} - ${data.descripcion}`" showClear class="w-full" />
-            <label>Galpón</label>
+            <Select
+              v-model="galponSeleccionado"
+              :options="globalStore.Galpones"
+              :optionLabel="(data: Galpon) => `${data.nombre} - ${data.descripcion}`"
+              showClear
+              class="w-full"
+            />
+            <label>Área</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="estanteSeleccionado" :options="galponSeleccionado?.estantes" optionLabel="nombre" showClear class="w-full" :disabled="!galponSeleccionado" />
+            <Select
+              v-model="estanteSeleccionado"
+              :options="galponSeleccionado?.estantes"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!galponSeleccionado"
+            />
             <label>Estante</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="nivelSeleccionado" :options="estanteSeleccionado?.niveles" optionLabel="nombre" showClear class="w-full" :disabled="!estanteSeleccionado" />
+            <Select
+              v-model="nivelSeleccionado"
+              :options="estanteSeleccionado?.niveles"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!estanteSeleccionado"
+            />
             <label>Nivel</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="seccionSeleccionada" :options="nivelSeleccionado?.secciones" optionLabel="nombre" showClear class="w-full" :disabled="!nivelSeleccionado" />
+            <Select
+              v-model="seccionSeleccionada"
+              :options="nivelSeleccionado?.secciones"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!nivelSeleccionado"
+            />
             <label>Sección</label>
           </FloatLabel>
           <FloatLabel variant="on">
-            <Select v-model="cajaSeleccionada" :options="seccionSeleccionada?.cajas" optionLabel="nombre" showClear class="w-full" :disabled="!seccionSeleccionada" :invalid="cajaSeleccionada == null" />
+            <Select
+              v-model="cajaSeleccionada"
+              :options="seccionSeleccionada?.cajas"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!seccionSeleccionada"
+              :invalid="cajaSeleccionada == null"
+            />
             <label>Caja</label>
           </FloatLabel>
         </div>
 
         <!-- Caja para INGRESO "Caja del Producto" o EGRESO -->
         <FloatLabel v-else variant="on">
-          <Select id="cajas" v-model="cajaDelProductoSeleccionada" :options="cajasDelProducto" optionLabel="nombre" class="w-full" :invalid="cajaDelProductoSeleccionada == null" />
+          <Select
+            id="cajas"
+            v-model="cajaDelProductoSeleccionada"
+            :options="cajasDelProducto"
+            optionLabel="nombre"
+            class="w-full"
+            :invalid="cajaDelProductoSeleccionada == null"
+          />
           <label for="cajas">Caja</label>
         </FloatLabel>
 
         <FloatLabel variant="on">
-          <InputNumber id="cantidad" v-model="itemEdicion!.cantidad" :min="0" class="w-full" :invalid="!itemEdicion?.cantidad || itemEdicion.cantidad <= 0 || ((itemEdicion.tipo == 'EGRESO' || itemEdicion.tipo == 'TRASLADO') && cajaDelProductoSeleccionada != null && itemEdicion.cantidad > cajaDelProductoSeleccionada?.cantidad)" />
+          <InputNumber
+            id="cantidad"
+            v-model="itemEdicion!.cantidad"
+            :min="0"
+            class="w-full"
+            :invalid="
+              !itemEdicion?.cantidad ||
+              itemEdicion.cantidad <= 0 ||
+              ((itemEdicion.tipo == 'EGRESO' || itemEdicion.tipo == 'TRASLADO') &&
+                cajaDelProductoSeleccionada != null &&
+                itemEdicion.cantidad > cajaDelProductoSeleccionada?.cantidad)
+            "
+          />
           <label for="cantidad">Cantidad</label>
-          <Message v-if="itemEdicion != null && cajaDelProductoSeleccionada != null && (itemEdicion.tipo == 'EGRESO' || itemEdicion.tipo == 'TRASLADO') && itemEdicion.cantidad > cajaDelProductoSeleccionada.cantidad" severity="error" size="small" class="mt-1">La cantidad no puede ser mayor al contenido de la caja</Message>
+          <Message
+            v-if="
+              itemEdicion != null &&
+              cajaDelProductoSeleccionada != null &&
+              (itemEdicion.tipo == 'EGRESO' || itemEdicion.tipo == 'TRASLADO') &&
+              itemEdicion.cantidad > cajaDelProductoSeleccionada.cantidad
+            "
+            severity="error"
+            size="small"
+            class="mt-1"
+            >La cantidad no puede ser mayor al contenido de la caja</Message
+          >
         </FloatLabel>
         <FloatLabel variant="on">
-          <Textarea id="justificacion" v-model="itemEdicion!.justificacion" class="w-full" maxlength="100" :rows="3" auto-resize :invalid="itemEdicion == null || itemEdicion.justificacion.trim().length < 20" />
+          <Textarea
+            id="justificacion"
+            v-model="itemEdicion!.justificacion"
+            class="w-full"
+            maxlength="100"
+            :rows="3"
+            auto-resize
+            :invalid="itemEdicion == null || itemEdicion.justificacion.trim().length < 20"
+          />
           <label for="justificacion">Justificación</label>
-          <p class="text-sm text-muted-color">Mínimo: 20 caracteres.{{ itemEdicion != null && itemEdicion.justificacion.trim().length < 20 ? ` Faltan ${20 - itemEdicion.justificacion.trim().length}.` : '' }}</p>
+          <p class="text-sm text-muted-color">
+            Mínimo: 20 caracteres.{{
+              itemEdicion != null && itemEdicion.justificacion.trim().length < 20
+                ? ` Faltan ${20 - itemEdicion.justificacion.trim().length}.`
+                : ""
+            }}
+          </p>
         </FloatLabel>
       </div>
     </div>

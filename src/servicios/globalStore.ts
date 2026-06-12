@@ -1,9 +1,19 @@
-import type { Cantidades, CantidadesConProducto, Estante, Galpon, IdNombre, Lista, Producto, ProductoConCantidad, Solicitud } from './modelos';
-import { computed, ref } from 'vue';
-import { defineStore } from 'pinia'
-import { Coleccion, ObtenerTodos } from './TablesDbService';
+import type {
+  Cantidades,
+  CantidadesConProducto,
+  Estante,
+  Galpon,
+  IdNombre,
+  Lista,
+  Producto,
+  ProductoConCantidad,
+  Solicitud,
+} from "./modelos";
+import { computed, ref } from "vue";
+import { defineStore } from "pinia";
+import { Coleccion, ObtenerTodos } from "./TablesDbService";
 
-export const useGlobalStore = defineStore('global', () => {
+export const useGlobalStore = defineStore("global", () => {
   const Listas = ref<Lista[]>([]);
   const Galpones = ref<Galpon[]>([]);
   const Productos = ref<Producto[]>([]);
@@ -15,16 +25,23 @@ export const useGlobalStore = defineStore('global', () => {
   const ProductosEnCaja = ref<CantidadesConProducto[]>([]);
   const listaSeleccionada = ref<IdNombre | null>(null);
 
-
-  const dialogoHistorial = ref({ mostrar: false, idElemento: '', nombreElemento: '' });
-  const solicitudActual = ref<Solicitud>({ id: '', fechaCreacion: new Date(), solicitante: '', direccion: '', telefono: '', procesada: false, productosCantidad: [] });
+  const dialogoHistorial = ref({ mostrar: false, idElemento: "", nombreElemento: "" });
+  const solicitudActual = ref<Solicitud>({
+    id: "",
+    fechaCreacion: new Date(),
+    solicitante: "",
+    direccion: "",
+    telefono: "",
+    procesada: false,
+    productosCantidad: [],
+  });
 
   async function CargarTodo() {
     Promise.all([
       ObtenerTodos<Producto>(Coleccion.Productos),
       ObtenerTodos<Galpon>(Coleccion.Galpones),
       ObtenerTodos<Lista>(Coleccion.Listas),
-      ObtenerTodos<Cantidades>(Coleccion.Cantidades)
+      ObtenerTodos<Cantidades>(Coleccion.Cantidades),
     ]).then(([productos, galpones, listas, cantidades]) => {
       Productos.value = productos;
       Galpones.value = galpones.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -34,31 +51,35 @@ export const useGlobalStore = defineStore('global', () => {
   }
 
   function ObtenerLista(tipo: string): Lista[] {
-    const filtrados = Listas.value.filter(x => x.tipo == tipo);
+    const filtrados = Listas.value.filter((x) => x.tipo == tipo);
     return [...filtrados].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
 
-  const ListasMap = computed(() => Object.fromEntries(new Map(Listas.value.map(l => [l.id, l.nombre]))));
+  const ListasMap = computed(() =>
+    Object.fromEntries(new Map(Listas.value.map((l) => [l.id, l.nombre]))),
+  );
 
   function ObtenerCantidadesPorProducto(productoId: string): Cantidades[] {
-    return Cantidades.value.filter(c => c.productoId === productoId);
+    return Cantidades.value.filter((c) => c.productoId === productoId);
   }
 
   function ObtenerCantidadesConProductos(): CantidadesConProducto[] {
-    const productosMap = new Map(Productos.value.map(p => [p.id, p]));
+    const productosMap = new Map(Productos.value.map((p) => [p.id, p]));
 
-    const resultado = Cantidades.value.map(cantidad => ({
+    const resultado = Cantidades.value.map((cantidad) => ({
       ...cantidad,
-      producto: productosMap.get(cantidad.productoId)!
+      producto: productosMap.get(cantidad.productoId)!,
     }));
 
-    return resultado.filter(r => r.producto !== undefined);
+    return resultado.filter((r) => r.producto !== undefined);
   }
 
   function ObtenerProductosConCantidad(): ProductoConCantidad[] {
-    return Productos.value.map(p => ({
+    return Productos.value.map((p) => ({
       ...p,
-      cantidad: Cantidades.value.filter(c => c.productoId == p.id).reduce((acc, c) => acc + c.cantidad, 0)
+      cantidad: Cantidades.value
+        .filter((c) => c.productoId == p.id)
+        .reduce((acc, c) => acc + c.cantidad, 0),
     }));
   }
 
@@ -70,9 +91,11 @@ export const useGlobalStore = defineStore('global', () => {
         for (const estante of galpon.estantes) {
           for (const nivel of estante.niveles) {
             for (const seccion of nivel.secciones) {
-              const caja = seccion.cajas.find(c => c.id === cantidad.cajaId);
+              const caja = seccion.cajas.find((c) => c.id === cantidad.cajaId);
               if (caja) {
-                ubicaciones.push(`Galpón ${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${caja.nombre} / ${cantidad.cantidad} unidades\n`);
+                ubicaciones.push(
+                  `${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${caja.nombre} / ${cantidad.cantidad} unidades\n`,
+                );
               }
             }
           }
@@ -80,8 +103,7 @@ export const useGlobalStore = defineStore('global', () => {
       }
     }
 
-    if (ubicaciones.length === 0)
-      ubicaciones.push('No hay ubicaciones.');
+    if (ubicaciones.length === 0) ubicaciones.push("No hay ubicaciones.");
 
     return ubicaciones;
   }
@@ -94,9 +116,9 @@ export const useGlobalStore = defineStore('global', () => {
     for (const nivel of EstanteSeleccionado.value.niveles) {
       for (const seccion of nivel.secciones) {
         for (const caja of seccion.cajas) {
-          const cantidades = Cantidades.value.filter(c => c.cajaId === caja.id);
+          const cantidades = Cantidades.value.filter((c) => c.cajaId === caja.id);
           for (const cantidad of cantidades) {
-            const producto = Productos.value.find(p => p.id === cantidad.productoId);
+            const producto = Productos.value.find((p) => p.id === cantidad.productoId);
             if (producto && producto.grupoId) {
               gruposSet.add(producto.grupoId);
             }
@@ -105,12 +127,12 @@ export const useGlobalStore = defineStore('global', () => {
       }
     }
 
-    return Array.from(gruposSet).map(grupoId => ListasMap.value[grupoId] || 'Grupo Desconocido');
+    return Array.from(gruposSet).map((grupoId) => ListasMap.value[grupoId] || "Grupo Desconocido");
   }
 
   function ObtenerNombreProducto(productoId: string): string {
-    const producto = Productos.value.find(p => p.id === productoId);
-    return producto ? `${producto.nombre} (Cód: ${producto.codigo})` : '';
+    const producto = Productos.value.find((p) => p.id === productoId);
+    return producto ? `${producto.nombre} (Cód: ${producto.codigo})` : "";
   }
 
   return {
@@ -134,6 +156,6 @@ export const useGlobalStore = defineStore('global', () => {
     ObtenerProductosConCantidad,
     ObtenerUbicaciones,
     ObtenerGruposEnEstanteSeleccionado,
-    ObtenerNombreProducto
+    ObtenerNombreProducto,
   };
 });
