@@ -442,9 +442,9 @@ function irAtras() {
   <div id="encabezado" class="flex justify-between md:grid md:grid-cols-3 items-center mb-3">
     <Button class="justify-self-start" severity="secondary" variant="outlined" @click="irAtras">
       <span class="p-button-icon p-button-icon-left pi pi-arrow-left" />
-      <span class="p-button-label hidden md:inline">{{
-        globalStore.GalponSeleccionado!.nombre
-      }}</span>
+      <span class="p-button-label hidden md:inline">
+        {{ globalStore.GalponSeleccionado!.nombre }}
+      </span>
     </Button>
     <div class="justify-self-center text-xl">
       ESTANTE {{ globalStore.EstanteSeleccionado!.nombre }}

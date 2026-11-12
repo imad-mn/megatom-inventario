@@ -143,6 +143,11 @@ function Ver(item: Estante) {
   router.push(globalStore.esTomasCapasso ? "/tomas/estante" : "/estante");
 }
 
+function VerDeposito(item: Deposito) {
+  globalStore.DepositoSeleccionado = item;
+  router.push(globalStore.esTomasCapasso ? "/tomas/deposito" : "/deposito");
+}
+
 function Editar(item: ConDescripcion, tipo: "estante" | "deposito" | "galpon" = "estante") {
   esNuevo.value = false;
   esEditandoGalpon.value = tipo === "galpon";
@@ -299,7 +304,7 @@ function ImprimirEstante(item: Estante) {
     >
       <Button
         variant="text"
-        disabled
+        @click="VerDeposito(item)"
         v-tooltip.bottom="'Ver Depósito'"
         class="flex flex-col justify-start"
       >

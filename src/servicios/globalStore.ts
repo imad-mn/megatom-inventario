@@ -3,6 +3,7 @@ import type {
   CantidadesConHerramienta,
   CantidadesConProducto,
   CantidadHerramienta,
+  Deposito,
   Estante,
   Galpon,
   Herramienta,
@@ -27,6 +28,7 @@ export const useGlobalStore = defineStore("global", () => {
 
   const GalponSeleccionado = ref<Galpon | null>(null);
   const EstanteSeleccionado = ref<Estante | null>(null);
+  const DepositoSeleccionado = ref<Deposito | null>(null);
   const CajaSeleccionada = ref<IdNombre | null>(null);
   const ProductosEnCaja = ref<CantidadesConProducto[]>([]);
   const listaSeleccionada = ref<IdNombre | null>(null);
@@ -220,6 +222,7 @@ export const useGlobalStore = defineStore("global", () => {
     Cantidades,
     GalponSeleccionado,
     EstanteSeleccionado,
+    DepositoSeleccionado,
     CajaSeleccionada,
     ProductosEnCaja,
     dialogoHistorial,
