@@ -14,6 +14,7 @@ import { onMounted, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
+import DialogoAgregarHerramienta from "@/componentes/DialogoAgregarHerramienta.vue";
 import TablaCantHerramientas from "@/componentes/TablaCantHerramientas.vue";
 import EditarQuitar from "../componentes/EditarQuitar.vue";
 import BotonesCompacto from "@/componentes/BotonesCompacto.vue";
@@ -47,7 +48,9 @@ const herramientasEnCaja = computed(() => {
         .filter((cantidad) => cantidad.cajaId === cajaId)
     : [];
 });
+const cajaSeleccionada = computed(() => globalStore.CajaSeleccionada);
 const mostrarDialogoCaja = ref(false);
+const mostrarDialogoAgregarHerramienta = ref(false);
 const deshabilitarSiguienteCaja = ref(false);
 const deshabilitarCajaAnterior = ref(false);
 
@@ -270,6 +273,11 @@ async function VerCaja(caja: Caja) {
   mostrarDialogoCaja.value = true;
   deshabilitarSiguienteCaja.value = false;
   deshabilitarCajaAnterior.value = false;
+}
+
+function AgregarHerramienta(caja: Caja) {
+  globalStore.CajaSeleccionada = caja;
+  mostrarDialogoAgregarHerramienta.value = true;
 }
 
 async function CajaAnterior() {
@@ -587,6 +595,7 @@ function irAtras() {
               />
               <BotonesCompacto
                 v-if="Usuario"
+                @agregarHerramientaClick="AgregarHerramienta(caja)"
                 @moverClick="MostrarDialogoMover(caja, 'Caja')"
                 @editarClick="Editar(caja, 'Caja')"
                 @quitarClick="Quitar(caja, 'Caja', undefined, seccion)"
@@ -841,6 +850,11 @@ function irAtras() {
       <TablaCantHerramientas :cantidades="herramientasEnCaja" />
     </div>
   </Dialog>
+
+  <DialogoAgregarHerramienta
+    v-model:mostrar="mostrarDialogoAgregarHerramienta"
+    :caja="cajaSeleccionada"
+  />
 
   <DialogoEdicion
     id="mover"

@@ -23,8 +23,8 @@ export type Producto = IdNombre & {
 export type Herramienta = IdNombre & {
   detalle: string | null;
   serial: string | null;
-  fabricanteId: string | null;
-  estadoId: string | null;
+  fabricanteId: string;
+  estadoId: string;
 };
 
 export type ItemOrdenable = IdNombre & {

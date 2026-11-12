@@ -17,8 +17,7 @@ const filtroTexto = ref("");
 const dialogVisible = ref(false);
 const itemEdicion = ref<Herramienta>();
 const esNuevo = ref(false);
-const ubicacionVisibleId = ref<string | null>(null);
-const ubicaciones = ref<Record<string, string[]>>({});
+const ubicacionDict = ref<Record<string, string[]>>({});
 
 const herramientasFiltradas = computed(() => {
   const filtro = filtroTexto.value.trim().toLocaleLowerCase();
@@ -49,8 +48,8 @@ function Agregar() {
     nombre: "",
     detalle: null,
     serial: null,
-    fabricanteId: null,
-    estadoId: null,
+    fabricanteId: "",
+    estadoId: "",
   };
   dialogVisible.value = true;
 }
@@ -123,20 +122,14 @@ function Quitar(item: Herramienta) {
       globalStore.Herramientas = globalStore.Herramientas.filter(
         (herramienta) => herramienta.id !== item.id,
       );
-      if (ubicacionVisibleId.value === item.id) ubicacionVisibleId.value = null;
+      delete ubicacionDict.value[item.id];
     },
   });
 }
 
 function VerUbicacion(item: Herramienta) {
-  if (ubicacionVisibleId.value === item.id) {
-    ubicacionVisibleId.value = null;
-    return;
-  }
-
   const cantidades: CantidadHerramienta[] = globalStore.ObtenerCantidadesPorHerramienta(item.id);
-  ubicaciones.value[item.id] = globalStore.ObtenerUbicacionesHerramienta(cantidades);
-  ubicacionVisibleId.value = item.id;
+  ubicacionDict.value[item.id] = globalStore.ObtenerUbicacionesHerramienta(cantidades);
 }
 </script>
 
@@ -168,6 +161,7 @@ function VerUbicacion(item: Herramienta) {
           <th class="px-3 py-2 font-semibold">Serial</th>
           <th class="px-3 py-2 font-semibold">Fabricante</th>
           <th class="px-3 py-2 font-semibold">Estado</th>
+          <th class="px-3 py-2 font-semibold">Ubicación</th>
           <th class="px-3 py-2 font-semibold"></th>
         </tr>
       </thead>
@@ -186,15 +180,24 @@ function VerUbicacion(item: Herramienta) {
               }}
             </td>
             <td class="px-3 py-2">
+              <Button
+                v-if="!ubicacionDict[item.id]"
+                icon="pi pi-map-marker"
+                severity="secondary"
+                variant="text"
+                label="Ver Ubicación"
+                v-tooltip.bottom="'Ver ubicación'"
+                :aria-label="`Ver ubicación de ${item.nombre}`"
+                @click="VerUbicacion(item)"
+              />
+              <ul v-else class="list-disc list-inside">
+                <li v-for="(ubicacion, indice) in ubicacionDict[item.id]" :key="indice">
+                  {{ ubicacion }}
+                </li>
+              </ul>
+            </td>
+            <td class="px-3 py-2">
               <div class="flex items-center justify-center">
-                <Button
-                  icon="pi pi-map-marker"
-                  severity="secondary"
-                  variant="text"
-                  v-tooltip.bottom="'Ver ubicación'"
-                  :aria-label="`Ver ubicación de ${item.nombre}`"
-                  @click="VerUbicacion(item)"
-                />
                 <EditarQuitar
                   @editar-click="Editar(item)"
                   @quitar-click="Quitar(item)"
@@ -204,19 +207,9 @@ function VerUbicacion(item: Herramienta) {
               </div>
             </td>
           </tr>
-          <tr
-            v-if="ubicacionVisibleId === item.id"
-            class="border-b border-surface-200 dark:border-surface-800 bg-surface-50 dark:bg-surface-900"
-          >
-            <td colspan="6" class="px-3 py-2">
-              <div v-for="(ubicacion, indice) in ubicaciones[item.id]" :key="indice">
-                {{ ubicacion }}
-              </div>
-            </td>
-          </tr>
         </template>
         <tr v-if="herramientasFiltradas.length === 0">
-          <td colspan="6" class="px-3 py-4 text-center italic text-muted-color">
+          <td colspan="7" class="px-3 py-4 text-center italic text-muted-color">
             No hay herramientas.
           </td>
         </tr>

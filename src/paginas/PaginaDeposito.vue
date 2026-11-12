@@ -5,6 +5,7 @@ import { computed, ref } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import { useRouter } from "vue-router";
 import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
+import DialogoAgregarHerramienta from "@/componentes/DialogoAgregarHerramienta.vue";
 import EditarQuitar from "@/componentes/EditarQuitar.vue";
 import TablaCantHerramientas from "@/componentes/TablaCantHerramientas.vue";
 import { RegistrarHistorial } from "@/servicios/historialService";
@@ -17,6 +18,7 @@ const globalStore = useGlobalStore();
 const Usuario = useAuthStore().Usuario;
 const mostrarDialogoCaja = ref(false);
 const cajaSeleccionada = ref<Caja | null>(null);
+const mostrarDialogoAgregarHerramienta = ref(false);
 
 const cajas = computed(() =>
   [...(globalStore.DepositoSeleccionado?.cajas ?? [])].sort((a, b) =>
@@ -89,6 +91,11 @@ function EditarCaja(caja: Caja) {
 function VerCaja(caja: Caja) {
   cajaSeleccionada.value = caja;
   mostrarDialogoCaja.value = true;
+}
+
+function AgregarHerramienta(caja: Caja) {
+  cajaSeleccionada.value = caja;
+  mostrarDialogoAgregarHerramienta.value = true;
 }
 
 async function Guardar() {
@@ -213,16 +220,29 @@ function QuitarCaja(caja: Caja): void {
       :key="caja.id"
       class="flex justify-between items-center border rounded-md border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 px-2 py-1"
     >
-      <Button
-        variant="text"
-        severity="warn"
-        @click="VerCaja(caja)"
-        v-tooltip.bottom="'Ver Caja'"
-        class="flex flex-col justify-start"
-      >
-        <i class="pi pi-box text-6xl"></i>
-        <div class="text-muted-color">Caja {{ caja.nombre }}</div>
-      </Button>
+      <div class="flex flex-col">
+        <Button
+          variant="text"
+          severity="warn"
+          @click="VerCaja(caja)"
+          v-tooltip.bottom="'Ver Caja'"
+          class="flex flex-col justify-start"
+        >
+          <i class="pi pi-box text-5xl"></i>
+          <div class="text-muted-color">Caja {{ caja.nombre }}</div>
+        </Button>
+
+        <Button
+          v-if="Usuario"
+          icon="pi pi-plus"
+          severity="info"
+          variant="text"
+          size="small"
+          label="Herramienta"
+          :aria-label="`Agregar herramienta a Caja ${caja.nombre}`"
+          @click="AgregarHerramienta(caja)"
+        />
+      </div>
       <EditarQuitar
         v-if="Usuario"
         @editar-click="EditarCaja(caja)"
@@ -273,7 +293,7 @@ function QuitarCaja(caja: Caja): void {
     </div>
   </DialogoEdicion>
 
-  <Dialog v-model:visible="mostrarDialogoCaja" :modal="true" class="md:w-2xl">
+  <Dialog v-model:visible="mostrarDialogoCaja" :modal="true" class="md:w-4xl">
     <template #header>
       <div class="w-full">
         <div class="text-xl font-medium text-center">Caja {{ cajaSeleccionada?.nombre }}</div>
@@ -281,4 +301,9 @@ function QuitarCaja(caja: Caja): void {
     </template>
     <TablaCantHerramientas :cantidades="herramientasEnCaja" />
   </Dialog>
+
+  <DialogoAgregarHerramienta
+    v-model:mostrar="mostrarDialogoAgregarHerramienta"
+    :caja="cajaSeleccionada"
+  />
 </template>
