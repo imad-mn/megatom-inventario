@@ -109,7 +109,12 @@ export type MovimientosExtendido = Movimientos & {
   seccionDestino: string | null;
 };
 
-export type TipoLista = "fabricantes" | "grupos" | "almacenistas" | "estados";
+export type TipoLista =
+  | "fabricantes"
+  | "grupos"
+  | "almacenistas"
+  | "estados"
+  | "fabricantes herramientas";
 export type Lista = IdNombre & {
   tipo: TipoLista;
 };

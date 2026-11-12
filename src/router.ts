@@ -4,6 +4,7 @@ import { useGlobalStore } from "./servicios/globalStore";
 import PaginaListas from "./paginas/PaginaListas.vue";
 import PaginaGalpones from "./paginas/PaginaGalpones.vue";
 import PaginaProductos from "./paginas/PaginaProductos.vue";
+import PaginaHerramientas from "./paginas/PaginaHerramientas.vue";
 import PaginaGalpon from "./paginas/PaginaGalpon.vue";
 import PaginaEstante from "./paginas/PaginaEstante.vue";
 import PaginaDeposito from "./paginas/PaginaDeposito.vue";
@@ -21,6 +22,7 @@ const router = createRouter({
     { path: "/listas", component: PaginaListas, name: "Listas" },
     { path: "/galpones", component: PaginaGalpones, name: "Galpones" },
     { path: "/productos", component: PaginaProductos, name: "Productos" },
+    { path: "/herramientas", component: PaginaHerramientas, name: "Herramientas" },
     { path: "/galpon", component: PaginaGalpon, name: "Area" },
     { path: "/estante", component: PaginaEstante, name: "Estante" },
     { path: "/deposito", component: PaginaDeposito, name: "Deposito" },

@@ -22,6 +22,11 @@ const menuItems = ref<MenuItem[]>([
     command: () => router.push("/productos"),
   },
   {
+    label: "HERRAMIENTAS",
+    icon: "pi pi-wrench",
+    command: () => router.push("/herramientas"),
+  },
+  {
     label: "ANEXO",
     icon: PrimeIcons.WAREHOUSE,
     paraTomasCappasso: true,
