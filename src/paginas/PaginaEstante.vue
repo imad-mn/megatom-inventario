@@ -14,6 +14,7 @@ import { onMounted, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
+import TablaCantHerramientas from "@/componentes/TablaCantHerramientas.vue";
 import EditarQuitar from "../componentes/EditarQuitar.vue";
 import BotonesCompacto from "@/componentes/BotonesCompacto.vue";
 import { useGlobalStore } from "@/servicios/globalStore";
@@ -38,6 +39,14 @@ const seccionParaNuevoItem = ref<Seccion | null>(null);
 
 const grupos = ref<Lista[]>([]);
 const productosEnCajas = ref<CantidadesConProducto[]>([]);
+const herramientasEnCaja = computed(() => {
+  const cajaId = globalStore.CajaSeleccionada?.id;
+  return cajaId
+    ? globalStore
+        .ObtenerCantidadesConHerramientas()
+        .filter((cantidad) => cantidad.cajaId === cajaId)
+    : [];
+});
 const mostrarDialogoCaja = ref(false);
 const deshabilitarSiguienteCaja = ref(false);
 const deshabilitarCajaAnterior = ref(false);
@@ -826,6 +835,10 @@ function irAtras() {
           />
         </div>
       </div>
+    </div>
+    <div class="mt-4" v-if="herramientasEnCaja.length > 0">
+      <h3 class="mb-2 font-semibold">Herramientas</h3>
+      <TablaCantHerramientas :cantidades="herramientasEnCaja" />
     </div>
   </Dialog>
 
