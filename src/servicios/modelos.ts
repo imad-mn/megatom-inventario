@@ -20,12 +20,19 @@ export type Producto = IdNombre & {
   deTomasCapasso: boolean;
 };
 
+export type Herramienta = IdNombre & {
+  detalle: string | null;
+  serial: string | null;
+  fabricanteId: string | null;
+  estadoId: string | null;
+};
+
 export type ItemOrdenable = IdNombre & {
   ordenDescendente: boolean;
 };
 
 export type Seccion = IdNombre & {
-  cajas: IdNombre[];
+  cajas: Caja[];
 };
 
 export type Nivel = ItemOrdenable & {
@@ -41,8 +48,13 @@ export type Estante = ConDescripcion & {
   niveles: Nivel[];
 };
 
+export type Deposito = ConDescripcion & {
+  cajas: Caja[];
+};
+
 export type Galpon = ConDescripcion & {
   estantes: Estante[];
+  depositos: Deposito[];
 };
 
 export type Cantidades = ModeloBase & {
@@ -51,11 +63,25 @@ export type Cantidades = ModeloBase & {
   cantidad: number;
 };
 
+export type CantidadHerramienta = ModeloBase & {
+  herramientaId: string;
+  cajaId: string;
+  cantidad: number;
+};
+
 export type CantidadesConProducto = Cantidades & {
   producto: Producto;
 };
 
+export type CantidadesConHerramienta = CantidadHerramienta & {
+  herramienta: Herramienta;
+};
+
 export type ProductoConCantidad = Producto & {
+  cantidad: number;
+};
+
+export type HerramientaConCantidad = Herramienta & {
   cantidad: number;
 };
 

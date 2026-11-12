@@ -1,8 +1,12 @@
 import type {
   Cantidades,
+  CantidadesConHerramienta,
   CantidadesConProducto,
+  CantidadHerramienta,
   Estante,
   Galpon,
+  Herramienta,
+  HerramientaConCantidad,
   IdNombre,
   Lista,
   Producto,
@@ -18,6 +22,8 @@ export const useGlobalStore = defineStore("global", () => {
   const Galpones = ref<Galpon[]>([]);
   const Productos = ref<Producto[]>([]);
   const Cantidades = ref<Cantidades[]>([]);
+  const Herramientas = ref<Herramienta[]>([]);
+  const CantidadHerramientas = ref<CantidadHerramienta[]>([]);
 
   const GalponSeleccionado = ref<Galpon | null>(null);
   const EstanteSeleccionado = ref<Estante | null>(null);
@@ -43,11 +49,15 @@ export const useGlobalStore = defineStore("global", () => {
       ObtenerTodos<Galpon>(Coleccion.Galpones),
       ObtenerTodos<Lista>(Coleccion.Listas),
       ObtenerTodos<Cantidades>(Coleccion.Cantidades),
-    ]).then(([productos, galpones, listas, cantidades]) => {
+      ObtenerTodos<Herramienta>(Coleccion.Herramientas),
+      ObtenerTodos<CantidadHerramienta>(Coleccion.CantidadHerramientas),
+    ]).then(([productos, galpones, listas, cantidades, herramientas, cantidadHerramientas]) => {
       Productos.value = productos;
       Galpones.value = galpones.sort((a, b) => a.nombre.localeCompare(b.nombre));
       Listas.value = listas;
       Cantidades.value = cantidades;
+      Herramientas.value = herramientas;
+      CantidadHerramientas.value = cantidadHerramientas;
 
       if (esTomasCapasso.value)
         GalponSeleccionado.value =
@@ -68,6 +78,10 @@ export const useGlobalStore = defineStore("global", () => {
     return Cantidades.value.filter((c) => c.productoId === productoId);
   }
 
+  function ObtenerCantidadesPorHerramienta(herramientaId: string): CantidadHerramienta[] {
+    return CantidadHerramientas.value.filter((c) => c.herramientaId === herramientaId);
+  }
+
   function ObtenerCantidadesConProductos(): CantidadesConProducto[] {
     const productosMap = new Map(Productos.value.map((p) => [p.id, p]));
 
@@ -79,11 +93,31 @@ export const useGlobalStore = defineStore("global", () => {
     return resultado.filter((r) => r.producto !== undefined);
   }
 
+  function ObtenerCantidadesConHerramientas(): CantidadesConHerramienta[] {
+    const herramientasMap = new Map(Herramientas.value.map((h) => [h.id, h]));
+
+    const resultado = CantidadHerramientas.value.map((cantidad) => ({
+      ...cantidad,
+      herramienta: herramientasMap.get(cantidad.herramientaId)!,
+    }));
+
+    return resultado.filter((r) => r.herramienta !== undefined);
+  }
+
   function ObtenerProductosConCantidad(): ProductoConCantidad[] {
     return Productos.value.map((p) => ({
       ...p,
       cantidad: Cantidades.value
         .filter((c) => c.productoId == p.id)
+        .reduce((acc, c) => acc + c.cantidad, 0),
+    }));
+  }
+
+  function ObtenerHerramientasConCantidad(): HerramientaConCantidad[] {
+    return Herramientas.value.map((p) => ({
+      ...p,
+      cantidad: CantidadHerramientas.value
+        .filter((c) => c.herramientaId == p.id)
         .reduce((acc, c) => acc + c.cantidad, 0),
     }));
   }
@@ -103,6 +137,44 @@ export const useGlobalStore = defineStore("global", () => {
                 );
               }
             }
+          }
+        }
+      }
+    }
+
+    if (ubicaciones.length === 0) ubicaciones.push("No hay ubicaciones.");
+
+    return ubicaciones;
+  }
+
+  function ObtenerUbicacionesHerramienta(cantidades: CantidadHerramienta[]): string[] {
+    const ubicaciones: string[] = [];
+
+    for (const cantidad of cantidades) {
+      for (const galpon of Galpones.value) {
+        for (const estante of galpon.estantes) {
+          for (const nivel of estante.niveles) {
+            for (const seccion of nivel.secciones) {
+              const caja = seccion.cajas.find((c) => c.id === cantidad.cajaId);
+              if (caja) {
+                ubicaciones.push(
+                  `${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${caja.nombre} / ${cantidad.cantidad} unidades\n`,
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (const cantidad of cantidades) {
+      for (const galpon of Galpones.value) {
+        for (const deposito of galpon.depositos) {
+          const caja = deposito.cajas.find((l) => l.id === cantidad.cajaId);
+          if (caja) {
+            ubicaciones.push(
+              `${galpon.nombre} / Depósito ${deposito.nombre} / Caja ${caja.nombre} / ${cantidad.cantidad} unidades\n`,
+            );
           }
         }
       }
@@ -154,13 +226,19 @@ export const useGlobalStore = defineStore("global", () => {
     listaSeleccionada,
     solicitudActual,
     esTomasCapasso,
+    Herramientas,
+    CantidadHerramientas,
 
     CargarTodo,
     ObtenerLista,
     ObtenerCantidadesPorProducto,
+    ObtenerCantidadesPorHerramienta,
     ObtenerCantidadesConProductos,
+    ObtenerCantidadesConHerramientas,
     ObtenerProductosConCantidad,
+    ObtenerHerramientasConCantidad,
     ObtenerUbicaciones,
+    ObtenerUbicacionesHerramienta,
     ObtenerGruposEnEstanteSeleccionado,
     ObtenerNombreProducto,
   };
