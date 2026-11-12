@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as TablesDbService from "@/servicios/TablesDbService";
-import type { ConDescripcion, Estante } from "@/servicios/modelos.ts";
+import type { ConDescripcion, Deposito, Estante } from "@/servicios/modelos.ts";
 import { computed, ref } from "vue";
 import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
 import { useConfirm } from "primevue/useconfirm";
@@ -25,6 +25,16 @@ const estantes = computed(() =>
     : [],
 );
 
+const depositos = computed(() =>
+  globalStore.GalponSeleccionado
+    ? [...(globalStore.GalponSeleccionado.depositos ?? [])].sort((a, b) =>
+        globalStore.GalponSeleccionado!.ordenDescendente
+          ? b.nombre.localeCompare(a.nombre)
+          : a.nombre.localeCompare(b.nombre),
+      )
+    : [],
+);
+
 const dialogVisible = ref(false);
 const itemEdicion = ref<ConDescripcion>({
   id: "",
@@ -34,10 +44,12 @@ const itemEdicion = ref<ConDescripcion>({
 });
 const esNuevo = ref(false);
 const esEditandoGalpon = ref(false);
+const tipoEdicion = ref<"estante" | "deposito" | "galpon">("estante");
 
-function Agregar() {
+function Agregar(tipo: "estante" | "deposito" = "estante") {
   esNuevo.value = true;
   esEditandoGalpon.value = false;
+  tipoEdicion.value = tipo;
   itemEdicion.value = {
     id: crypto.randomUUID(),
     nombre: "",
@@ -49,15 +61,21 @@ function Agregar() {
 
 async function Guardar() {
   if (esNuevo.value) {
-    const nuevoEstante: Estante = { ...itemEdicion.value, niveles: [] };
-    globalStore.GalponSeleccionado!.estantes.push(nuevoEstante);
+    if (tipoEdicion.value === "deposito") {
+      const nuevoDeposito: Deposito = { ...itemEdicion.value, cajas: [] };
+      globalStore.GalponSeleccionado!.depositos ??= [];
+      globalStore.GalponSeleccionado!.depositos.push(nuevoDeposito);
+    } else {
+      const nuevoEstante: Estante = { ...itemEdicion.value, niveles: [] };
+      globalStore.GalponSeleccionado!.estantes.push(nuevoEstante);
+    }
     await TablesDbService.Actualizar(
       TablesDbService.Coleccion.Galpones,
       globalStore.GalponSeleccionado!,
     );
     await RegistrarHistorial(
       itemEdicion.value.id,
-      "[Estante] Creado",
+      tipoEdicion.value === "deposito" ? "[Depósito] Creado" : "[Estante] Creado",
       null,
       itemEdicion.value.nombre,
     );
@@ -76,6 +94,26 @@ async function Guardar() {
       nombreAnterior,
       itemEdicion.value.nombre,
     );
+  } else if (tipoEdicion.value === "deposito") {
+    const deposito = globalStore.GalponSeleccionado!.depositos?.find(
+      (d) => d.id === itemEdicion.value.id,
+    );
+    if (deposito) {
+      const nombreAnterior = deposito.nombre;
+      deposito.nombre = itemEdicion.value.nombre;
+      deposito.descripcion = itemEdicion.value.descripcion;
+      deposito.ordenDescendente = itemEdicion.value.ordenDescendente;
+      await TablesDbService.Actualizar(
+        TablesDbService.Coleccion.Galpones,
+        globalStore.GalponSeleccionado!,
+      );
+      await RegistrarHistorial(
+        deposito.id,
+        "[Depósito] Modificado",
+        nombreAnterior,
+        deposito.nombre,
+      );
+    }
   } else {
     const estante = globalStore.GalponSeleccionado!.estantes.find(
       (e) => e.id === itemEdicion.value.id,
@@ -105,9 +143,10 @@ function Ver(item: Estante) {
   router.push(globalStore.esTomasCapasso ? "/tomas/estante" : "/estante");
 }
 
-function Editar(item: ConDescripcion, editandoGalpon = false) {
+function Editar(item: ConDescripcion, tipo: "estante" | "deposito" | "galpon" = "estante") {
   esNuevo.value = false;
-  esEditandoGalpon.value = editandoGalpon;
+  esEditandoGalpon.value = tipo === "galpon";
+  tipoEdicion.value = tipo;
   itemEdicion.value = {
     id: item.id,
     nombre: item.nombre,
@@ -117,7 +156,26 @@ function Editar(item: ConDescripcion, editandoGalpon = false) {
   dialogVisible.value = true;
 }
 
-function Quitar(item: Estante): void {
+function QuitarDeposito(item: Deposito): void {
+  confirm.require({
+    header: "Eliminar",
+    message: `¿Estás seguro de eliminar el Depósito: "${item.nombre}" y sus cajas?`,
+    acceptClass: "p-button-danger p-button-outlined",
+    rejectClass: "p-button-secondary p-button-outlined",
+    acceptIcon: "pi pi-trash",
+    accept: async () => {
+      await RegistrarHistorial(item.id, "[Depósito] Eliminado", item.nombre, null);
+      globalStore.GalponSeleccionado!.depositos =
+        globalStore.GalponSeleccionado!.depositos?.filter((d) => d.id !== item.id) ?? [];
+      await TablesDbService.Actualizar(
+        TablesDbService.Coleccion.Galpones,
+        globalStore.GalponSeleccionado!,
+      );
+    },
+  });
+}
+
+function QuitarEstante(item: Estante): void {
   confirm.require({
     header: "Eliminar",
     message: `¿Estás seguro de eliminar el Estante: "${item.nombre}" y sus descendientes?`,
@@ -144,7 +202,7 @@ function ImprimirEstante(item: Estante) {
 </script>
 
 <template>
-  <div class="flex justify-between md:grid md:grid-cols-3 items-center mb-10">
+  <div class="flex justify-between md:grid md:grid-cols-3 items-center mb-5">
     <div>
       <Button
         v-show="!globalStore.esTomasCapasso"
@@ -167,7 +225,7 @@ function ImprimirEstante(item: Estante) {
         severity="success"
         variant="outlined"
         class="mr-2"
-        @click="Editar(globalStore.GalponSeleccionado!, true)"
+        @click="Editar(globalStore.GalponSeleccionado!, 'galpon')"
         v-tooltip.bottom="'Editar Área'"
       >
         <span class="p-button-icon p-button-icon-left pi pi-pen-to-square" />
@@ -177,15 +235,27 @@ function ImprimirEstante(item: Estante) {
         v-if="Usuario"
         severity="info"
         variant="outlined"
-        @click="Agregar"
+        @click="Agregar('estante')"
         v-tooltip.bottom="'Agregar Estante'"
       >
         <span class="p-button-icon p-button-icon-left pi pi-plus" />
         <span class="p-button-label hidden md:inline">Estante</span>
       </Button>
+      <Button
+        v-if="Usuario"
+        severity="info"
+        variant="outlined"
+        class="ml-2"
+        @click="Agregar('deposito')"
+        v-tooltip.bottom="'Agregar Depósito'"
+      >
+        <span class="p-button-icon p-button-icon-left pi pi-plus" />
+        <span class="p-button-label hidden md:inline">Depósito</span>
+      </Button>
     </div>
   </div>
 
+  <div class="mt-5 mb-3 text-lg font-semibold">Estantes</div>
   <div v-if="estantes.length === 0" class="italic text-muted-color">
     No hay estantes en este Galpón
   </div>
@@ -207,7 +277,7 @@ function ImprimirEstante(item: Estante) {
       </Button>
       <EditarQuitar
         @editar-click="Editar(item)"
-        @quitar-click="Quitar(item)"
+        @quitar-click="QuitarEstante(item)"
         :boton-imprimir="true"
         @imprimir-click="ImprimirEstante(item)"
         :vertical="true"
@@ -217,11 +287,41 @@ function ImprimirEstante(item: Estante) {
     </div>
   </div>
 
+  <div class="mt-5 mb-3 text-lg font-semibold">Depósitos</div>
+  <div v-if="depositos.length === 0" class="italic text-muted-color">
+    No hay depósitos en este Galpón
+  </div>
+  <div class="flex flex-wrap gap-10 justify-center">
+    <div
+      v-for="item in depositos"
+      :key="item.id"
+      class="flex justify-between border rounded-md border-gray-300 bg-gray-100 dark:bg-gray-900 dark:border-gray-700 p-0 md:p-2"
+    >
+      <Button
+        variant="text"
+        disabled
+        v-tooltip.bottom="'Ver Depósito'"
+        class="flex flex-col justify-start"
+      >
+        <i class="pi pi-building-columns text-6xl mb-4"></i>
+        <div class="text-muted-color">Depósito {{ item.nombre }}</div>
+        <div class="text-muted-color text-wrap">{{ item.descripcion }}</div>
+      </Button>
+      <EditarQuitar
+        @editar-click="Editar(item, 'deposito')"
+        @quitar-click="QuitarDeposito(item)"
+        :vertical="true"
+        :id-elemento="item.id"
+        :nombre-elemento="'Depósito ' + item.nombre"
+      />
+    </div>
+  </div>
+
   <DialogoEdicion
     v-model:mostrar="dialogVisible"
     :esAgregar="esNuevo"
     :clickAceptar="Guardar"
-    :nombre-objeto="esEditandoGalpon ? 'Área' : 'Estante'"
+    :nombre-objeto="esEditandoGalpon ? 'Área' : tipoEdicion === 'deposito' ? 'Depósito' : 'Estante'"
     :desabilitarAceptar="itemEdicion.nombre.trim() === ''"
   >
     <div class="flex flex-col gap-3 pt-1">

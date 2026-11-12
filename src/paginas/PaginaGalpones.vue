@@ -24,6 +24,7 @@ const itemEdicion = ref<Galpon>({
   descripcion: "",
   ordenDescendente: false,
   estantes: [],
+  depositos: [],
 });
 const esNuevo = ref(false);
 
@@ -37,6 +38,7 @@ function Agregar() {
     descripcion: "",
     ordenDescendente: false,
     estantes: [],
+    depositos: [],
   };
   dialogVisible.value = true;
 }

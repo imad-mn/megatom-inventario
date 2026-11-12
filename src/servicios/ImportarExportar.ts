@@ -140,6 +140,7 @@ async function obtenerOCrearGalpon(nombre: string): Promise<Galpon> {
       descripcion: "",
       ordenDescendente: false,
       estantes: [],
+      depositos: [],
     };
     await Crear(Coleccion.Galpones, galpon);
     globalStore.Galpones.push(galpon);
