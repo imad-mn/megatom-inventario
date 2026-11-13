@@ -81,10 +81,6 @@ export type ProductoConCantidad = Producto & {
   cantidad: number;
 };
 
-export type HerramientaConCantidad = Herramienta & {
-  cantidad: number;
-};
-
 export type ConFechaCreacion = ModeloBase & {
   fechaCreacion: Date;
 };

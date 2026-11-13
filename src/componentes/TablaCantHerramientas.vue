@@ -141,7 +141,7 @@ function Quitar(item: CantidadesConHerramienta) {
               @editar-click="Editar(item)"
               @quitar-click="Quitar(item)"
             />
-            <div v-else class="flex items-center gap-1">
+            <div v-else class="flex items-center justify-center">
               <Button
                 icon="pi pi-save"
                 severity="primary"

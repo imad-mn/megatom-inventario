@@ -7,7 +7,6 @@ import type {
   Estante,
   Galpon,
   Herramienta,
-  HerramientaConCantidad,
   IdNombre,
   Lista,
   Producto,
@@ -115,15 +114,6 @@ export const useGlobalStore = defineStore("global", () => {
     }));
   }
 
-  function ObtenerHerramientasConCantidad(): HerramientaConCantidad[] {
-    return Herramientas.value.map((p) => ({
-      ...p,
-      cantidad: CantidadHerramientas.value
-        .filter((c) => c.herramientaId == p.id)
-        .reduce((acc, c) => acc + c.cantidad, 0),
-    }));
-  }
-
   function ObtenerUbicaciones(cantidades: Cantidades[]): string[] {
     const ubicaciones: string[] = [];
 
@@ -139,44 +129,6 @@ export const useGlobalStore = defineStore("global", () => {
                 );
               }
             }
-          }
-        }
-      }
-    }
-
-    if (ubicaciones.length === 0) ubicaciones.push("No hay ubicaciones.");
-
-    return ubicaciones;
-  }
-
-  function ObtenerUbicacionesHerramienta(cantidades: CantidadHerramienta[]): string[] {
-    const ubicaciones: string[] = [];
-
-    for (const cantidad of cantidades) {
-      for (const galpon of Galpones.value) {
-        for (const estante of galpon.estantes) {
-          for (const nivel of estante.niveles) {
-            for (const seccion of nivel.secciones) {
-              const caja = seccion.cajas.find((c) => c.id === cantidad.cajaId);
-              if (caja) {
-                ubicaciones.push(
-                  `${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${caja.nombre} / ${cantidad.cantidad} unidades\n`,
-                );
-              }
-            }
-          }
-        }
-      }
-    }
-
-    for (const cantidad of cantidades) {
-      for (const galpon of Galpones.value) {
-        for (const deposito of galpon.depositos ?? []) {
-          const caja = deposito.cajas.find((l) => l.id === cantidad.cajaId);
-          if (caja) {
-            ubicaciones.push(
-              `${galpon.nombre} / Depósito ${deposito.nombre} / Caja ${caja.nombre} / ${cantidad.cantidad} unidades\n`,
-            );
           }
         }
       }
@@ -239,9 +191,7 @@ export const useGlobalStore = defineStore("global", () => {
     ObtenerCantidadesConProductos,
     ObtenerCantidadesConHerramientas,
     ObtenerProductosConCantidad,
-    ObtenerHerramientasConCantidad,
     ObtenerUbicaciones,
-    ObtenerUbicacionesHerramienta,
     ObtenerGruposEnEstanteSeleccionado,
     ObtenerNombreProducto,
   };

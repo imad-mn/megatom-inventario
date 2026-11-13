@@ -10,6 +10,7 @@ import { RegistrarHistorial } from "@/servicios/historialService";
 import type {
   Caja,
   CantidadHerramienta,
+  CantidadesConHerramienta,
   Deposito,
   Estante,
   Galpon,
@@ -26,7 +27,10 @@ const filtroTexto = ref("");
 const dialogVisible = ref(false);
 const itemEdicion = ref<Herramienta>();
 const esNuevo = ref(false);
-const ubicacionDict = ref<Record<string, string[]>>({});
+const herramientaUbicacion = ref<Herramienta | null>(null);
+const dialogoUbicacionVisible = ref(false);
+const cantidadUbicacionEdicionId = ref<string | null>(null);
+const cantidadUbicacionEdicion = ref<number | null>(null);
 const galponSeleccionado = ref<Galpon | null>(null);
 const depositoSeleccionado = ref<Deposito | null>(null);
 const estanteSeleccionado = ref<Estante | null>(null);
@@ -48,6 +52,20 @@ const herramientasFiltradas = computed(() => {
       (valor) => valor?.toLocaleLowerCase().includes(filtro),
     );
   }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+});
+
+const cantidadesUbicacion = computed(() => {
+  const herramientaId = herramientaUbicacion.value?.id;
+  if (!herramientaId) return [];
+
+  return globalStore
+    .ObtenerCantidadesConHerramientas()
+    .filter((cantidad) => cantidad.herramientaId === herramientaId)
+    .map((cantidad) => ({
+      ...cantidad,
+      ubicacion: ObtenerUbicacionCaja(cantidad.cajaId),
+    }))
+    .sort((a, b) => a.ubicacion.localeCompare(b.ubicacion));
 });
 
 const fabricantes = computed(() => globalStore.ObtenerLista("fabricantes herramientas"));
@@ -125,6 +143,28 @@ function Describir(item: Herramienta): string {
   return `Nombre: ${item.nombre} | Detalle: ${item.detalle ?? ""} | Serial: ${item.serial ?? ""} | Fabricante: ${fabricante} | Estado: ${estado}`;
 }
 
+function ObtenerUbicacionCaja(cajaId: string): string {
+  for (const galpon of globalStore.Galpones) {
+    for (const estante of galpon.estantes) {
+      for (const nivel of estante.niveles) {
+        for (const seccion of nivel.secciones) {
+          const caja = seccion.cajas.find((item) => item.id === cajaId);
+          if (caja) {
+            return `${galpon.nombre} / Estante ${estante.nombre} / Nivel ${nivel.nombre} / Sección ${seccion.nombre} / Caja ${caja.nombre}`;
+          }
+        }
+      }
+    }
+
+    for (const deposito of galpon.depositos ?? []) {
+      const caja = deposito.cajas.find((item) => item.id === cajaId);
+      if (caja) return `${galpon.nombre} / Depósito ${deposito.nombre} / Caja ${caja.nombre}`;
+    }
+  }
+
+  return "Ubicación no encontrada.";
+}
+
 async function Guardar() {
   if (!itemEdicion.value) return;
 
@@ -173,7 +213,7 @@ async function Guardar() {
 function Quitar(item: Herramienta) {
   confirm.require({
     header: "Eliminar",
-    message: `¿Estás seguro de eliminar: "${item.nombre}"?`,
+    message: `¿Estás seguro de eliminar esta herramienta: "${item.nombre}"?`,
     acceptClass: "p-button-danger p-button-outlined",
     acceptIcon: "pi pi-trash",
     rejectClass: "p-button-secondary p-button-outlined",
@@ -198,14 +238,80 @@ function Quitar(item: Herramienta) {
       globalStore.Herramientas = globalStore.Herramientas.filter(
         (herramienta) => herramienta.id !== item.id,
       );
-      delete ubicacionDict.value[item.id];
+      if (herramientaUbicacion.value?.id === item.id) {
+        herramientaUbicacion.value = null;
+        dialogoUbicacionVisible.value = false;
+      }
     },
   });
 }
 
 function VerUbicacion(item: Herramienta) {
-  const cantidades: CantidadHerramienta[] = globalStore.ObtenerCantidadesPorHerramienta(item.id);
-  ubicacionDict.value[item.id] = globalStore.ObtenerUbicacionesHerramienta(cantidades);
+  CancelarEdicionCantidadUbicacion();
+  herramientaUbicacion.value = item;
+  dialogoUbicacionVisible.value = true;
+}
+
+function EditarCantidadUbicacion(item: CantidadesConHerramienta) {
+  cantidadUbicacionEdicionId.value = item.id;
+  cantidadUbicacionEdicion.value = item.cantidad;
+}
+
+function CancelarEdicionCantidadUbicacion() {
+  cantidadUbicacionEdicionId.value = null;
+  cantidadUbicacionEdicion.value = null;
+}
+
+async function GuardarCantidadUbicacion(item: CantidadesConHerramienta & { ubicacion: string }) {
+  const cantidad = cantidadUbicacionEdicion.value;
+  if (cantidad === null || !Number.isInteger(cantidad) || cantidad < 1) return;
+
+  if (cantidad === item.cantidad) {
+    CancelarEdicionCantidadUbicacion();
+    return;
+  }
+
+  const registro: CantidadHerramienta = {
+    id: item.id,
+    herramientaId: item.herramientaId,
+    cajaId: item.cajaId,
+    cantidad,
+  };
+  await TablesDbService.Actualizar(TablesDbService.Coleccion.CantidadHerramientas, registro);
+
+  const indice = globalStore.CantidadHerramientas.findIndex((actual) => actual.id === item.id);
+  if (indice >= 0) globalStore.CantidadHerramientas[indice] = registro;
+
+  await RegistrarHistorial(
+    item.herramientaId,
+    "[Herramienta] Cantidad en caja modificada",
+    `${item.herramienta.nombre} en ${item.ubicacion}: ${item.cantidad} unidades`,
+    `${item.herramienta.nombre} en ${item.ubicacion}: ${cantidad} unidades`,
+  );
+  CancelarEdicionCantidadUbicacion();
+}
+
+function QuitarCantidadUbicacion(item: CantidadesConHerramienta & { ubicacion: string }) {
+  confirm.require({
+    header: "Eliminar",
+    message: `¿Estás seguro de quitar "${item.herramienta.nombre}" de ${item.ubicacion}?`,
+    acceptClass: "p-button-danger p-button-outlined",
+    acceptIcon: "pi pi-trash",
+    rejectClass: "p-button-secondary p-button-outlined",
+    accept: async () => {
+      await TablesDbService.Eliminar(TablesDbService.Coleccion.CantidadHerramientas, item);
+      globalStore.CantidadHerramientas = globalStore.CantidadHerramientas.filter(
+        (cantidad) => cantidad.id !== item.id,
+      );
+      await RegistrarHistorial(
+        item.herramientaId,
+        "[Herramienta] Quitada de caja",
+        `${item.herramienta.nombre} en ${item.ubicacion}: ${item.cantidad} unidades`,
+        null,
+      );
+      if (cantidadUbicacionEdicionId.value === item.id) CancelarEdicionCantidadUbicacion();
+    },
+  });
 }
 </script>
 
@@ -257,7 +363,6 @@ function VerUbicacion(item: Herramienta) {
             </td>
             <td class="px-3 py-2">
               <Button
-                v-if="!ubicacionDict[item.id]"
                 icon="pi pi-map-marker"
                 severity="secondary"
                 variant="text"
@@ -266,11 +371,6 @@ function VerUbicacion(item: Herramienta) {
                 :aria-label="`Ver ubicación de ${item.nombre}`"
                 @click="VerUbicacion(item)"
               />
-              <ul v-else class="list-disc list-inside">
-                <li v-for="(ubicacion, indice) in ubicacionDict[item.id]" :key="indice">
-                  {{ ubicacion }}
-                </li>
-              </ul>
             </td>
             <td class="px-3 py-2">
               <div class="flex items-center justify-center">
@@ -449,4 +549,89 @@ function VerUbicacion(item: Herramienta) {
       </div>
     </div>
   </DialogoEdicion>
+
+  <Dialog
+    v-model:visible="dialogoUbicacionVisible"
+    :header="`Ubicaciones de ${herramientaUbicacion?.nombre ?? ''}`"
+    :modal="true"
+    class="md:w-3xl"
+    @hide="CancelarEdicionCantidadUbicacion"
+  >
+    <div class="w-full overflow-x-auto">
+      <table class="w-full border-collapse text-left">
+        <thead>
+          <tr
+            class="border-b border-surface-300 dark:border-surface-700 bg-surface-100 dark:bg-surface-800"
+          >
+            <th class="px-3 py-2 font-semibold">Ubicación</th>
+            <th class="px-3 py-2 text-right font-semibold">Cantidad</th>
+            <th class="px-3 py-2 font-semibold"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="item in cantidadesUbicacion"
+            :key="item.id"
+            class="border-b border-surface-200 last:border-0 dark:border-surface-800"
+          >
+            <td class="px-3 py-2">{{ item.ubicacion }}</td>
+            <td class="px-3 py-2 text-right">
+              <InputNumber
+                v-if="cantidadUbicacionEdicionId === item.id"
+                :inputId="`cantidadUbicacion-${item.id}`"
+                v-model="cantidadUbicacionEdicion"
+                :min="1"
+                :maxFractionDigits="0"
+                :useGrouping="false"
+                inputClass="w-20 text-right"
+                @keyup.enter="GuardarCantidadUbicacion(item)"
+              />
+              <div v-else>{{ item.cantidad }}</div>
+            </td>
+            <td class="px-3 py-2">
+              <EditarQuitar
+                v-if="cantidadUbicacionEdicionId !== item.id"
+                tamaño="small"
+                :id-elemento="item.herramientaId"
+                :nombre-elemento="item.herramienta.nombre"
+                @editar-click="EditarCantidadUbicacion(item)"
+                @quitar-click="QuitarCantidadUbicacion(item)"
+                :ocultar-historial="true"
+              />
+              <div v-else class="flex items-center justify-center">
+                <Button
+                  icon="pi pi-save"
+                  severity="primary"
+                  variant="text"
+                  size="small"
+                  aria-label="Guardar cantidad"
+                  v-tooltip.bottom="'Guardar'"
+                  :disabled="
+                    cantidadUbicacionEdicion === null ||
+                    !Number.isInteger(cantidadUbicacionEdicion) ||
+                    cantidadUbicacionEdicion < 1
+                  "
+                  @click="GuardarCantidadUbicacion(item)"
+                />
+                <Button
+                  icon="pi pi-times"
+                  severity="secondary"
+                  variant="text"
+                  size="small"
+                  aria-label="Cancelar edición"
+                  v-tooltip.bottom="'Cancelar'"
+                  @click="CancelarEdicionCantidadUbicacion"
+                />
+              </div>
+            </td>
+          </tr>
+          <tr v-if="cantidadesUbicacion.length === 0">
+            <td colspan="3" class="px-3 py-4 text-center italic text-muted-color">
+              No hay ubicaciones registradas.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </Dialog>
 </template>
