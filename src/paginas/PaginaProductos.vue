@@ -166,6 +166,7 @@ async function Guardar() {
           cajaId: cajaSeleccionada.value.id,
         };
         await TablesDbService.Crear(TablesDbService.Coleccion.Cantidades, item);
+        globalStore.Cantidades.push(item);
         await RegistrarHistorial(
           itemEdicion.value!.id,
           "[Cantidad] Creada",

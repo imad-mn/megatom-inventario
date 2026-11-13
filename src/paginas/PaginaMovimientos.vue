@@ -181,6 +181,21 @@ function Agregar() {
   cajaSeleccionada.value = null;
 }
 
+function ActualizarCantidadLocal(cantidad: Cantidades): void {
+  const globalIndex = globalStore.Cantidades.findIndex((item) => item.id === cantidad.id);
+  if (globalIndex >= 0) globalStore.Cantidades[globalIndex] = cantidad;
+  else globalStore.Cantidades.push(cantidad);
+
+  const productoIndex = cantidadesDelProducto.findIndex((item) => item.id === cantidad.id);
+  if (productoIndex >= 0) cantidadesDelProducto[productoIndex] = cantidad;
+  else cantidadesDelProducto.push(cantidad);
+}
+
+function EliminarCantidadLocal(cantidadId: string): void {
+  globalStore.Cantidades = globalStore.Cantidades.filter((item) => item.id !== cantidadId);
+  cantidadesDelProducto = cantidadesDelProducto.filter((item) => item.id !== cantidadId);
+}
+
 async function Guardar() {
   // Validaciones
   if (
@@ -214,23 +229,37 @@ async function Guardar() {
     // Resta en la caja origen
     const cantidadOrigen = cantidadesDelProducto.find((x) => x.cajaId == cajaOrigenId);
     if (cantidadOrigen) {
-      cantidadOrigen.cantidad -= itemEdicion.value.cantidad;
-      if (cantidadOrigen.cantidad == 0) await Eliminar(Coleccion.Cantidades, cantidadOrigen);
-      else await Actualizar(Coleccion.Cantidades, cantidadOrigen);
+      const cantidadActualizada: Cantidades = {
+        ...cantidadOrigen,
+        cantidad: cantidadOrigen.cantidad - itemEdicion.value.cantidad,
+      };
+      if (cantidadActualizada.cantidad == 0) {
+        await Eliminar(Coleccion.Cantidades, cantidadOrigen);
+        EliminarCantidadLocal(cantidadOrigen.id);
+      } else {
+        await Actualizar(Coleccion.Cantidades, cantidadActualizada);
+        ActualizarCantidadLocal(cantidadActualizada);
+      }
     }
 
     // Suma en la caja destino
     const cantidadDestino = cantidadesDelProducto.find((x) => x.cajaId == cajaDestinoId);
     if (cantidadDestino) {
-      cantidadDestino.cantidad += itemEdicion.value.cantidad;
-      await Actualizar(Coleccion.Cantidades, cantidadDestino);
+      const cantidadActualizada: Cantidades = {
+        ...cantidadDestino,
+        cantidad: cantidadDestino.cantidad + itemEdicion.value.cantidad,
+      };
+      await Actualizar(Coleccion.Cantidades, cantidadActualizada);
+      ActualizarCantidadLocal(cantidadActualizada);
     } else {
-      await Crear(Coleccion.Cantidades, {
+      const cantidadNueva: Cantidades = {
         id: "",
         productoId: productoSeleccionado.value.id,
         cantidad: itemEdicion.value.cantidad,
         cajaId: cajaDestinoId,
-      });
+      };
+      await Crear(Coleccion.Cantidades, cantidadNueva);
+      ActualizarCantidadLocal(cantidadNueva);
     }
   } else {
     const cajaId =
@@ -249,8 +278,12 @@ async function Guardar() {
     let cantidadAModificar = cantidadesDelProducto.find((x) => x.cajaId == cajaId);
     if (itemEdicion.value.tipo == "INGRESO") {
       if (cantidadAModificar) {
-        cantidadAModificar.cantidad += itemEdicion.value.cantidad;
-        await Actualizar(Coleccion.Cantidades, cantidadAModificar);
+        const cantidadActualizada: Cantidades = {
+          ...cantidadAModificar,
+          cantidad: cantidadAModificar.cantidad + itemEdicion.value.cantidad,
+        };
+        await Actualizar(Coleccion.Cantidades, cantidadActualizada);
+        ActualizarCantidadLocal(cantidadActualizada);
       } else {
         cantidadAModificar = {
           id: "",
@@ -259,13 +292,21 @@ async function Guardar() {
           cajaId: cajaId || "",
         };
         await Crear(Coleccion.Cantidades, cantidadAModificar);
+        ActualizarCantidadLocal(cantidadAModificar);
       }
     } else {
       if (cantidadAModificar) {
-        cantidadAModificar.cantidad -= itemEdicion.value.cantidad;
-        if (cantidadAModificar.cantidad == 0)
+        const cantidadActualizada: Cantidades = {
+          ...cantidadAModificar,
+          cantidad: cantidadAModificar.cantidad - itemEdicion.value.cantidad,
+        };
+        if (cantidadActualizada.cantidad == 0) {
           await Eliminar(Coleccion.Cantidades, cantidadAModificar);
-        else await Actualizar(Coleccion.Cantidades, cantidadAModificar);
+          EliminarCantidadLocal(cantidadAModificar.id);
+        } else {
+          await Actualizar(Coleccion.Cantidades, cantidadActualizada);
+          ActualizarCantidadLocal(cantidadActualizada);
+        }
       }
     }
   }

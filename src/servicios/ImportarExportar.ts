@@ -164,9 +164,7 @@ async function ProcesarHerramientas(
     }
 
     if (!fila.fabricante) {
-      console.error(`La fila ${numeroFila} no tiene fabricante. Se omitirá.`);
-      reportarProgreso(i + 1);
-      continue;
+      fila.fabricante = "XXXXX";
     }
 
     const estado = estados.find(
