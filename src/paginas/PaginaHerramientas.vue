@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
 import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
 import EditarQuitar from "@/componentes/EditarQuitar.vue";
@@ -7,7 +7,16 @@ import * as TablesDbService from "@/servicios/TablesDbService";
 import { useAuthStore } from "@/servicios/authStore";
 import { useGlobalStore } from "@/servicios/globalStore";
 import { RegistrarHistorial } from "@/servicios/historialService";
-import type { CantidadHerramienta, Herramienta } from "@/servicios/modelos";
+import type {
+  Caja,
+  CantidadHerramienta,
+  Deposito,
+  Estante,
+  Galpon,
+  Herramienta,
+  Nivel,
+  Seccion,
+} from "@/servicios/modelos";
 
 const confirm = useConfirm();
 const globalStore = useGlobalStore();
@@ -18,6 +27,14 @@ const dialogVisible = ref(false);
 const itemEdicion = ref<Herramienta>();
 const esNuevo = ref(false);
 const ubicacionDict = ref<Record<string, string[]>>({});
+const galponSeleccionado = ref<Galpon | null>(null);
+const depositoSeleccionado = ref<Deposito | null>(null);
+const estanteSeleccionado = ref<Estante | null>(null);
+const nivelSeleccionado = ref<Nivel | null>(null);
+const seccionSeleccionada = ref<Seccion | null>(null);
+const cajaSeleccionada = ref<Caja | null>(null);
+const tipoUbicacion = ref<"estantes" | "depositos">("estantes");
+const cantidadInicial = ref(1);
 
 const herramientasFiltradas = computed(() => {
   const filtro = filtroTexto.value.trim().toLocaleLowerCase();
@@ -40,9 +57,51 @@ const estados = computed(() =>
     nombre: estado.nombre.substring(3),
   })),
 );
+watch(galponSeleccionado, () => {
+  depositoSeleccionado.value = null;
+  estanteSeleccionado.value = null;
+  nivelSeleccionado.value = null;
+  seccionSeleccionada.value = null;
+  cajaSeleccionada.value = null;
+});
+
+watch(estanteSeleccionado, () => {
+  nivelSeleccionado.value = null;
+  seccionSeleccionada.value = null;
+  cajaSeleccionada.value = null;
+});
+
+watch(nivelSeleccionado, () => {
+  seccionSeleccionada.value = null;
+  cajaSeleccionada.value = null;
+});
+
+watch(seccionSeleccionada, () => {
+  cajaSeleccionada.value = null;
+});
+
+watch(depositoSeleccionado, () => {
+  cajaSeleccionada.value = null;
+});
+
+watch(tipoUbicacion, () => {
+  depositoSeleccionado.value = null;
+  estanteSeleccionado.value = null;
+  nivelSeleccionado.value = null;
+  seccionSeleccionada.value = null;
+  cajaSeleccionada.value = null;
+});
 
 function Agregar() {
   esNuevo.value = true;
+  tipoUbicacion.value = "estantes";
+  galponSeleccionado.value = null;
+  depositoSeleccionado.value = null;
+  estanteSeleccionado.value = null;
+  nivelSeleccionado.value = null;
+  seccionSeleccionada.value = null;
+  cajaSeleccionada.value = null;
+  cantidadInicial.value = 1;
   itemEdicion.value = {
     id: "",
     nombre: "",
@@ -76,6 +135,23 @@ async function Guardar() {
     await TablesDbService.Crear(TablesDbService.Coleccion.Herramientas, herramienta);
     await RegistrarHistorial(herramienta.id, "[Herramienta] Creada", null, Describir(herramienta));
     globalStore.Herramientas.push({ ...herramienta });
+
+    if (cajaSeleccionada.value && cantidadInicial.value > 0) {
+      const cantidad: CantidadHerramienta = {
+        id: "",
+        herramientaId: herramienta.id,
+        cajaId: cajaSeleccionada.value.id,
+        cantidad: cantidadInicial.value,
+      };
+      await TablesDbService.Crear(TablesDbService.Coleccion.CantidadHerramientas, cantidad);
+      await RegistrarHistorial(
+        herramienta.id,
+        "[Herramienta] Agregada a caja",
+        null,
+        `'${herramienta.nombre}' agregada a Caja ${cajaSeleccionada.value.nombre} (${cantidadInicial.value} unidades)`,
+      );
+      globalStore.CantidadHerramientas.push(cantidad);
+    }
   } else {
     const anterior = globalStore.Herramientas.find((item) => item.id === herramienta.id);
     if (!anterior) return;
@@ -222,7 +298,7 @@ function VerUbicacion(item: Herramienta) {
     :esAgregar="esNuevo"
     :clickAceptar="Guardar"
     nombre-objeto="Herramienta"
-    :desabilitarAceptar="!itemEdicion?.nombre?.trim()"
+    :desabilitarAceptar="!itemEdicion?.nombre?.trim() || (esNuevo && !itemEdicion.fabricanteId)"
   >
     <div v-if="itemEdicion" class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on">
@@ -267,6 +343,110 @@ function VerUbicacion(item: Herramienta) {
         />
         <label for="estadoHerramienta">Estado</label>
       </FloatLabel>
+      <div v-if="esNuevo" class="flex flex-col gap-3">
+        <b>Ubicación</b>
+        <FloatLabel variant="on">
+          <Select
+            v-model="galponSeleccionado"
+            :options="globalStore.Galpones"
+            optionLabel="nombre"
+            showClear
+            class="w-full"
+          />
+          <label>Área</label>
+        </FloatLabel>
+        <div class="flex flex-wrap gap-4">
+          <label class="flex items-center gap-2">
+            <input v-model="tipoUbicacion" type="radio" name="tipoUbicacion" value="estantes" />
+            Estantes
+          </label>
+          <label class="flex items-center gap-2">
+            <input v-model="tipoUbicacion" type="radio" name="tipoUbicacion" value="depositos" />
+            Depósitos
+          </label>
+        </div>
+        <template v-if="tipoUbicacion === 'estantes'">
+          <FloatLabel variant="on">
+            <Select
+              v-model="estanteSeleccionado"
+              :options="galponSeleccionado?.estantes"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!galponSeleccionado"
+            />
+            <label>Estante</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select
+              v-model="nivelSeleccionado"
+              :options="estanteSeleccionado?.niveles"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!estanteSeleccionado"
+            />
+            <label>Nivel</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select
+              v-model="seccionSeleccionada"
+              :options="nivelSeleccionado?.secciones"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!nivelSeleccionado"
+            />
+            <label>Sección</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select
+              v-model="cajaSeleccionada"
+              :options="seccionSeleccionada?.cajas"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!seccionSeleccionada"
+            />
+            <label>Caja</label>
+          </FloatLabel>
+        </template>
+        <template v-else>
+          <FloatLabel variant="on">
+            <Select
+              v-model="depositoSeleccionado"
+              :options="galponSeleccionado?.depositos"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!galponSeleccionado"
+            />
+            <label>Depósito</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <Select
+              v-model="cajaSeleccionada"
+              :options="depositoSeleccionado?.cajas"
+              optionLabel="nombre"
+              showClear
+              class="w-full"
+              :disabled="!depositoSeleccionado"
+            />
+            <label>Caja</label>
+          </FloatLabel>
+        </template>
+        <FloatLabel variant="on">
+          <InputNumber
+            v-model="cantidadInicial"
+            :minFractionDigits="0"
+            :maxFractionDigits="0"
+            :min="1"
+            class="w-full"
+            :disabled="!cajaSeleccionada"
+          />
+          <label>Cantidad</label>
+        </FloatLabel>
+      </div>
     </div>
   </DialogoEdicion>
 </template>

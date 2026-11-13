@@ -171,7 +171,7 @@ export const useGlobalStore = defineStore("global", () => {
 
     for (const cantidad of cantidades) {
       for (const galpon of Galpones.value) {
-        for (const deposito of galpon.depositos) {
+        for (const deposito of galpon.depositos ?? []) {
           const caja = deposito.cajas.find((l) => l.id === cantidad.cajaId);
           if (caja) {
             ubicaciones.push(
