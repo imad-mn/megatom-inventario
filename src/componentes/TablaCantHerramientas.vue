@@ -99,7 +99,7 @@ function Quitar(item: CantidadesConHerramienta) {
         <tr
           v-for="item in props.cantidades"
           :key="item.id"
-          class="border-b border-surface-200 last:border-0 dark:border-surface-800"
+          class="border-b border-surface-200 last:border-0 odd:bg-white even:bg-surface-100 dark:border-surface-800 dark:odd:bg-surface-900 dark:even:bg-surface-800"
         >
           <td class="px-3 py-2">{{ item.herramienta.nombre }}</td>
           <td class="px-3 py-2">{{ item.herramienta.detalle ?? "—" }}</td>

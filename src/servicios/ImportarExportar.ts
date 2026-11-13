@@ -3,6 +3,7 @@ import { Actualizar, Coleccion, Crear } from "./TablesDbService";
 import type {
   Estante,
   Galpon,
+  Herramienta,
   Historial,
   IdNombre,
   Lista,
@@ -36,6 +37,45 @@ interface ContextoImportacion {
   fabricantes: Lista[];
   estados: Lista[];
   galponesModificados: Set<string>;
+}
+
+type FilaHerramienta = {
+  nombre: string;
+  detalle: string;
+  serial: string;
+  fabricante: string;
+  estado: string;
+};
+
+function normalizarTextoCsv(valor: string): string {
+  return valor
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
+}
+
+function parsearCsvHerramientas(file: File): Promise<FilaHerramienta[]> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<FilaHerramienta>(file, {
+      delimiter: ";",
+      header: true,
+      skipEmptyLines: true,
+      encoding: "ISO-8859-1",
+      transformHeader: (header) => {
+        const headerMap: Record<string, string> = {
+          articulo: "nombre",
+          detalle: "detalle",
+          serial: "serial",
+          fabricante: "fabricante",
+          condicion: "estado",
+        };
+        return headerMap[normalizarTextoCsv(header)] || header;
+      },
+      complete: (result) => resolve(result.data),
+      error: (error) => reject(error),
+    });
+  });
 }
 
 function parsearCsv(file: File): Promise<Fila[]> {
@@ -84,6 +124,88 @@ export async function Importar(
     completar();
   } catch (error) {
     reportarError(error as string);
+  }
+}
+
+export async function ImportarHerramientas(
+  archivo: File,
+  reportarTotal: (total: number) => void,
+  reportarProgreso: (cont: number) => void,
+  completar: () => void,
+  reportarError: (error: string) => void,
+): Promise<void> {
+  try {
+    const data = await parsearCsvHerramientas(archivo);
+    reportarTotal(data.length);
+    await ProcesarHerramientas(data, reportarProgreso);
+    completar();
+  } catch (error) {
+    reportarError(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function ProcesarHerramientas(
+  data: FilaHerramienta[],
+  reportarProgreso: (cont: number) => void,
+): Promise<void> {
+  const globalStore = useGlobalStore();
+  const fabricantes = globalStore.ObtenerLista("fabricantes herramientas");
+  const estados = globalStore.ObtenerLista("estados");
+
+  for (let i = 0; i < data.length; i++) {
+    const fila = data[i];
+    if (!fila) continue;
+
+    const numeroFila = i + 1;
+    if (!fila.nombre) {
+      console.error(`La fila ${numeroFila} no tiene nombre de herramienta. Se omitirá.`);
+      reportarProgreso(i + 1);
+      continue;
+    }
+
+    if (!fila.fabricante) {
+      console.error(`La fila ${numeroFila} no tiene fabricante. Se omitirá.`);
+      reportarProgreso(i + 1);
+      continue;
+    }
+
+    const estado = estados.find(
+      (item) =>
+        normalizarTextoCsv(item.nombre.replace(/^\d+\.\s*/, "")) ===
+        normalizarTextoCsv(fila.estado),
+    );
+    if (!estado) {
+      console.error(
+        `No se encontró el estado "${fila.estado}" de la fila ${numeroFila}. Se omitirá.`,
+      );
+      reportarProgreso(i + 1);
+      continue;
+    }
+
+    const fabricanteEncontrado = fabricantes.find((item) =>
+      normalizarTextoCsv(item.nombre).includes(normalizarTextoCsv(fila.fabricante)),
+    );
+    const fabricante =
+      fabricanteEncontrado ??
+      (await obtenerOCrearLista(fabricantes, "fabricantes herramientas", fila.fabricante));
+
+    const herramienta: Herramienta = {
+      id: "",
+      nombre: fila.nombre,
+      detalle: fila.detalle || null,
+      serial: fila.serial || null,
+      fabricanteId: fabricante.id,
+      estadoId: estado.id,
+    };
+    await Crear(Coleccion.Herramientas, herramienta);
+    globalStore.Herramientas.push(herramienta);
+    await RegistrarHistorial(
+      herramienta.id,
+      "IMPORTACION [Herramienta] Creada",
+      null,
+      `Nombre: ${herramienta.nombre} | Detalle: ${herramienta.detalle ?? ""} | Serial: ${herramienta.serial ?? ""} | Fabricante: ${fabricante.nombre} | Estado: ${estado.nombre}`,
+    );
+    reportarProgreso(i + 1);
   }
 }
 
@@ -347,7 +469,13 @@ async function obtenerOCrearLista(
     globalStore.Listas.push(item);
     lista.push(item);
     const etiqueta =
-      tipo === "grupos" ? "Grupo" : tipo === "fabricantes" ? "Fabricante" : "Almacenista";
+      tipo === "grupos"
+        ? "Grupo"
+        : tipo === "fabricantes"
+          ? "Fabricante"
+          : tipo === "fabricantes herramientas"
+            ? "Fabricante de Herramientas"
+            : "Almacenista";
     await RegistrarHistorial(item.id, `IMPORTACION [${etiqueta}] Creado`, null, nombre);
     return item;
   } catch (error) {

@@ -726,7 +726,6 @@ function GuardarProductoSolicitud(): void {
         class="p-button-outlined"
         custom-upload
         @select="() => (deshabilitarBotonImportar = false)"
-        choose-label="xx"
         @uploader="ImportarProductos"
       />
       <Button

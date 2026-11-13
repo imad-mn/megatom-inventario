@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useConfirm } from "primevue/useconfirm";
+import Paginator from "primevue/paginator";
 import DialogoEdicion from "@/componentes/DialogoEdicion.vue";
 import EditarQuitar from "@/componentes/EditarQuitar.vue";
 import * as TablesDbService from "@/servicios/TablesDbService";
@@ -18,12 +19,16 @@ import type {
   Nivel,
   Seccion,
 } from "@/servicios/modelos";
+import type { FileUploadMethods, FileUploadUploaderEvent } from "primevue";
+import { ImportarHerramientas } from "@/servicios/ImportarExportar";
 
 const confirm = useConfirm();
 const globalStore = useGlobalStore();
 const usuario = useAuthStore().Usuario;
 
 const filtroTexto = ref("");
+const paginaInicial = ref(0);
+const filasPorPagina = 10;
 const dialogVisible = ref(false);
 const itemEdicion = ref<Herramienta>();
 const esNuevo = ref(false);
@@ -40,6 +45,15 @@ const cajaSeleccionada = ref<Caja | null>(null);
 const tipoUbicacion = ref<"estantes" | "depositos">("estantes");
 const cantidadInicial = ref(1);
 
+const dialogoImportar = ref(false);
+const fileupload = ref<FileUploadMethods>();
+const progresoImportacion = ref(0);
+const totalRegistros = ref(0);
+const mostrarMensajeImportacion = ref(false);
+const errorImportacion = ref("");
+const deshabilitarBotonImportar = ref(true);
+const permitirCerrarDialogoImportar = ref(true);
+
 const herramientasFiltradas = computed(() => {
   const filtro = filtroTexto.value.trim().toLocaleLowerCase();
   return globalStore.Herramientas.filter((herramienta) => {
@@ -53,6 +67,24 @@ const herramientasFiltradas = computed(() => {
     );
   }).sort((a, b) => a.nombre.localeCompare(b.nombre));
 });
+
+const herramientasPaginadas = computed(() =>
+  herramientasFiltradas.value.slice(paginaInicial.value, paginaInicial.value + filasPorPagina),
+);
+
+watch(filtroTexto, () => {
+  paginaInicial.value = 0;
+});
+
+watch(
+  () => herramientasFiltradas.value.length,
+  (total) => {
+    if (total === 0) paginaInicial.value = 0;
+    else if (paginaInicial.value >= total) {
+      paginaInicial.value = Math.floor((total - 1) / filasPorPagina) * filasPorPagina;
+    }
+  },
+);
 
 const cantidadesUbicacion = computed(() => {
   const herramientaId = herramientaUbicacion.value?.id;
@@ -313,11 +345,39 @@ function QuitarCantidadUbicacion(item: CantidadesConHerramienta & { ubicacion: s
     },
   });
 }
+
+function AbrirDialogoImportar() {
+  dialogoImportar.value = true;
+  mostrarMensajeImportacion.value = false;
+  progresoImportacion.value = 0;
+  totalRegistros.value = 0;
+}
+async function Importar(e: FileUploadUploaderEvent) {
+  const archivo = (<File[]>e.files)[0];
+  if (!archivo) return;
+
+  errorImportacion.value = "";
+  deshabilitarBotonImportar.value = true;
+  permitirCerrarDialogoImportar.value = false;
+  await ImportarHerramientas(
+    archivo,
+    (total) => (totalRegistros.value = total),
+    (progreso) => (progresoImportacion.value = progreso),
+    () => {
+      mostrarMensajeImportacion.value = true;
+      permitirCerrarDialogoImportar.value = true;
+    },
+    (error) => {
+      permitirCerrarDialogoImportar.value = true;
+      errorImportacion.value = error;
+    },
+  );
+}
 </script>
 
 <template>
-  <div class="flex gap-2 items-center mb-3 mx-auto max-w-lg">
-    <div class="text-xl mr-3">HERRAMIENTAS</div>
+  <div class="flex gap-2 items-center mb-3 mx-auto max-w-2xl">
+    <div class="text-xl mr-2">HERRAMIENTAS</div>
     <Button
       v-if="usuario"
       label="Agregar"
@@ -330,49 +390,65 @@ function QuitarCantidadUbicacion(item: CantidadesConHerramienta & { ubicacion: s
       <InputIcon class="pi pi-search" />
       <InputText v-model="filtroTexto" placeholder="Buscar" class="w-full md:w-auto" />
     </IconField>
+    <Button
+      v-if="
+        usuario != null &&
+        usuario.user.displayName != null &&
+        ['Imad', 'Giovanni'].includes(usuario.user.displayName)
+      "
+      label="Importar"
+      icon="pi pi-file-import"
+      severity="success"
+      variant="outlined"
+      @click="AbrirDialogoImportar"
+      v-tooltip.bottom="'Importar herramientas desde un archivo CSV'"
+    />
   </div>
 
+  <!-- Tabla principal -->
   <div class="w-full overflow-x-auto">
     <table class="w-full border-collapse text-left">
       <thead>
         <tr
           class="border-b border-surface-300 dark:border-surface-700 bg-surface-100 dark:bg-surface-800"
         >
-          <th class="px-3 py-2 font-semibold">Nombre</th>
-          <th class="px-3 py-2 font-semibold">Detalle</th>
-          <th class="px-3 py-2 font-semibold">Serial</th>
-          <th class="px-3 py-2 font-semibold">Fabricante</th>
-          <th class="px-3 py-2 font-semibold">Estado</th>
-          <th class="px-3 py-2 font-semibold">Ubicación</th>
-          <th class="px-3 py-2 font-semibold"></th>
+          <th class="px-3 py-1 font-semibold">Nombre</th>
+          <th class="px-3 py-1 font-semibold">Detalle</th>
+          <th class="px-3 py-1 font-semibold">Serial</th>
+          <th class="px-3 py-1 font-semibold">Fabricante</th>
+          <th class="px-3 py-1 font-semibold">Estado</th>
+          <th class="px-3 py-1 font-semibold">Ubicación</th>
+          <th class="px-3 py-1 font-semibold"></th>
         </tr>
       </thead>
       <tbody>
-        <template v-for="item in herramientasFiltradas" :key="item.id">
-          <tr class="border-b border-surface-200 dark:border-surface-800">
-            <td class="px-3 py-2">{{ item.nombre }}</td>
-            <td class="px-3 py-2">{{ item.detalle || "—" }}</td>
-            <td class="px-3 py-2">{{ item.serial || "—" }}</td>
-            <td class="px-3 py-2">
+        <template v-for="item in herramientasPaginadas" :key="item.id">
+          <tr
+            class="border-b border-surface-200 odd:bg-white even:bg-surface-100 dark:border-surface-800 dark:odd:bg-surface-900 dark:even:bg-surface-800"
+          >
+            <td class="px-3 py-1">{{ item.nombre }}</td>
+            <td class="px-3 py-1">{{ item.detalle || "—" }}</td>
+            <td class="px-3 py-1">{{ item.serial || "—" }}</td>
+            <td class="px-3 py-1">
               {{ item.fabricanteId ? (globalStore.ListasMap[item.fabricanteId] ?? "—") : "—" }}
             </td>
-            <td class="px-3 py-2">
+            <td class="px-3 py-1">
               {{
                 item.estadoId ? (globalStore.ListasMap[item.estadoId]?.substring(3) ?? "—") : "—"
               }}
             </td>
-            <td class="px-3 py-2">
+            <td class="px-3 py-1">
               <Button
                 icon="pi pi-map-marker"
                 severity="secondary"
                 variant="text"
-                label="Ver Ubicación"
+                label="Ubicación"
                 v-tooltip.bottom="'Ver ubicación'"
                 :aria-label="`Ver ubicación de ${item.nombre}`"
                 @click="VerUbicacion(item)"
               />
             </td>
-            <td class="px-3 py-2">
+            <td class="px-3 py-1">
               <div class="flex items-center justify-center">
                 <EditarQuitar
                   @editar-click="Editar(item)"
@@ -392,6 +468,12 @@ function QuitarCantidadUbicacion(item: CantidadesConHerramienta & { ubicacion: s
       </tbody>
     </table>
   </div>
+  <Paginator
+    v-if="herramientasFiltradas.length > filasPorPagina"
+    v-model:first="paginaInicial"
+    :rows="filasPorPagina"
+    :totalRecords="herramientasFiltradas.length"
+  />
 
   <DialogoEdicion
     v-model:mostrar="dialogVisible"
@@ -572,7 +654,7 @@ function QuitarCantidadUbicacion(item: CantidadesConHerramienta & { ubicacion: s
           <tr
             v-for="item in cantidadesUbicacion"
             :key="item.id"
-            class="border-b border-surface-200 last:border-0 dark:border-surface-800"
+            class="border-b border-surface-200 last:border-0 odd:bg-white even:bg-surface-100 dark:border-surface-800 dark:odd:bg-surface-900 dark:even:bg-surface-800"
           >
             <td class="px-3 py-2">{{ item.ubicacion }}</td>
             <td class="px-3 py-2 text-right">
@@ -632,6 +714,44 @@ function QuitarCantidadUbicacion(item: CantidadesConHerramienta & { ubicacion: s
           </tr>
         </tbody>
       </table>
+    </div>
+  </Dialog>
+
+  <!-- Dialogo para importar -->
+  <Dialog
+    v-model:visible="dialogoImportar"
+    header="Importar Herramientas"
+    modal
+    :closable="permitirCerrarDialogoImportar"
+    :style="{ width: '450px' }"
+  >
+    <div class="flex flex-col gap-3">
+      <p>Seleccione el archivo CSV con las herramientas.</p>
+      <FileUpload
+        ref="fileupload"
+        mode="basic"
+        accept=".csv"
+        :maxFileSize="1048576"
+        class="p-button-outlined"
+        custom-upload
+        @select="() => (deshabilitarBotonImportar = false)"
+        @uploader="Importar"
+      />
+      <Button
+        label="Importar"
+        icon="pi pi-file-import"
+        severity="primary"
+        variant="outlined"
+        :disabled="deshabilitarBotonImportar"
+        @click="fileupload?.upload()"
+      />
+      <ProgressBar :value="Math.ceil((progresoImportacion / totalRegistros) * 100)">{{
+        `${progresoImportacion}/${totalRegistros}`
+      }}</ProgressBar>
+      <Message severity="success" v-show="mostrarMensajeImportacion"
+        >Las herramientas se han importado correctamente.</Message
+      >
+      <Message severity="error" v-show="errorImportacion">{{ errorImportacion }}</Message>
     </div>
   </Dialog>
 </template>
