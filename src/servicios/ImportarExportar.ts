@@ -45,6 +45,7 @@ type FilaHerramienta = {
   serial: string;
   fabricante: string;
   estado: string;
+  cantidad: string;
 };
 
 function normalizarTextoCsv(valor: string): string {
@@ -64,11 +65,12 @@ function parsearCsvHerramientas(file: File): Promise<FilaHerramienta[]> {
       encoding: "ISO-8859-1",
       transformHeader: (header) => {
         const headerMap: Record<string, string> = {
-          articulo: "nombre",
+          elemento: "nombre",
           detalle: "detalle",
           serial: "serial",
           fabricante: "fabricante",
           condicion: "estado",
+          cantidad: "cantidad",
         };
         return headerMap[normalizarTextoCsv(header)] || header;
       },
@@ -163,6 +165,15 @@ async function ProcesarHerramientas(
       continue;
     }
 
+    const cantidad = Number(fila.cantidad);
+    if (!fila.cantidad?.trim() || !Number.isInteger(cantidad) || cantidad < 0) {
+      console.error(
+        `La cantidad "${fila.cantidad}" de la fila ${numeroFila} no es un entero válido. Se omitirá.`,
+      );
+      reportarProgreso(i + 1);
+      continue;
+    }
+
     if (!fila.fabricante) {
       fila.fabricante = "XXXXX";
     }
@@ -194,6 +205,7 @@ async function ProcesarHerramientas(
       serial: fila.serial || null,
       fabricanteId: fabricante.id,
       estadoId: estado.id,
+      cantidad,
     };
     await Crear(Coleccion.Herramientas, herramienta);
     globalStore.Herramientas.push(herramienta);
@@ -201,7 +213,7 @@ async function ProcesarHerramientas(
       herramienta.id,
       "IMPORTACION [Herramienta] Creada",
       null,
-      `Nombre: ${herramienta.nombre} | Detalle: ${herramienta.detalle ?? ""} | Serial: ${herramienta.serial ?? ""} | Fabricante: ${fabricante.nombre} | Estado: ${estado.nombre}`,
+      `Nombre: ${herramienta.nombre} | Cantidad: ${herramienta.cantidad} | Detalle: ${herramienta.detalle ?? ""} | Serial: ${herramienta.serial ?? ""} | Fabricante: ${fabricante.nombre} | Estado: ${estado.nombre}`,
     );
     reportarProgreso(i + 1);
   }

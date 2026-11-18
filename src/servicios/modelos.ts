@@ -21,6 +21,7 @@ export type Producto = IdNombre & {
 };
 
 export type Herramienta = IdNombre & {
+  cantidad: number;
   detalle: string | null;
   serial: string | null;
   fabricanteId: string;

@@ -44,6 +44,12 @@ const seccionSeleccionada = ref<Seccion | null>(null);
 const cajaSeleccionada = ref<Caja | null>(null);
 const tipoUbicacion = ref<"estantes" | "depositos">("estantes");
 const cantidadInicial = ref(1);
+const cantidadTotalInvalida = computed(
+  () =>
+    !itemEdicion.value ||
+    !Number.isInteger(itemEdicion.value.cantidad) ||
+    itemEdicion.value.cantidad < 0,
+);
 
 const dialogoImportar = ref(false);
 const fileupload = ref<FileUploadMethods>();
@@ -155,6 +161,7 @@ function Agregar() {
   itemEdicion.value = {
     id: "",
     nombre: "",
+    cantidad: 1,
     detalle: null,
     serial: null,
     fabricanteId: "",
@@ -172,7 +179,7 @@ function Editar(item: Herramienta) {
 function Describir(item: Herramienta): string {
   const fabricante = item.fabricanteId ? (globalStore.ListasMap[item.fabricanteId] ?? "") : "";
   const estado = item.estadoId ? (globalStore.ListasMap[item.estadoId] ?? "") : "";
-  return `Nombre: ${item.nombre} | Detalle: ${item.detalle ?? ""} | Serial: ${item.serial ?? ""} | Fabricante: ${fabricante} | Estado: ${estado}`;
+  return `Nombre: ${item.nombre} | Cantidad: ${item.cantidad} | Detalle: ${item.detalle ?? ""} | Serial: ${item.serial ?? ""} | Fabricante: ${fabricante} | Estado: ${estado}`;
 }
 
 function ObtenerUbicacionCaja(cajaId: string): string {
@@ -417,6 +424,7 @@ async function Importar(e: FileUploadUploaderEvent) {
           <th class="px-3 py-1 font-semibold">Serial</th>
           <th class="px-3 py-1 font-semibold">Fabricante</th>
           <th class="px-3 py-1 font-semibold">Estado</th>
+          <th class="px-3 py-1 font-semibold text-right">Cant. total</th>
           <th class="px-3 py-1 font-semibold">Ubicación</th>
           <th class="px-3 py-1 font-semibold"></th>
         </tr>
@@ -437,6 +445,7 @@ async function Importar(e: FileUploadUploaderEvent) {
                 item.estadoId ? (globalStore.ListasMap[item.estadoId]?.substring(3) ?? "—") : "—"
               }}
             </td>
+            <td class="px-3 py-1 text-right">{{ item.cantidad }}</td>
             <td class="px-3 py-1">
               <Button
                 icon="pi pi-map-marker"
@@ -461,7 +470,7 @@ async function Importar(e: FileUploadUploaderEvent) {
           </tr>
         </template>
         <tr v-if="herramientasFiltradas.length === 0">
-          <td colspan="7" class="px-3 py-4 text-center italic text-muted-color">
+          <td colspan="8" class="px-3 py-4 text-center italic text-muted-color">
             No hay herramientas.
           </td>
         </tr>
@@ -480,7 +489,11 @@ async function Importar(e: FileUploadUploaderEvent) {
     :esAgregar="esNuevo"
     :clickAceptar="Guardar"
     nombre-objeto="Herramienta"
-    :desabilitarAceptar="!itemEdicion?.nombre?.trim() || (esNuevo && !itemEdicion.fabricanteId)"
+    :desabilitarAceptar="
+      !itemEdicion?.nombre?.trim() ||
+      (esNuevo && !itemEdicion.fabricanteId) ||
+      cantidadTotalInvalida
+    "
   >
     <div v-if="itemEdicion" class="flex flex-col gap-3 pt-1">
       <FloatLabel variant="on">
@@ -525,8 +538,19 @@ async function Importar(e: FileUploadUploaderEvent) {
         />
         <label for="estadoHerramienta">Estado</label>
       </FloatLabel>
+      <FloatLabel variant="on">
+        <InputNumber
+          id="cantidadTotalHerramienta"
+          v-model="itemEdicion.cantidad"
+          class="w-full"
+          :min="0"
+          :maxFractionDigits="0"
+          :useGrouping="false"
+        />
+        <label for="cantidadTotalHerramienta">Cantidad total</label>
+      </FloatLabel>
       <div v-if="esNuevo" class="flex flex-col gap-3">
-        <b>Ubicación</b>
+        <b>UBICACION</b>
         <FloatLabel variant="on">
           <Select
             v-model="galponSeleccionado"
@@ -626,7 +650,7 @@ async function Importar(e: FileUploadUploaderEvent) {
             class="w-full"
             :disabled="!cajaSeleccionada"
           />
-          <label>Cantidad</label>
+          <label>Cantidad en caja</label>
         </FloatLabel>
       </div>
     </div>
@@ -726,7 +750,10 @@ async function Importar(e: FileUploadUploaderEvent) {
     :style="{ width: '450px' }"
   >
     <div class="flex flex-col gap-3">
-      <p>Seleccione el archivo CSV con las herramientas.</p>
+      <p>
+        Seleccione el CSV con las columnas Elemento, Detalle, Serial, Fabricante, Condición y
+        Cantidad.
+      </p>
       <FileUpload
         ref="fileupload"
         mode="basic"

@@ -57,7 +57,14 @@ export const useGlobalStore = defineStore("global", () => {
       Galpones.value = galpones.sort((a, b) => a.nombre.localeCompare(b.nombre));
       Listas.value = listas;
       Cantidades.value = cantidades;
-      Herramientas.value = herramientas;
+      Herramientas.value = herramientas.map((herramienta) => ({
+        ...herramienta,
+        cantidad:
+          herramienta.cantidad ??
+          cantidadHerramientas
+            .filter((cantidad) => cantidad.herramientaId === herramienta.id)
+            .reduce((total, cantidad) => total + cantidad.cantidad, 0),
+      }));
       CantidadHerramientas.value = cantidadHerramientas;
 
       if (esTomasCapasso.value)
