@@ -200,7 +200,7 @@ async function ProcesarHerramientas(
 
     const herramienta: Herramienta = {
       id: "",
-      nombre: fila.nombre,
+      nombre: fila.nombre.trim(),
       detalle: fila.detalle || null,
       serial: fila.serial || null,
       fabricanteId: fabricante.id,
