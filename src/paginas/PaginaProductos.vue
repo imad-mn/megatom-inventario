@@ -21,6 +21,7 @@ import type {
   FileUploadSelectEvent,
   FileUploadUploaderEvent,
 } from "primevue";
+import Checkbox from "primevue/checkbox";
 import FileUpload from "primevue/fileupload";
 import * as StorageService from "@/servicios/StorageService.ts";
 import { Importar, Exportar } from "@/servicios/ImportarExportar";
@@ -94,6 +95,18 @@ const productosFiltrados = computed(() => {
     );
   });
   return [...filtrados].sort((a, b) => a.nombre.localeCompare(b.nombre));
+});
+
+// Productos seleccionados en las fichas y suma de sus cantidades
+const productosSeleccionados = ref<string[]>([]);
+
+const sumaCantidadesSeleccionadas = computed(() => {
+  if (productosSeleccionados.value.length === 0) return 0;
+  const idsSeleccionados = new Set(productosSeleccionados.value);
+  return globalStore
+    .ObtenerProductosConCantidad()
+    .filter((p) => idsSeleccionados.has(p.id))
+    .reduce((acc, p) => acc + (p.cantidad ?? 0), 0);
 });
 
 const galponSeleccionado = ref<Galpon | null>(null);
@@ -392,7 +405,7 @@ function GuardarProductoSolicitud(): void {
 </script>
 
 <template>
-  <div class="flex flex-wrap gap-2 items-center mb-3">
+  <div id="barraHerramientas" class="flex flex-wrap gap-2 items-center mb-3">
     <div class="text-xl mr-3">PRODUCTOS</div>
     <Button
       v-if="Usuario"
@@ -448,6 +461,15 @@ function GuardarProductoSolicitud(): void {
       @click="DescargarExportacion"
       v-tooltip.bottom="'Exportar productos a un archivo CSV'"
     />
+    <div class="flex items-center gap-2">
+      <span>Suma de Cantidades</span>
+      <InputText
+        :model-value="String(sumaCantidadesSeleccionadas)"
+        readonly
+        class="w-18"
+        aria-label="Suma de cantidades de productos seleccionados"
+      />
+    </div>
   </div>
 
   <DataView :value="productosFiltrados">
@@ -462,12 +484,22 @@ function GuardarProductoSolicitud(): void {
           <template #header>
             <img v-if="item.imagenUrl" :src="item.imagenUrl" alt="Foto" class="h-60 w-full" />
           </template>
-          <template #title
-            ><span v-if="item.deTomasCapasso" class="text-white font-bold bg-blue-900 px-1"
-              >TC</span
-            >
-            {{ item.nombre }}</template
-          >
+          <template #title>
+            <div class="flex items-start gap-2">
+              <Checkbox
+                v-model="productosSeleccionados"
+                :value="item.id"
+                :input-id="`producto-seleccion-${item.id}`"
+                class="mt-1"
+              />
+              <label :for="`producto-seleccion-${item.id}`" class="cursor-pointer">
+                <span v-if="item.deTomasCapasso" class="text-white font-bold bg-blue-900 px-1"
+                  >TC</span
+                >
+                {{ item.nombre }}
+              </label>
+            </div>
+          </template>
           <template #subtitle>{{ item.descripcion }}</template>
           <template #content>
             <div><b>Código:&nbsp;</b>{{ item.codigo }}</div>
@@ -479,10 +511,12 @@ function GuardarProductoSolicitud(): void {
             </div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
             <div v-if="item.pesoPorMetro != null">
-              <b>Peso por metro:&nbsp;</b>{{ item.pesoPorMetro.toLocaleString("es-VE", { maximumFractionDigits: 4 }) }} Kg
+              <b>Peso por metro:&nbsp;</b
+              >{{ item.pesoPorMetro.toLocaleString("es-VE", { maximumFractionDigits: 4 }) }} Kg
             </div>
             <div v-if="item.pesoPorMetro != null">
-              <b>Longitud:&nbsp;</b>{{
+              <b>Longitud:&nbsp;</b
+              >{{
                 LongitudKm(item.pesoPorMetro, item.cantidad)?.toLocaleString("es-VE", {
                   maximumFractionDigits: 4,
                 }) ?? "—"
