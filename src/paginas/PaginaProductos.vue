@@ -51,6 +51,7 @@ const filtroTexto = ref<string>("");
 const dialogVisible = ref(false);
 const itemEdicion = ref<Producto>();
 const esNuevo = ref(false);
+const esCableConductor = ref(false);
 
 const ubicacionDict = ref<Record<string, string[]>>({});
 
@@ -110,6 +111,36 @@ const productoSolicitud = ref<ProductoConCantidad>();
 const cantidadSolicitud = ref<number>(1);
 const mostrarPedidoAgregado = ref(false);
 
+function CantidadTotalProducto(productoId: string): number {
+  return globalStore.Cantidades.filter((c) => c.productoId === productoId).reduce(
+    (acc, c) => acc + c.cantidad,
+    0,
+  );
+}
+
+function LongitudKm(pesoPorMetro: number | null | undefined, cantidadTotal: number): number | null {
+  if (pesoPorMetro == null || pesoPorMetro <= 0) return null;
+  return cantidadTotal / pesoPorMetro / 1000;
+}
+
+function AlCambiarCableConductor(activo: boolean) {
+  if (!itemEdicion.value) return;
+  if (!activo) {
+    itemEdicion.value.pesoPorMetro = null;
+  } else if (itemEdicion.value.pesoPorMetro == null) {
+    itemEdicion.value.pesoPorMetro = 0;
+  }
+}
+
+const cantidadTotalEdicion = computed(() => {
+  if (!itemEdicion.value?.id) return 0;
+  return CantidadTotalProducto(itemEdicion.value.id);
+});
+
+const longitudKmEdicion = computed(() =>
+  LongitudKm(itemEdicion.value?.pesoPorMetro, cantidadTotalEdicion.value),
+);
+
 function Agregar() {
   esNuevo.value = true;
   imagenEdicion.value = undefined;
@@ -121,11 +152,13 @@ function Agregar() {
     codigo: "",
     descripcion: null,
     pesoUnitario: 0,
+    pesoPorMetro: null,
     imagenUrl: null,
     nombreArchivo: null,
     estadoId: null,
     deTomasCapasso: false,
   };
+  esCableConductor.value = false;
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
   galponSeleccionado.value = null;
@@ -192,7 +225,8 @@ async function Guardar() {
 
 async function Editar(item: Producto) {
   esNuevo.value = false;
-  itemEdicion.value = { ...item };
+  itemEdicion.value = { ...item, pesoPorMetro: item.pesoPorMetro ?? null };
+  esCableConductor.value = itemEdicion.value.pesoPorMetro != null;
   imagenEdicion.value = item.imagenUrl ?? undefined;
   dialogVisible.value = true;
   mostrarAdvertencia.value = false;
@@ -444,6 +478,17 @@ function GuardarProductoSolicitud(): void {
               >{{ item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || "" : "" }}
             </div>
             <div><b>Peso Unitario:&nbsp;</b>{{ item.pesoUnitario?.toFixed(2) }} Kg</div>
+            <div v-if="item.pesoPorMetro != null">
+              <b>Peso por metro:&nbsp;</b>{{ item.pesoPorMetro.toLocaleString("es-VE", { maximumFractionDigits: 4 }) }} Kg
+            </div>
+            <div v-if="item.pesoPorMetro != null">
+              <b>Longitud:&nbsp;</b>{{
+                LongitudKm(item.pesoPorMetro, item.cantidad)?.toLocaleString("es-VE", {
+                  maximumFractionDigits: 4,
+                }) ?? "—"
+              }}
+              Km
+            </div>
             <div>
               <b>Estado:&nbsp;</b
               >{{ item.estadoId ? globalStore.ListasMap[item.estadoId]?.substring(3) || "" : "" }}
@@ -622,6 +667,38 @@ function GuardarProductoSolicitud(): void {
         <ToggleSwitch id="deTomasCapasso" v-model="itemEdicion!.deTomasCapasso" />
         <label for="deTomasCapasso">De Tomás Capasso</label>
       </div>
+      <div class="flex gap-2 items-center">
+        <ToggleSwitch
+          id="esCableConductor"
+          v-model="esCableConductor"
+          @update:modelValue="AlCambiarCableConductor"
+        />
+        <label for="esCableConductor">Cable/Conductor</label>
+      </div>
+      <FloatLabel v-if="esCableConductor" variant="on">
+        <InputNumber
+          id="pesoPorMetro"
+          v-model="itemEdicion!.pesoPorMetro"
+          mode="decimal"
+          :min="0"
+          :minFractionDigits="0"
+          :maxFractionDigits="4"
+          class="w-full"
+        />
+        <label for="pesoPorMetro">Peso por metro (Kg)</label>
+      </FloatLabel>
+      <FloatLabel v-if="esCableConductor" variant="on">
+        <InputNumber
+          id="longitudKm"
+          :modelValue="longitudKmEdicion"
+          mode="decimal"
+          :minFractionDigits="0"
+          :maxFractionDigits="4"
+          class="w-full"
+          disabled
+        />
+        <label for="longitudKm">Longitud (Km)</label>
+      </FloatLabel>
       <FileUpload
         mode="basic"
         accept="image/*"

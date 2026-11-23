@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { useGlobalStore } from '@/servicios/globalStore';
-import type { ProductoConCantidad } from '@/servicios/modelos';
-import { computed } from 'vue';
+import { useGlobalStore } from "@/servicios/globalStore";
+import type { ProductoConCantidad } from "@/servicios/modelos";
+import { computed } from "vue";
 
-const mostrar = defineModel<boolean>('mostrar')
+const mostrar = defineModel<boolean>("mostrar");
 
 interface DialogoVerProductoProps {
-  producto: ProductoConCantidad | null
-  mostrarUbicacion?: boolean
+  producto: ProductoConCantidad | null;
+  mostrarUbicacion?: boolean;
 }
 const props = defineProps<DialogoVerProductoProps>();
 
@@ -19,6 +19,13 @@ const ubicaciones = computed(() => {
     return globalStore.ObtenerUbicaciones(cantidades);
   }
   return [];
+});
+
+const longitudKm = computed(() => {
+  if (!props.producto || props.producto.pesoPorMetro == null || props.producto.pesoPorMetro <= 0) {
+    return null;
+  }
+  return props.producto.cantidad / props.producto.pesoPorMetro / 1000;
 });
 </script>
 
@@ -33,22 +40,60 @@ const ubicaciones = computed(() => {
           :alt="props.producto.nombre"
           class="rounded-lg object-contain max-h-55 w-full sm:w-55"
         />
-        <div v-else class="flex items-center justify-center rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-400 dark:text-surface-500 w-full sm:w-48 h-48">
+        <div
+          v-else
+          class="flex items-center justify-center rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-400 dark:text-surface-500 w-full sm:w-48 h-48"
+        >
           <i class="pi pi-image text-4xl" />
         </div>
       </div>
       <!-- Atributos -->
       <div class="flex-1 min-w-0 flex flex-col gap-1">
-        <div><span class="font-semibold">Nombre:&nbsp;</span>{{ props.producto.nombre ?? '—' }}</div>
-        <div><span class="font-semibold">Código:&nbsp;</span>{{ props.producto.codigo ?? '—' }}</div>
-        <div><span class="font-semibold">Fabricante:&nbsp;</span>{{ props.producto.fabricanteId ? globalStore.ListasMap[props.producto.fabricanteId] : '—' }}</div>
-        <div><span class="font-semibold">Grupo:&nbsp;</span>{{ props.producto.grupoId ? globalStore.ListasMap[props.producto.grupoId] : '—' }}</div>
-        <div><span class="font-semibold">Peso unitario:&nbsp;</span>{{ props.producto.pesoUnitario?.toFixed(2) }} kg</div>
-        <div><span class="font-semibold">Estado:&nbsp;</span>{{ props.producto.estadoId ? globalStore.ListasMap[props.producto.estadoId]?.substring(3) : '—' }}</div>
+        <div>
+          <span class="font-semibold">Nombre:&nbsp;</span>{{ props.producto.nombre ?? "—" }}
+        </div>
+        <div>
+          <span class="font-semibold">Código:&nbsp;</span>{{ props.producto.codigo ?? "—" }}
+        </div>
+        <div>
+          <span class="font-semibold">Fabricante:&nbsp;</span
+          >{{
+            props.producto.fabricanteId ? globalStore.ListasMap[props.producto.fabricanteId] : "—"
+          }}
+        </div>
+        <div>
+          <span class="font-semibold">Grupo:&nbsp;</span
+          >{{ props.producto.grupoId ? globalStore.ListasMap[props.producto.grupoId] : "—" }}
+        </div>
+        <div>
+          <span class="font-semibold">Peso unitario:&nbsp;</span
+          >{{ props.producto.pesoUnitario?.toFixed(2) }} kg
+        </div>
+        <div>
+          <span class="font-semibold">Estado:&nbsp;</span
+          >{{
+            props.producto.estadoId
+              ? globalStore.ListasMap[props.producto.estadoId]?.substring(3)
+              : "—"
+          }}
+        </div>
         <div><span class="font-semibold">Cantidad:&nbsp;</span>{{ props.producto.cantidad }}</div>
+        <div v-if="props.producto.pesoPorMetro != null">
+          <span class="font-semibold">Peso por metro:&nbsp;</span
+          >{{
+            props.producto.pesoPorMetro.toLocaleString("es-VE", { maximumFractionDigits: 4 })
+          }}
+          kg
+        </div>
+        <div v-if="props.producto.pesoPorMetro != null">
+          <span class="font-semibold">Longitud:&nbsp;</span
+          >{{ longitudKm?.toLocaleString("es-VE", { maximumFractionDigits: 4 }) ?? "—" }} Km
+        </div>
       </div>
     </div>
-    <div class="mt-1"><span class="font-semibold">Descripción:&nbsp;</span>{{ props.producto?.descripcion ?? '—' }}</div>
+    <div class="mt-1">
+      <span class="font-semibold">Descripción:&nbsp;</span>{{ props.producto?.descripcion ?? "—" }}
+    </div>
 
     <div v-if="props.mostrarUbicacion" class="mt-2">
       <div><b>Ubicación:</b></div>

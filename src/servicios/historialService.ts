@@ -37,7 +37,8 @@ export async function ObtenerHistorialPorElemento(idElemento: string): Promise<H
 
 export function Stringify(item: Producto): string {
   const globalStore = useGlobalStore();
-  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : ''} | Fabricante: ${item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : ''} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg`;
+  const pesoPorMetro = item.pesoPorMetro != null ? ` | Peso por Metro: ${item.pesoPorMetro} Kg/m` : '';
+  return `Nombre: ${item.nombre} | Código: ${item.codigo} | Grupo: ${item.grupoId ? globalStore.ListasMap[item.grupoId] || '' : ''} | Fabricante: ${item.fabricanteId ? globalStore.ListasMap[item.fabricanteId] || '' : ''} | Descripción: ${item.descripcion} | Peso Unitario: ${item.pesoUnitario} Kg${pesoPorMetro}`;
 }
 
 export async function RegistrarCambioProducto(idProducto: string, anterior: Producto, posterior: Producto): Promise<void> {
@@ -59,6 +60,10 @@ export async function RegistrarCambioProducto(idProducto: string, anterior: Prod
   if (anterior.pesoUnitario !== posterior.pesoUnitario) {
     cambiosAnterior += `Peso Unitario: ${anterior.pesoUnitario} Kg | `;
     cambiosPosterior += `Peso Unitario: ${posterior.pesoUnitario} Kg | `;
+  }
+  if (anterior.pesoPorMetro !== posterior.pesoPorMetro) {
+    cambiosAnterior += `Peso por Metro: ${anterior.pesoPorMetro ?? '—'} Kg/m | `;
+    cambiosPosterior += `Peso por Metro: ${posterior.pesoPorMetro ?? '—'} Kg/m | `;
   }
   if (anterior.grupoId !== posterior.grupoId) {
     cambiosAnterior += `Grupo: ${anterior.grupoId ? globalStore.ListasMap[anterior.grupoId] || '' : ''} | `;

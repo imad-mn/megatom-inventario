@@ -12,6 +12,7 @@ export type Producto = IdNombre & {
   codigo: string | null;
   descripcion: string | null;
   pesoUnitario: number;
+  pesoPorMetro: number | null;
   grupoId: string | null;
   fabricanteId: string | null;
   imagenUrl: string | null;

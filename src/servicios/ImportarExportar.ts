@@ -512,6 +512,7 @@ async function obtenerOCrearProducto(
       codigo: fila.codigo || null,
       descripcion: fila.descripcion || null,
       pesoUnitario: parsearPesoUnitarioFila(fila.pesoUnitario),
+      pesoPorMetro: null,
       grupoId: grupoId,
       fabricanteId: fabricanteId,
       imagenUrl: null,

@@ -71,6 +71,37 @@ const estados = globalStore
   .ObtenerLista("estados")
   .map((x) => ({ id: x.id, nombre: x.nombre.substring(3), tipo: x.tipo }));
 
+const esCableConductorEdicion = ref(false);
+
+function CantidadTotalProducto(productoId: string): number {
+  return globalStore.Cantidades.filter((c) => c.productoId === productoId).reduce(
+    (acc, c) => acc + c.cantidad,
+    0,
+  );
+}
+
+function LongitudKm(pesoPorMetro: number | null | undefined, cantidadTotal: number): number | null {
+  if (pesoPorMetro == null || pesoPorMetro <= 0) return null;
+  return cantidadTotal / pesoPorMetro / 1000;
+}
+
+function AlCambiarCableConductorEdicion(activo: boolean) {
+  if (!productoEditando.value) return;
+  if (!activo) {
+    productoEditando.value.pesoPorMetro = null;
+  } else if (productoEditando.value.pesoPorMetro == null) {
+    productoEditando.value.pesoPorMetro = 0;
+  }
+}
+
+const longitudKmEdicionProducto = computed(() => {
+  if (!productoEditando.value) return null;
+  return LongitudKm(
+    productoEditando.value.pesoPorMetro,
+    CantidadTotalProducto(productoEditando.value.id),
+  );
+});
+
 const seccionesNivel = computed(() => {
   if (!nuevoPadreNivel.value || !elementoAMover.value) return [];
   return nuevoPadreNivel.value.secciones.filter(
@@ -399,13 +430,15 @@ function ImprimirCaja(caja: Caja) {
 }
 
 function EditarProducto(producto: Producto) {
-  productoEditando.value = producto;
+  productoEditando.value = { ...producto, pesoPorMetro: producto.pesoPorMetro ?? null };
+  esCableConductorEdicion.value = productoEditando.value.pesoPorMetro != null;
   imagenEdicion.value = producto.imagenUrl ?? undefined;
   deshabilitarCajaAnterior.value = true;
   deshabilitarSiguienteCaja.value = true;
 }
 function CancelarEdicionProducto() {
   productoEditando.value = null;
+  esCableConductorEdicion.value = false;
   imagenEdicion.value = undefined;
   deshabilitarCajaAnterior.value = false;
   deshabilitarSiguienteCaja.value = false;
@@ -703,7 +736,7 @@ function irAtras() {
             class="rounded-xl md:w-50 md:h-50"
           />
           <FileUpload
-            v-if="productoEditando == item.producto"
+            v-if="productoEditando?.id === item.producto.id"
             mode="basic"
             accept="image/*"
             :maxFileSize="524288"
@@ -718,12 +751,12 @@ function irAtras() {
         <div class="flex-1 flex flex-col gap-1">
           <div class="text-wrap flex items-center gap-2">
             <b>Nombre:</b>
-            <span v-if="productoEditando != item.producto">{{ item.producto.nombre }}</span>
+            <span v-if="productoEditando?.id !== item.producto.id">{{ item.producto.nombre }}</span>
             <InputText v-else v-model="productoEditando!.nombre" class="flex-1" />
           </div>
           <div class="flex items-center gap-2">
             <b>Grupo:</b>
-            <span v-if="productoEditando != item.producto">{{
+            <span v-if="productoEditando?.id !== item.producto.id">{{
               item.producto.grupoId ? globalStore.ListasMap[item.producto.grupoId] : ""
             }}</span>
             <Select
@@ -737,7 +770,7 @@ function irAtras() {
           </div>
           <div class="flex items-center gap-2">
             <b>Fabricante: </b>
-            <span v-if="productoEditando != item.producto">{{
+            <span v-if="productoEditando?.id !== item.producto.id">{{
               item.producto.fabricanteId ? globalStore.ListasMap[item.producto.fabricanteId] : ""
             }}</span>
             <Select
@@ -751,7 +784,7 @@ function irAtras() {
           </div>
           <div class="flex items-center gap-2">
             <b>Código: </b>
-            <span v-if="productoEditando != item.producto">{{ item.producto.codigo }}</span>
+            <span v-if="productoEditando?.id !== item.producto.id">{{ item.producto.codigo }}</span>
             <InputText v-else v-model="productoEditando!.codigo" class="flex-1" />
           </div>
 
@@ -759,14 +792,14 @@ function irAtras() {
             <b>Cantidad: </b>
             <span>{{ item.cantidad.toLocaleString("es-VE") }}</span>
             <i
-              v-if="productoEditando == item.producto"
+              v-if="productoEditando?.id === item.producto.id"
               class="pi pi-info-circle ml-2 text-primary"
               v-tooltip.bottom="'La cantida puede modificarse en la página: Movimientos'"
             />
           </div>
           <div class="flex items-center gap-2">
             <b>Peso Unitario:</b>
-            <span v-if="productoEditando != item.producto"
+            <span v-if="productoEditando?.id !== item.producto.id"
               >{{
                 item.producto.pesoUnitario.toLocaleString("es-VE", { maximumFractionDigits: 2 })
               }}
@@ -792,9 +825,62 @@ function irAtras() {
               Kg.</span
             >
           </div>
+          <div v-if="productoEditando?.id === item.producto.id" class="flex items-center gap-2">
+            <ToggleSwitch
+              :id="`esCableConductor-${item.id}`"
+              v-model="esCableConductorEdicion"
+              @update:modelValue="AlCambiarCableConductorEdicion"
+            />
+            <label :for="`esCableConductor-${item.id}`">Cable/Conductor</label>
+          </div>
+          <div
+            v-if="productoEditando?.id === item.producto.id && esCableConductorEdicion"
+            class="flex items-center gap-2"
+          >
+            <b>Peso por metro:</b>
+            <InputNumber
+              v-model="productoEditando!.pesoPorMetro"
+              mode="decimal"
+              :min="0"
+              :minFractionDigits="0"
+              :maxFractionDigits="4"
+              class="flex-1"
+            />
+            <span>Kg</span>
+          </div>
+          <div
+            v-if="productoEditando?.id === item.producto.id && esCableConductorEdicion"
+            class="flex items-center gap-2"
+          >
+            <b>Longitud:</b>
+            <InputNumber
+              :modelValue="longitudKmEdicionProducto"
+              mode="decimal"
+              :minFractionDigits="0"
+              :maxFractionDigits="4"
+              class="flex-1"
+              disabled
+            />
+            <span>Km</span>
+          </div>
+          <div v-if="productoEditando?.id !== item.producto.id && item.producto.pesoPorMetro != null">
+            <b>Peso por metro: </b>
+            <span>{{
+              item.producto.pesoPorMetro.toLocaleString("es-VE", { maximumFractionDigits: 4 })
+            }} Kg</span>
+          </div>
+          <div v-if="productoEditando?.id !== item.producto.id && item.producto.pesoPorMetro != null">
+            <b>Longitud: </b>
+            <span>{{
+              LongitudKm(
+                item.producto.pesoPorMetro,
+                CantidadTotalProducto(item.producto.id),
+              )?.toLocaleString("es-VE", { maximumFractionDigits: 4 }) ?? "—"
+            }} Km</span>
+          </div>
           <div class="flex items-center gap-2">
             <b>Estado: </b>
-            <span v-if="productoEditando != item.producto">{{
+            <span v-if="productoEditando?.id !== item.producto.id">{{
               item.producto.estadoId
                 ? globalStore.ListasMap[item.producto.estadoId]?.substring(3)
                 : ""
@@ -813,12 +899,12 @@ function irAtras() {
       <div class="mt-1 pl-2 flex items-center">
         <div class="flex-1 flex items-center gap-2">
           <b>Descripción:</b>
-          <span v-if="productoEditando != item.producto">{{ item.producto.descripcion }}</span>
+          <span v-if="productoEditando?.id !== item.producto.id">{{ item.producto.descripcion }}</span>
           <InputText v-else v-model="productoEditando!.descripcion" class="flex-1" />
         </div>
         <div v-if="Usuario" class="flex-none ml-2">
           <Button
-            v-if="productoEditando != item.producto"
+            v-if="productoEditando?.id !== item.producto.id"
             label="Editar"
             icon="pi pi-pen-to-square"
             severity="success"
@@ -826,7 +912,7 @@ function irAtras() {
             @click="EditarProducto(item.producto)"
           />
           <Button
-            v-if="productoEditando == item.producto"
+            v-if="productoEditando?.id === item.producto.id"
             icon="pi pi-times-circle"
             severity="danger"
             variant="outlined"
@@ -834,7 +920,7 @@ function irAtras() {
             v-tooltip.bottom="'Cancelar'"
           />
           <Button
-            v-if="productoEditando == item.producto"
+            v-if="productoEditando?.id === item.producto.id"
             icon="pi pi-save"
             severity="primary"
             variant="outlined"
